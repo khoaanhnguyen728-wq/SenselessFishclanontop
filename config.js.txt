@@ -1,0 +1,4 @@
+{
+  "token": "BOT_TOKEN_DISCORD",
+  "staffRole": "ROLE_ID_STAFF"
+}

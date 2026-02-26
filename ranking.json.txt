@@ -1,0 +1,5 @@
+[
+  { "rank": 1, "robloxId": 123456789, "stage": "Stage 1 Mid" },
+  { "rank": 2, "robloxId": 222222222, "stage": "Stage 1 Mid" },
+  { "rank": 3, "robloxId": 333333333, "stage": "Stage 1 Mid" }
+]
