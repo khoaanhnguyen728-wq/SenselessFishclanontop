@@ -201,7 +201,41 @@
         }
 
         setInterval(createDolphin, 1500);
-    </script>
+    <script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io();
+
+    socket.on("update", data => {
+        document.getElementById("totalMembers").innerText = data.totalMembers;
+        document.getElementById("onlineMembers").innerText = data.onlineMembers;
+    });
+
+    function showIntro() {
+        contentBox.innerHTML = `
+            <h2>Clan Introduction</h2>
+            <p>Senseless Fish — united by strength.</p>
+        `;
+    }
+
+    function showTop() {
+        contentBox.innerHTML = `
+            <h2>Top In Clan</h2>
+            <ol style="text-align:left; display:inline-block">
+                <li>🥇 PlayerOne</li>
+                <li>🥈 PlayerTwo</li>
+                <li>🥉 PlayerThree</li>
+            </ol>
+        `;
+    }
+
+    function showStaff() {
+        contentBox.innerHTML = `
+            <h2>Clan Staff</h2>
+            <p>Founder: ☾á<br>Owner: MoiMoi<br>Admin: Miruibel</p>
+        `;
+    }
+</script>
 
 </body>
+
 </html>
