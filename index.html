@@ -134,6 +134,85 @@ body{
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
+/* ===== RANK SYSTEM ===== */
+.rank-system{
+    width:90%;
+    max-width:900px;
+    margin:40px auto;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+}
+
+/* ITEM */
+.rank-item{
+    background:rgba(0,0,0,.45);
+    border-radius:14px;
+    padding:16px 20px;
+    text-align:left;
+    box-shadow:0 10px 25px rgba(0,0,0,.45);
+    transition:.25s;
+    position:relative;
+    overflow:hidden;
+}
+
+.rank-item:hover{
+    transform:translateY(-4px);
+}
+
+/* TAG */
+.rank-tag{
+    font-weight:800;
+    padding:4px 12px;
+    border-radius:8px;
+    display:inline-block;
+    margin-bottom:6px;
+    font-size:14px;
+}
+
+/* ===== RANK COLORS ===== */
+.rank-d .rank-tag{background:#f39c12;color:black}
+.rank-c .rank-tag{background:#2ecc71;color:black}
+.rank-b .rank-tag{background:#00ffcc;color:black}
+.rank-a .rank-tag{background:#bdc3c7;color:black}
+.rank-s .rank-tag{background:#00aaff;color:white}
+.rank-ss .rank-tag{background:#1e90ff;color:white}
+.rank-ex .rank-tag{
+    background:linear-gradient(135deg,#8e2de2,#4a00e0);
+    color:white;
+}
+
+/* TEXT */
+.rank-item p{
+    margin:0;
+    font-size:14.5px;
+    color:#e0e0e0;
+    line-height:1.5;
+}
+
+/* SHINE EFFECT */
+.rank-item::after{
+    content:"";
+    position:absolute;
+    top:-100%;
+    left:-100%;
+    width:200%;
+    height:200%;
+    background:linear-gradient(
+        135deg,
+        transparent 45%,
+        rgba(255,255,255,.15) 50%,
+        transparent 55%
+    );
+    animation:rankShine 6s infinite;
+    pointer-events:none;
+}
+
+@keyframes rankShine{
+    0%{transform:translate(-100%,-100%)}
+    50%{transform:translate(100%,100%)}
+    100%{transform:translate(-100%,-100%)}
+}
 </style>
 </head>
 
@@ -169,6 +248,43 @@ body{
             Hệ thống giúp người chơi nhận biết được thực lực của bản thân cũng như
             đánh giá sức mạnh của các thành viên khác trong clan.
         </p>
+    </div>
+<!-- ===== RANKING SYSTEM ===== -->
+<div class="rank-system">
+
+    <div class="rank-item rank-d">
+        <span class="rank-tag">Rank D</span>
+        <p>Là người chưa biết rõ lối chơi của game và chưa có kĩ năng nhất định để áp dụng vào thực chiến.</p>
+    </div>
+
+    <div class="rank-item rank-c">
+        <span class="rank-tag">Rank C</span>
+        <p>Là người đang làm quen game mechanic như: Blocking, Side Dashing,vv...</p>
+    </div>
+
+    <div class="rank-item rank-b">
+        <span class="rank-tag">Rank B</span>
+        <p>Ở bậc rank này người chơi hầu hết vượt trội hơn người đạt mức Rank C. Họ có phản xạ và áp dụng được các tech đã học vào trận đấu.</p>
+    </div>
+
+    <div class="rank-item rank-a">
+        <span class="rank-tag">Rank A</span>
+        <p>Người chơi đạt Rank A đa phần đều thông hiểu được game-mechanic, có lối chơi riêng cho bản thân, áp dụng được vào thực chiến, học được một số tech thông dụng và có tư duy chiến thuật trong trận đấu.</p>
+    </div>
+
+    <div class="rank-item rank-s">
+        <span class="rank-tag">Rank S</span>
+        <p>Người chơi ở giai đoạn này vượt trội hơn hẳn các người chơi ở rank A. Tâm lí vững chắc trước vấn đề .Kĩ năng thực chiến và phản xạ đạt được là một bước đột phá. Người chơi rank S thường có đủ trình độ để tham gia các giải đấu tsb.</p>
+    </div>
+
+    <div class="rank-item rank-ss">
+        <span class="rank-tag">Rank SS</span>
+        <p> Người chơi rank SS có trình độ rất cao. Đánh bại hầu hết các người chơi rank S. Tinh thông các mechanic trong game áp dụng hoàn hảo cho các trận đấu. Có khả năng đọc tâm lí và phán đoán nước đi đối thủ. Người chơi ở mức rank này có thể tham gia các giải đấu cấp cao.</p>
+    </div>
+
+    <div class="rank-item rank-ex">
+        <span class="rank-tag">Rank EX</span>
+        <p>Người chơi này có trình độ châu lục. Thường tham gia cái giải đẩu giữa các nước trong cùng châu lục. Mang trong mình một trình độ thượng thừa. Đánh bại hầu hết các người chơi rank SS. Mọi đòn đánh đều hoàn hảo. Thuần thục hầu hết các style đánh của các người chơi rank EX khác và áp dụng hoàn hảo cho bản thân.</p>
     </div>
 
 </div>
