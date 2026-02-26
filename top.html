@@ -161,10 +161,13 @@ body{
 /* CROWN */
 .crown{
     position:absolute;
-    top:-28px;
+    top:-22px;              /* hạ xuống nhẹ */
     left:50%;
     transform:translateX(-50%);
-    font-size:34px;
+    font-size:32px;
+    z-index:20;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,.6));
+    pointer-events:none;
 }
 
 /* RANK */
@@ -304,7 +307,7 @@ body{
     background:linear-gradient(135deg,#3a2c00,#ffd700,#3a2c00);
     box-shadow:
         0 0 25px gold,
-        0 0 60px rgba(255,215,0,.7);
+        0 0 80px rgba(255,215,0,.7);
     border:2px solid gold;
 }
 
@@ -353,6 +356,9 @@ body{
     50%{top:120%;opacity:.25}
     80%{opacity:.4}
     100%{top:-120%;opacity:0}
+}
+.top-card.top-1{
+    overflow: visible;
 }
 </style>
 </head>
