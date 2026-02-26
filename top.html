@@ -218,6 +218,23 @@ body{
     cursor:pointer;
     z-index:10;
 }
+.view-profile{
+    margin-top:10px;
+    padding:6px 14px;
+    font-size:13px;
+    border-radius:6px;
+    background:#1e90ff;
+    color:white;
+    border:none;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.view-profile:hover{
+    background:#00eaff;
+    box-shadow:0 0 10px #00eaff;
+    transform:scale(1.05);
+}
 </style>
 </head>
 
@@ -242,33 +259,254 @@ body{
 
 <div class="top-wrapper">
 
+<!-- ===== TOP 2 ===== -->
 <div class="top-card">
-    <div class="avatar silver"></div>
+    <div class="avatar silver"
+         style="background-image:url('https://www.roblox.com/headshot-thumbnail/image?userId=261&width=150&height=150&format=png')">
+    </div>
     <div class="rank silver">2</div>
     <div class="name">Top Two</div>
     <div class="stage">Member</div>
+    <button class="view-profile"
+            onclick="window.open('https://www.roblox.com/users/261/profile')">
+        View Profile
+    </button>
 </div>
 
+<!-- ===== TOP 1 ===== -->
 <div class="top-card top-1">
     <div class="crown">👑</div>
-    <div class="avatar gold"></div>
+    <div class="avatar gold"
+         style="background-image:url('https://www.roblox.com/headshot-thumbnail/image?userId=1&width=150&height=150&format=png')">
+    </div>
     <div class="rank gold">1</div>
     <div class="name">Top One</div>
     <div class="stage">Leader</div>
+    <button class="view-profile"
+            onclick="window.open('https://www.roblox.com/users/1/profile')">
+        View Profile
+    </button>
 </div>
 
+<!-- ===== TOP 3 ===== -->
 <div class="top-card">
-    <div class="avatar bronze"></div>
+    <div class="avatar bronze"
+         style="background-image:url('https://www.roblox.com/headshot-thumbnail/image?userId=156&width=150&height=150&format=png')">
+    </div>
     <div class="rank bronze">3</div>
     <div class="name">Top Three</div>
     <div class="stage">Member</div>
+    <button class="view-profile"
+            onclick="window.open('https://www.roblox.com/users/156/profile')">
+        View Profile
+    </button>
 </div>
+
+<script>
+const top420 = [
+  {rank:4, name:"Member 4", stage:"Stage 1"},
+  {rank:5, name:"Member 5", stage:"Stage 1"},
+  {rank:6, name:"Member 6", stage:"Stage 1"},
+  {rank:7, name:"Member 7", stage:"Stage 1"},
+  {rank:8, name:"Member 8", stage:"Stage 1"},
+  {rank:9, name:"Member 9", stage:"Stage 1"},
+  {rank:10, name:"Member 10", stage:"Stage 1"},
+  {rank:11, name:"Member 11", stage:"Stage 1"},
+  {rank:12, name:"Member 12", stage:"Stage 1"},
+  {rank:13, name:"Member 13", stage:"Stage 1"},
+  {rank:14, name:"Member 14", stage:"Stage 1"},
+  {rank:15, name:"Member 15", stage:"Stage 1"},
+  {rank:16, name:"Member 16", stage:"Stage 1"},
+  {rank:17, name:"Member 17", stage:"Stage 1"},
+  {rank:18, name:"Member 18", stage:"Stage 1"},
+  {rank:19, name:"Member 19", stage:"Stage 1"},
+  {rank:20, name:"Member 20", stage:"Stage 1"}
+];
+
+const box = document.getElementById("rankList");
+
+top420.forEach(m=>{
+  box.innerHTML += `
+    <div class="rank-row">
+      <span>#${m.rank}</span>
+      <span>${m.name}</span>
+      <span>${m.stage}</span>
+    </div>
+  `;
+});
+</script>
 
 </div>
 
 <div class="rank-list">
-    <div class="rank-row"><span>#4</span><span>Member 4</span><span>Stage 1</span></div>
-    <div class="rank-row"><span>#5</span><span>Member 5</span><span>Stage 1</span></div>
+<!-- ===== TOP 4 ===== -->
+<div class="rank-row">
+    <div class="rank-avatar"
+         style="background-image:url('https://www.roblox.com/headshot-thumbnail/image?userId=4&width=150&height=150&format=png')">
+    </div>
+    <div class="rank-pos">#4</div>
+    <div class="rank-name">Member 4</div>
+    <div class="rank-stage">Stage 1</div>
+</div>
+
+<!-- ===== TOP 5 ===== -->
+<div class="rank-row">
+    <div class="rank-avatar"
+         style="background-image:url('https://www.roblox.com/headshot-thumbnail/image?userId=5&width=150&height=150&format=png')">
+    </div>
+    <div class="rank-pos">#5</div>
+    <div class="rank-name">Member 5</div>
+    <div class="rank-stage">Stage 1</div>
+</div>
+
+<!-- ===== TOP 6 ===== -->
+<div class="rank-row">
+    <div class="rank-avatar"
+         style="background-image:url('https://www.roblox.com/headshot-thumbnail/image?userId=6&width=150&height=150&format=png')">
+    </div>
+    <div class="rank-pos">#6</div>
+    <div class="rank-name">Member 6</div>
+    <div class="rank-stage">Stage 1</div>
+</div>
+
+<!-- ===== TOP 7 ===== -->
+<div class="rank-row">
+    <div class="rank-avatar"
+         style="background-image:url('https://www.roblox.com/headshot-thumbnail/image?userId=7&width=150&height=150&format=png')">
+    </div>
+    <div class="rank-pos">#7</div>
+    <div class="rank-name">Member 7</div>
+    <div class="rank-stage">Stage 1</div>
+</div>
+
+<!-- ===== TOP 8 ===== -->
+<div class="rank-row">
+    <div class="rank-avatar"
+         style="background-image:url('https://www.roblox.com/headshot-thumbnail/image?userId=8&width=150&height=150&format=png')">
+    </div>
+    <div class="rank-pos">#8</div>
+    <div class="rank-name">Member 8</div>
+    <div class="rank-stage">Stage 1</div>
+</div>
+
+<!-- ===== TOP 9 ===== -->
+<div class="rank-row">
+    <div class="rank-avatar"
+         style="background-image:url('https://www.roblox.com/headshot-thumbnail/image?userId=9&width=150&height=150&format=png')">
+    </div>
+    <div class="rank-pos">#9</div>
+    <div class="rank-name">Member 9</div>
+    <div class="rank-stage">Stage 1</div>
+</div>
+
+<!-- ===== TOP 10 ===== -->
+<div class="rank-row">
+    <div class="rank-avatar"
+         style="background-image:url('https://www.roblox.com/headshot-thumbnail/image?userId=10&width=150&height=150&format=png')">
+    </div>
+    <div class="rank-pos">#10</div>
+    <div class="rank-name">Member 10</div>
+    <div class="rank-stage">Stage 1</div>
+</div>
+
+<!-- ===== TOP 11 ===== -->
+<div class="rank-row">
+    <div class="rank-avatar"
+         style="background-image:url('https://www.roblox.com/headshot-thumbnail/image?userId=11&width=150&height=150&format=png')">
+    </div>
+    <div class="rank-pos">#11</div>
+    <div class="rank-name">Member 11</div>
+    <div class="rank-stage">Stage 1</div>
+</div>
+
+<!-- ===== TOP 12 ===== -->
+<div class="rank-row">
+    <div class="rank-avatar"
+         style="background-image:url('https://www.roblox.com/headshot-thumbnail/image?userId=12&width=150&height=150&format=png')">
+    </div>
+    <div class="rank-pos">#12</div>
+    <div class="rank-name">Member 12</div>
+    <div class="rank-stage">Stage 1</div>
+</div>
+
+<!-- ===== TOP 13 ===== -->
+<div class="rank-row">
+    <div class="rank-avatar"
+         style="background-image:url('https://www.roblox.com/headshot-thumbnail/image?userId=13&width=150&height=150&format=png')">
+    </div>
+    <div class="rank-pos">#13</div>
+    <div class="rank-name">Member 13</div>
+    <div class="rank-stage">Stage 1</div>
+</div>
+
+<!-- ===== TOP 14 ===== -->
+<div class="rank-row">
+    <div class="rank-avatar"
+         style="background-image:url('https://www.roblox.com/headshot-thumbnail/image?userId=14&width=150&height=150&format=png')">
+    </div>
+    <div class="rank-pos">#14</div>
+    <div class="rank-name">Member 14</div>
+    <div class="rank-stage">Stage 1</div>
+</div>
+
+<!-- ===== TOP 15 ===== -->
+<div class="rank-row">
+    <div class="rank-avatar"
+         style="background-image:url('https://www.roblox.com/headshot-thumbnail/image?userId=15&width=150&height=150&format=png')">
+    </div>
+    <div class="rank-pos">#15</div>
+    <div class="rank-name">Member 15</div>
+    <div class="rank-stage">Stage 1</div>
+</div>
+
+<!-- ===== TOP 16 ===== -->
+<div class="rank-row">
+    <div class="rank-avatar"
+         style="background-image:url('https://www.roblox.com/headshot-thumbnail/image?userId=16&width=150&height=150&format=png')">
+    </div>
+    <div class="rank-pos">#16</div>
+    <div class="rank-name">Member 16</div>
+    <div class="rank-stage">Stage 1</div>
+</div>
+
+<!-- ===== TOP 17 ===== -->
+<div class="rank-row">
+    <div class="rank-avatar"
+         style="background-image:url('https://www.roblox.com/headshot-thumbnail/image?userId=17&width=150&height=150&format=png')">
+    </div>
+    <div class="rank-pos">#17</div>
+    <div class="rank-name">Member 17</div>
+    <div class="rank-stage">Stage 1</div>
+</div>
+
+<!-- ===== TOP 18 ===== -->
+<div class="rank-row">
+    <div class="rank-avatar"
+         style="background-image:url('https://www.roblox.com/headshot-thumbnail/image?userId=18&width=150&height=150&format=png')">
+    </div>
+    <div class="rank-pos">#18</div>
+    <div class="rank-name">Member 18</div>
+    <div class="rank-stage">Stage 1</div>
+</div>
+
+<!-- ===== TOP 19 ===== -->
+<div class="rank-row">
+    <div class="rank-avatar"
+         style="background-image:url('https://www.roblox.com/headshot-thumbnail/image?userId=19&width=150&height=150&format=png')">
+    </div>
+    <div class="rank-pos">#19</div>
+    <div class="rank-name">Member 19</div>
+    <div class="rank-stage">Stage 1</div>
+</div>
+
+<!-- ===== TOP 20 ===== -->
+<div class="rank-row">
+    <div class="rank-avatar"
+         style="background-image:url('https://www.roblox.com/headshot-thumbnail/image?userId=20&width=150&height=150&format=png')">
+    </div>
+    <div class="rank-pos">#20</div>
+    <div class="rank-name">Member 20</div>
+    <div class="rank-stage">Stage 1</div>
 </div>
 
 <div id="discordJoin" onclick="window.open('https://discord.gg/yourlink')">
