@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Senseless Fish</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #0B3C5D, #328CC1, #0B3C5D);
+            background-size: 400% 400%;
+            animation: bgMove 15s ease infinite;
+            color: white;
+            text-align: center;
+            overflow-x: hidden;
+        }
+
+        @keyframes bgMove {
+            0% {background-position: 0% 50%;}
+            50% {background-position: 100% 50%;}
+            100% {background-position: 0% 50%;}
+        }
+
+        /* ===== STATS GÓC TRÁI ===== */
+        #statsBox {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            background: rgba(0,0,0,0.6);
+            padding: 10px 15px;
+            border-radius: 10px;
+            font-size: 15px;
+            box-shadow: 0 0 10px rgba(0,255,255,0.6);
+        }
+
+        #logo {
+            width: 160px;
+            height: 160px;
+            margin: 30px auto;
+            border-radius: 50%;
+            background-image: url("images/Senselessfish.png");
+            background-size: cover;
+            border: 5px solid white;
+            box-shadow: 0 0 20px white;
+        }
+
+        .btn {
+            padding: 15px 32px;
+            margin: 10px;
+            font-size: 18px;
+            background: #1464A0;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            color: white;
+            box-shadow: 0px 4px 10px rgba(255,255,255,0.5),
+                        0px 8px 15px rgba(0,0,0,0.2);
+            transition: transform 0.1s ease;
+        }
+
+        .btn:hover { transform: scale(1.05); }
+        .btn:active { transform: scale(0.95); }
+
+        #contentBox {
+            margin-top: 30px;
+            font-size: 20px;
+        }
+
+        .join-image-wrapper { margin-top: 15px; }
+
+        .join-image {
+            height: 48px;
+            width: auto;
+            cursor: pointer;
+            border-radius: 10px;
+            box-shadow: 0 0 10px #00eaff,
+                        0 0 20px rgba(0,255,255,0.5);
+            transition: transform 0.2s ease;
+        }
+
+        .join-image:hover { transform: scale(1.08); }
+
+        .staff-list {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 18px;
+            margin-top: 20px;
+        }
+
+        .staff-card {
+            width: 220px;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 17px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .founder { background: linear-gradient(135deg, #8E44AD, #9B59B6); }
+        .leader { background: linear-gradient(135deg, #007bff, #2196f3); }
+        .admin { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+
+        .dolphin {
+            position: fixed;
+            top: -50px;
+            pointer-events: none;
+            animation-name: fall;
+            animation-timing-function: linear;
+            z-index: 9999;
+        }
+
+        @keyframes fall {
+            0% { transform: translateY(0) translateX(0) rotate(0deg); }
+            50% { transform: translateY(50vh) translateX(20px) rotate(8deg); }
+            100% { transform: translateY(110vh) translateX(-15px) rotate(15deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ===== STATS GÓC TRÁI ===== -->
+    <div id="statsBox">
+        👥 Total: <span id="totalMembers">0</span><br>
+        🟢 Online: <span id="onlineMembers">0</span>
+    </div>
+
+    <div id="logo"></div>
+
+    <button class="btn" onclick="showIntro()">Clan Introduction</button>
+    <button class="btn" onclick="showTop()">Top in Clan</button>
+    <button class="btn" onclick="showStaff()">Clan Staff</button>
+
+    <div class="join-image-wrapper">
+        <img src="images/discordsenseless.png"
+             class="join-image"
+             onclick="openDiscord()">
+    </div>
+
+    <div id="contentBox"></div>
+
+    <script>
+        function showIntro() {
+            document.getElementById("contentBox").innerHTML =
+                `<h2>Clan Introduction</h2>
+                 <p>Senseless Fish — united by strength and guardian spirit.</p>`;
+        }
+
+        function showTop() {
+            document.getElementById("contentBox").innerHTML =
+                `<h2>Top Players</h2>
+                 <p>1. WaveMaster<br>2. SeaDragon<br>3. FishSlayer</p>`;
+        }
+
+        function showStaff() {
+            document.getElementById("contentBox").innerHTML = `
+                <h2>Clan Staff</h2>
+                <div class="staff-list">
+                    <div class="staff-card founder">Founder: @☾á</div>
+                    <div class="staff-card leader">Owner: @MoiMoi</div>
+                    <div class="staff-card admin">Admin: @Miruibel</div>
+                </div>
+            `;
+        }
+
+        function openDiscord() {
+            window.open("https://discord.gg/senselessfish", "_blank");
+        }
+
+        /* SOCKET NHẬN DATA TỪ BOT */
+        const socket = io();
+
+        socket.on("update", data => {
+            document.getElementById("totalMembers").innerText = data.totalMembers;
+            document.getElementById("onlineMembers").innerText = data.onlineMembers;
+        });
+
+        /* Cá heo rơi */
+        let dolphinCount = 0;
+        const maxDolphins = 8;
+
+        function createDolphin() {
+            if (dolphinCount >= maxDolphins) return;
+
+            dolphinCount++;
+            const dolphin = document.createElement("div");
+            dolphin.classList.add("dolphin");
+            dolphin.innerHTML = "🐬";
+            dolphin.style.left = Math.random() * window.innerWidth + "px";
+            dolphin.style.fontSize = (20 + Math.random() * 18) + "px";
+            const duration = 10 + Math.random() * 6;
+            dolphin.style.animationDuration = duration + "s";
+
+            document.body.appendChild(dolphin);
+
+            setTimeout(() => {
+                dolphin.remove();
+                dolphinCount--;
+            }, duration * 1000);
+        }
+
+        setInterval(createDolphin, 1500);
+    </script>
+
+</body>
+</html>
