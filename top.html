@@ -242,6 +242,118 @@ body{
 .rank-row{
     text-align:left;
 }
+/* ===== SHINY EFFECT ===== */
+/* ===== SHINE VERTICAL ===== */
+@keyframes shineVertical {
+    0% {
+        top: -120%;
+        opacity: 0;
+    }
+    20% {
+        opacity: .4;
+    }
+    50% {
+        top: 120%;
+        opacity: .25;
+    }
+    80% {
+        opacity: .4;
+    }
+    100% {
+        top: -120%;
+        opacity: 0;
+    }
+}
+
+.top-card::after{
+    content:"";
+    position:absolute;
+    left:0;
+    top:-120%;
+    width:100%;
+    height:120%;
+    background:linear-gradient(
+        to bottom,
+        transparent,
+        rgba(255,255,255,.35),
+        transparent
+    );
+    animation:shineVertical 4s ease-in-out infinite;
+    pointer-events:none;
+}
+
+.top-card::after{
+    content:"";
+    position:absolute;
+    top:0;
+    left:-60%;
+    width:60%;
+    height:100%;
+    background:linear-gradient(
+        120deg,
+        transparent,
+        rgba(255,255,255,.25),
+        transparent
+    );
+    transform:skewX(-20deg);
+    animation:shineMove 4s infinite;
+}
+
+/* ===== TOP 1 STYLE ===== */
+.top-1{
+    background:linear-gradient(135deg,#3a2c00,#ffd700,#3a2c00);
+    box-shadow:
+        0 0 25px gold,
+        0 0 60px rgba(255,215,0,.7);
+    border:2px solid gold;
+}
+
+/* ===== TOP 2 STYLE ===== */
+.top-2{
+    background:linear-gradient(135deg,#1c1c1c,#cfd2d6,#1c1c1c);
+    box-shadow:
+        0 0 20px silver,
+        0 0 45px rgba(220,220,220,.6);
+    border:2px solid silver;
+}
+
+/* ===== TOP 3 STYLE ===== */
+.top-3{
+    background:linear-gradient(135deg,#2a1600,#cd7f32,#2a1600);
+    box-shadow:
+        0 0 18px #cd7f32,
+        0 0 40px rgba(205,127,50,.6);
+    border:2px solid #cd7f32;
+}
+
+/* smooth hover */
+.top-card{
+    position:relative;
+    overflow:hidden;
+}
+.top-card::after{
+    content:"";
+    position:absolute;
+    left:0;
+    top:-120%;
+    width:100%;
+    height:120%;
+    background:linear-gradient(
+        to bottom,
+        transparent,
+        rgba(255,255,255,.35),
+        transparent
+    );
+    animation:shineVertical 4s ease-in-out infinite;
+    pointer-events:none;
+}
+@keyframes shineVertical{
+    0%{top:-120%;opacity:0}
+    20%{opacity:.4}
+    50%{top:120%;opacity:.25}
+    80%{opacity:.4}
+    100%{top:-120%;opacity:0}
+}
 </style>
 </head>
 
@@ -267,7 +379,7 @@ body{
 <div class="top-wrapper">
 
 <!-- ===== TOP 2 ===== -->
-<div class="top-card">
+<div class="top-card top-2">
     <div class="avatar silver"
          style="background-image:url('https://www.roblox.com/headshot-thumbnail/image?userId=261&width=150&height=150&format=png')">
     </div>
@@ -296,7 +408,7 @@ body{
 </div>
 
 <!-- ===== TOP 3 ===== -->
-<div class="top-card">
+<div class="top-card top-3">
     <div class="avatar bronze"
          style="background-image:url('https://www.roblox.com/headshot-thumbnail/image?userId=156&width=150&height=150&format=png')">
     </div>
@@ -354,3 +466,4 @@ members.forEach(m=>{
 
 </body>
 </html>
+
