@@ -370,6 +370,12 @@ body{
 .top-1 .crown{
     animation:crownFloat 2.5s ease-in-out infinite;
 }
+.top-card::after{
+    max-height:100%;
+}
+.top-card.top-1{
+    overflow:hidden !important;
+}
 </style>
 </head>
 
@@ -482,4 +488,5 @@ members.forEach(m=>{
 
 </body>
 </html>
+
 
