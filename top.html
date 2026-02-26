@@ -159,15 +159,35 @@ body{
 .avatar.bronze{--c:#cd7f32;border:5px solid #cd7f32;animation:glowPulse 3s infinite}
 
 /* CROWN */
-.crown{
+.crown-wrap{
     position:absolute;
-    top:-22px;              /* hạ xuống nhẹ */
+    top:-32px;
     left:50%;
     transform:translateX(-50%);
-    font-size:32px;
-    z-index:20;
-    filter: drop-shadow(0 4px 6px rgba(0,0,0,.6));
+    width:0;
+    height:0;
+    z-index:50;
     pointer-events:none;
+}
+.crown{
+    position:absolute;
+    top:-36px;            /* bay ra ngoài */
+    left:50%;
+    transform:translateX(-50%);
+    font-size:34px;
+    z-index:100;
+    pointer-events:none;
+
+    animation:crownFloat 2.5s ease-in-out infinite;
+    filter:drop-shadow(0 4px 6px rgba(0,0,0,.6));
+    text-shadow:
+        0 0 10px gold,
+        0 0 25px rgba(255,215,0,.8);
+}
+@keyframes crownFloat{
+    0%{transform:translateY(0)}
+    50%{transform:translateY(-5px)}
+    100%{transform:translateY(0)}
 }
 
 /* RANK */
@@ -272,7 +292,8 @@ body{
 }
 .top-card{
     position:relative;
-    overflow:hidden;
+    overflow:hidden;      /* khóa ánh sáng */
+    border-radius:22px;
 }
 
 /* SHINE FIXED */
@@ -319,10 +340,6 @@ body{
 }
 
 /* smooth hover */
-.top-card{
-    position:relative;
-    overflow:hidden;
-}
 .top-card::after{
     content:"";
     position:absolute;
@@ -354,10 +371,35 @@ body{
 }
 
 .top-1 .crown{
-    animation:crownFloat 2.5s ease-in-out infinite;
+    animation:crownFloat 2.5s ease-in-out infinite;;
 }
-.top-card.top-1{
-    overflow: visible;
+.avatar-wrap{
+    position:relative;
+    width:110px;
+    margin:0 auto;
+}
+.top-slot{
+    position:relative;
+    width:260px;          /* đúng bằng card */
+    margin:0 auto;
+}
+#floating-crown{
+    position:fixed;              /* QUAN TRỌNG */
+    font-size:36px;
+    z-index:9999;
+    pointer-events:none;
+
+    animation:crownFloat 2.5s ease-in-out infinite;
+    filter:drop-shadow(0 4px 6px rgba(0,0,0,.6));
+    text-shadow:
+        0 0 12px gold,
+        0 0 28px rgba(255,215,0,.9);
+}
+
+@keyframes crownFloat{
+    0%{transform:translate(-50%,0)}
+    50%{transform:translate(-50%,-6px)}
+    100%{transform:translate(-50%,0)}
 }
 </style>
 </head>
@@ -389,7 +431,7 @@ body{
          style="background-image:url('https://www.roblox.com/headshot-thumbnail/image?userId=261&width=150&height=150&format=png')">
     </div>
     <div class="rank silver">2</div>
-    <div class="name">Top Two</div>
+    <div class="name">Top 2</div>
     <div class="stage">Member</div>
     <button class="view-profile"
             onclick="window.open('https://www.roblox.com/users/261/profile')">
@@ -399,12 +441,11 @@ body{
 
 <!-- ===== TOP 1 ===== -->
 <div class="top-card top-1">
-    <div class="crown">👑</div>
     <div class="avatar gold"
          style="background-image:url('https://www.roblox.com/headshot-thumbnail/image?userId=1&width=150&height=150&format=png')">
     </div>
     <div class="rank gold">1</div>
-    <div class="name">Top One</div>
+    <div class="name">Top 1</div>
     <div class="stage">Leader</div>
     <button class="view-profile"
             onclick="window.open('https://www.roblox.com/users/1/profile')">
@@ -418,13 +459,15 @@ body{
          style="background-image:url('https://www.roblox.com/headshot-thumbnail/image?userId=156&width=150&height=150&format=png')">
     </div>
     <div class="rank bronze">3</div>
-    <div class="name">Top Three</div>
+    <div class="name">Top 3</div>
     <div class="stage">Member</div>
     <button class="view-profile"
             onclick="window.open('https://www.roblox.com/users/156/profile')">
         View Profile
     </button>
 </div>
+</div>
+
 
 </div>
 
@@ -471,5 +514,4 @@ members.forEach(m=>{
 
 </body>
 </html>
-
 
