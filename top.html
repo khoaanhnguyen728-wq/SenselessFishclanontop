@@ -229,16 +229,19 @@ body{
     padding:6px 14px;
     font-size:13px;
     border-radius:6px;
-    background:#1e90ff;
-    color:white;
-    border:none;
+
+    background:#ffffff;          /* nền trắng */
+    color:#1e90ff;               /* chữ xanh */
+    border:1.5px solid #1e90ff;
+
     cursor:pointer;
     transition:.2s;
+    font-weight:600;
 }
 
 .view-profile:hover{
-    background:#00eaff;
-    box-shadow:0 0 10px #00eaff;
+    background:#f2faff;          /* trắng xanh nhẹ */
+    box-shadow:0 0 12px #00eaff;
     transform:scale(1.05);
 }
 .rank-list,
@@ -359,6 +362,15 @@ body{
 }
 .top-card.top-1{
     overflow: visible;
+}
+@keyframes crownFloat{
+    0%{transform:translateX(-50%) translateY(0)}
+    50%{transform:translateX(-50%) translateY(-4px)}
+    100%{transform:translateX(-50%) translateY(0)}
+}
+
+.top-1 .crown{
+    animation:crownFloat 2.5s ease-in-out infinite;
 }
 </style>
 </head>
