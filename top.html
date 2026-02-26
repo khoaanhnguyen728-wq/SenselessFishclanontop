@@ -250,59 +250,45 @@ body{
 }
 /* ===== SHINY EFFECT ===== */
 /* ===== SHINE VERTICAL ===== */
-@keyframes shineVertical{
+@keyframes shineMoveFixed{
     0%{
-        top:-100%;
+        transform:translateY(-100%);
         opacity:0;
     }
     30%{
-        opacity:.35;
+        opacity:.4;
     }
     50%{
-        top:100%;
+        transform:translateY(100%);
         opacity:.25;
     }
     70%{
-        opacity:.35;
+        opacity:.4;
     }
     100%{
-        top:-100%;
+        transform:translateY(-100%);
         opacity:0;
     }
 }
-
-.top-card::after{
-    content:"";
-    position:absolute;
-    left:0;
-    top:-120%;
-    width:100%;
-    height:120%;
-    background:linear-gradient(
-        to bottom,
-        transparent,
-        rgba(255,255,255,.35),
-        transparent
-    );
-    animation:shineVertical 4s ease-in-out infinite;
-    pointer-events:none;
+.top-card{
+    position:relative;
+    overflow:hidden;
 }
 
+/* SHINE FIXED */
 .top-card::after{
     content:"";
     position:absolute;
-    top:0;
-    left:-60%;
-    width:60%;
-    height:100%;
+    inset:0;                     /* khóa cứng trong khung */
     background:linear-gradient(
-        120deg,
-        transparent,
-        rgba(255,255,255,.25),
-        transparent
+        to bottom,
+        transparent 0%,
+        rgba(255,255,255,.35) 50%,
+        transparent 100%
     );
-    transform:skewX(-20deg);
-    animation:shineMove 4s infinite;
+    transform:translateY(-100%);
+    animation:shineMoveFixed 4s ease-in-out infinite;
+    pointer-events:none;
 }
 
 /* ===== TOP 1 STYLE ===== */
@@ -369,12 +355,6 @@ body{
 
 .top-1 .crown{
     animation:crownFloat 2.5s ease-in-out infinite;
-}
-.top-card::after{
-    max-height:100%;
-}
-.top-card.top-1{
-    overflow:hidden !important;
 }
 </style>
 </head>
@@ -488,5 +468,4 @@ members.forEach(m=>{
 
 </body>
 </html>
-
 
