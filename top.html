@@ -600,6 +600,18 @@ body{
 .register-box button:hover {
   background: #404EED;
 }
+.register-box {
+  position: fixed;
+  top: 120px;
+  right: 25px;
+  z-index: 9998;
+}
+@media (max-width: 768px) {
+  .register-box {
+    position: static;
+    margin: 20px auto;
+  }
+}
 </style>
 </head>
 
@@ -764,6 +776,7 @@ function sendRegister() {
 
 </body>
 </html>
+
 
 
 
