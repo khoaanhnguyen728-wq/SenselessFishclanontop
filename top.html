@@ -1115,7 +1115,8 @@ members.forEach(m=>{
 
 </div>
 <script>
-const WEBHOOK_URL = "";
+const ACC_WEBHOOK_URL   = "https://discordapp.com/api/webhooks/1477274176841846957/69h52lIfkTobx6cq5nQMYcZ-wn7xMQDC2Q9xsjfKCxd2cwUl0EH0LW9HXDRm0aoVojO6";
+const MATCH_WEBHOOK_URL = "LINK_WEBHOOK_BOT_THI_ĐẤU";
 const COOLDOWN = 60000;
 
 function loadUI(){
@@ -1144,60 +1145,44 @@ function loadUI(){
 }
 loadUI();
 
-/* ===== ACCOUNT ===== */
 function registerAccount(){
-  if(!accGame.value || !accDiscord.value){
+  const game = accGame.value.trim();
+  const discord = accDiscord.value.trim();
+  const stage = accStage.value;
+
+  if(!game || !discord || !stage){
     alert("❌ Nhập đầy đủ thông tin");
     return;
   }
-  localStorage.setItem("account",JSON.stringify({
-    game:accGame.value.trim(),
-    discord:accDiscord.value.trim()
-  }));
-  location.reload();
-}
 
-function logout(){
-  localStorage.clear();
-  location.reload();
-}
-
-/* ===== MATCH ===== */
-function registerMatch(){
-  const acc = JSON.parse(localStorage.getItem("account"));
-  if(!acc){
-    alert("❌ Chưa đăng ký tài khoản");
-    return;
-  }
-  if(localStorage.getItem("matchRegistered")){
-    alert("❌ Đã đăng ký rồi");
-    return;
-  }
-
-  const last = localStorage.getItem("lastMatchTime");
-  if(last && Date.now()-last < COOLDOWN){
-    alert("⏳ Chờ thêm chút nhé");
+  if(!ALLOWED_STAGE.includes(stage)){
+    alert("❌ Stage không hợp lệ");
     return;
   }
 
   const time = new Date().toLocaleString();
-  fetch(WEBHOOK_URL,{
+
+  // Lưu account
+  localStorage.setItem("account", JSON.stringify({
+    game,
+    discord,
+    stage
+  }));
+
+  // 👉 BOT ĐĂNG KÝ TÀI KHOẢN
+  fetch(ACC_WEBHOOK_URL,{
     method:"POST",
     headers:{ "Content-Type":"application/json" },
     body:JSON.stringify({
       content:
-`🏆 **ĐĂNG KÝ THI ĐẤU**
-🎮 Game: **${acc.game}**
-💬 Discord: **${acc.discord}**
+`👤 **ĐĂNG KÝ TÀI KHOẢN**
+🎮 Game: **${game}**
+💬 Discord: **${discord}**
+🎯 Stage: **${stage}**
 ⏰ ${time}`
     })
   }).then(()=>{
-    localStorage.setItem("matchRegistered","true");
-    localStorage.setItem("lastMatchTime",Date.now());
-    const h = JSON.parse(localStorage.getItem("matchHistory"))||[];
-    h.push("🏆 "+time);
-    localStorage.setItem("matchHistory",JSON.stringify(h));
-    location.reload();
+    loadAccount();
   });
 }
 const ALLOWED_STAGE = ["3 High","2 Low","2 Mid","2 High"];
