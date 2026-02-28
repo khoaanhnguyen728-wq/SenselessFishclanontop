@@ -645,10 +645,34 @@ body{
     50%{transform:translateY(-8px)}
     100%{transform:translateY(0)}
 }
+/* ===== DOLPHINS ===== */
+#dolphin-layer{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  overflow:hidden;
+  z-index:5; /* dưới icon nhạc */
+}
+
+.dolphin{
+  position:absolute;
+  top:-60px;
+  user-select:none;
+  animation: fall linear forwards;
+}
+
+/* animation rơi */
+@keyframes fall{
+  to{
+    transform: translateY(110vh);
+  }
+}
 </style>
 </head>
 
 <body>
+<!-- DOLPHIN LAYER -->
+<div id="dolphin-layer"></div>
 <!-- ===== GIF FLOAT BUTTON ===== -->
 <a href="rickroll.html" target="_blank" class="gif-float">
   <img src="images/shark.gif" alt="Floating GIF">
@@ -795,10 +819,46 @@ body{
         View Discord
     </a>
 </div>
+<script>
+const dolphinLayer = document.getElementById("dolphin-layer");
+const dolphinIcon = "🐬";
 
-</div>
+/* tạo 1 con cá heo */
+function spawnDolphin(){
+  const d = document.createElement("div");
+  d.className = "dolphin";
+  d.textContent = dolphinIcon;
+
+  /* random vị trí ngang */
+  const x = Math.random() * 100;
+  d.style.left = x + "vw";
+
+  /* random size (chiều sâu) */
+  const size = Math.random() * 24 + 12; // 12px → 36px
+  d.style.fontSize = size + "px";
+
+  /* càng nhỏ càng tối */
+  const darkness = Math.max(0.35, size / 36);
+  d.style.opacity = darkness;
+
+  /* random thời gian rơi */
+  const duration = Math.random() * 6 + 6; // 6s → 12s
+  d.style.animationDuration = duration + "s";
+
+  dolphinLayer.appendChild(d);
+
+  /* xóa sau khi rơi xong */
+  setTimeout(()=>{
+    d.remove();
+  }, duration * 1000);
+}
+
+/* rơi ít thôi */
+setInterval(spawnDolphin, 1800);
+</script>
 
 </div>
 
 </body>
+
 </html>
