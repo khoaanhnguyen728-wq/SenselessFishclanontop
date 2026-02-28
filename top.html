@@ -1115,10 +1115,13 @@ members.forEach(m=>{
 
 </div>
 <script>
+/* ===== CONFIG ===== */
 const ACC_WEBHOOK_URL   = "https://discordapp.com/api/webhooks/1477274176841846957/69h52lIfkTobx6cq5nQMYcZ-wn7xMQDC2Q9xsjfKCxd2cwUl0EH0LW9HXDRm0aoVojO6";
-const MATCH_WEBHOOK_URL = "LINK_WEBHOOK_BOT_THI_ĐẤU";
+const MATCH_WEBHOOK_URL = "LINK_WEBHOOK_MATCH";
 const COOLDOWN = 60000;
+const ALLOWED_STAGE = ["3 High","2 Low","2 Mid","2 High"];
 
+/* ===== LOAD UI ===== */
 function loadUI(){
   const acc = JSON.parse(localStorage.getItem("account"));
   const done = localStorage.getItem("matchRegistered");
@@ -1127,8 +1130,10 @@ function loadUI(){
   if(acc){
     accBox.style.display="none";
     userInfo.style.display="block";
+
     showGame.innerText = acc.game;
     showDiscord.innerText = acc.discord;
+    showStage.innerText = acc.stage;
 
     matchStatus.innerHTML = done
       ? "🟢 <b>Đã đăng ký thi đấu</b>"
@@ -1145,6 +1150,7 @@ function loadUI(){
 }
 loadUI();
 
+/* ===== REGISTER ACCOUNT (FIXED) ===== */
 function registerAccount(){
   const game = accGame.value.trim();
   const discord = accDiscord.value.trim();
@@ -1162,14 +1168,14 @@ function registerAccount(){
 
   const time = new Date().toLocaleString();
 
-  // Lưu account
+  // LƯU ACCOUNT
   localStorage.setItem("account", JSON.stringify({
     game,
     discord,
     stage
   }));
 
-  // 👉 BOT ĐĂNG KÝ TÀI KHOẢN
+  // 👉 BOT ĐĂNG KÝ ACC
   fetch(ACC_WEBHOOK_URL,{
     method:"POST",
     headers:{ "Content-Type":"application/json" },
@@ -1181,48 +1187,9 @@ function registerAccount(){
 🎯 Stage: **${stage}**
 ⏰ ${time}`
     })
-  }).then(()=>{
-    loadAccount();
-  });
-}
-const ALLOWED_STAGE = ["3 High","2 Low","2 Mid","2 High"];
+  }).catch(err=>console.error(err));
 
-/* ===== LOAD ACCOUNT ===== */
-function loadAccount(){
-  const acc = JSON.parse(localStorage.getItem("account"));
-  if(!acc) return;
-
-  accBox.style.display = "none";
-  userInfo.style.display = "block";
-  showGame.innerText = acc.game;
-  showDiscord.innerText = acc.discord;
-  showStage.innerText = acc.stage;
-}
-loadAccount();
-
-/* ===== REGISTER ===== */
-function registerAccount(){
-  const game = accGame.value.trim();
-  const discord = accDiscord.value.trim();
-  const stage = accStage.value;
-
-  if(!game || !discord || !stage){
-    alert("❌ Nhập đầy đủ thông tin");
-    return;
-  }
-
-  if(!ALLOWED_STAGE.includes(stage)){
-    alert("❌ Stage không hợp lệ");
-    return;
-  }
-
-  localStorage.setItem("account", JSON.stringify({
-    game,
-    discord,
-    stage
-  }));
-
-  loadAccount();
+  loadUI();
 }
 
 /* ===== LOGOUT ===== */
@@ -1230,11 +1197,56 @@ function logout(){
   localStorage.clear();
   location.reload();
 }
+
+/* ===== REGISTER MATCH (GIỮ LOGIC CŨ) ===== */
+function registerMatch(){
+  const acc = JSON.parse(localStorage.getItem("account"));
+  if(!acc){
+    alert("❌ Chưa đăng ký tài khoản");
+    return;
+  }
+
+  if(localStorage.getItem("matchRegistered")){
+    alert("❌ Đã đăng ký rồi");
+    return;
+  }
+
+  const last = localStorage.getItem("lastMatchTime");
+  if(last && Date.now()-last < COOLDOWN){
+    alert("⏳ Chờ thêm chút nhé");
+    return;
+  }
+
+  const time = new Date().toLocaleString();
+
+  fetch(MATCH_WEBHOOK_URL,{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({
+      content:
+`🏆 **ĐĂNG KÝ THI ĐẤU**
+🎮 Game: **${acc.game}**
+💬 Discord: **${acc.discord}**
+🎯 Stage: **${acc.stage}**
+⏰ ${time}`
+    })
+  }).then(()=>{
+    localStorage.setItem("matchRegistered","true");
+    localStorage.setItem("lastMatchTime",Date.now());
+
+    const h = JSON.parse(localStorage.getItem("matchHistory")) || [];
+    h.push("🏆 " + time);
+    localStorage.setItem("matchHistory",JSON.stringify(h));
+
+    location.reload();
+  });
+}
 </script>
 </div>
 
 </body>
 </html>
+
 
 
 
