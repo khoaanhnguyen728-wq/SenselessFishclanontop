@@ -600,12 +600,6 @@ body{
 .register-box button:hover {
   background: #404EED;
 }
-.register-box {
-  position: fixed;
-  top: 120px;
-  right: 25px;
-  z-index: 9998;
-}
 @media (max-width: 768px) {
   .register-box {
     position: static;
@@ -825,6 +819,67 @@ body{
     50%{transform:translateY(-8px)}
     100%{transform:translateY(0)}
 }
+/* ===== REGISTER LEFT - RIGHT ===== */
+.register-wrapper{
+  position: fixed;
+  top: 120px;
+  right: 25px;
+  display: flex;
+  gap: 20px;
+  z-index: 9998;
+}
+
+.register-wrapper .register-box{
+  width: 260px;
+}
+
+/* MOBILE */
+@media (max-width:768px){
+  .register-wrapper{
+    position: static;
+    flex-direction: column;
+    margin: 20px auto;
+  }
+}
+/* ===== STAGE SELECT ===== */
+.stage-box{
+  margin: 10px 0;
+}
+
+.stage-box label{
+  display: block;
+  margin-bottom: 6px;
+  font-weight: bold;
+  color: #e5e7eb;
+}
+
+#accStage{
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 2px solid #334155;
+  background: #020617;
+  color: #e5e7eb;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all .2s ease;
+}
+
+#accStage:hover{
+  border-color: #22c55e;
+}
+
+#accStage:focus{
+  outline: none;
+  border-color: #22c55e;
+  box-shadow: 0 0 0 2px rgba(34,197,94,.3);
+}
+
+#accStage option{
+  background: #020617;
+  color: #e5e7eb;
+}
+
 </style>
 </head>
 
@@ -1002,53 +1057,199 @@ members.forEach(m=>{
 <div id="discordJoin" onclick="window.open('https://discord.gg/senselessfish')">
     💬
 </div>
-<div class="register-box">
-  <h3>📝 Đăng ký end</h3>
+<!-- ===== REGISTER WRAPPER ===== -->
+<div class="register-wrapper">
 
-  <input type="text" id="gameName" placeholder="Tên trong game">
-  <input type="text" id="discordName" placeholder="Discord (vd: user#1234)">
+<!-- ===== ACCOUNT REGISTER ===== -->
+<div class="register-box" id="accountBox">
 
-  <button onclick="sendRegister()">🚀 Đăng ký</button>
+  <!-- FORM ĐĂNG KÝ -->
+  <div id="accBox">
+    <h3>👤 Đăng ký tài khoản</h3>
+
+    <input id="accGame" placeholder="Tên trong game">
+    <input id="accDiscord" placeholder="Discord (user#1234)">
+
+    <div class="stage-box">
+  <label for="accStage">🎯 Chọn Stage</label>
+
+  <select id="accStage">
+    <option value="">-- Chọn Stage --</option>
+    <option value="3 High">🔥 3 High</option>
+    <option value="2 Low">❄️ 2 Low</option>
+    <option value="2 Mid">⚡ 2 Mid</option>
+    <option value="2 High">💎 2 High</option>
+  </select>
+</div>
+
+    <button onclick="registerAccount()">✅ Đăng ký</button>
+  </div>
+
+  <!-- USER INFO -->
+  <div id="userInfo" style="display:none">
+    <h3>✅ Tài khoản</h3>
+    <p>🎮 <b id="showGame"></b></p>
+    <p>💬 <b id="showDiscord"></b></p>
+    <p>🎯 <b id="showStage"></b></p>
+    <button onclick="logout()" style="background:#ef4444">🚪 Đăng xuất</button>
+  </div>
+
+</div>
+
+  <!-- ===== MATCH BOX (RIGHT) ===== -->
+  <div class="register-box">
+
+    <h3>🏆 Đăng ký thi đấu</h3>
+    <p id="matchStatus">⛔ Chưa đăng nhập</p>
+
+    <button id="matchBtn" onclick="registerMatch()">
+      🚀 Đăng ký thi đấu
+    </button>
+
+    <div id="historyBox" style="display:none;margin-top:10px">
+      <h4>📋 Lịch sử</h4>
+      <ul id="historyList"></ul>
+    </div>
+
+  </div>
+
 </div>
 <script>
 const WEBHOOK_URL = "";
+const COOLDOWN = 60000;
 
-function sendRegister() {
-  const game = document.getElementById("gameName").value;
-  const discord = document.getElementById("discordName").value;
+function loadUI(){
+  const acc = JSON.parse(localStorage.getItem("account"));
+  const done = localStorage.getItem("matchRegistered");
+  const history = JSON.parse(localStorage.getItem("matchHistory")) || [];
 
-  if (!game || !discord) {
-    alert("❌ Vui lòng nhập đầy đủ thông tin");
+  if(acc){
+    accBox.style.display="none";
+    userInfo.style.display="block";
+    showGame.innerText = acc.game;
+    showDiscord.innerText = acc.discord;
+
+    matchStatus.innerHTML = done
+      ? "🟢 <b>Đã đăng ký thi đấu</b>"
+      : "🟡 Sẵn sàng đăng ký";
+
+    matchBtn.disabled = !!done;
+    matchBtn.innerText = done ? "✔ Đã đăng ký" : "🚀 Đăng ký thi đấu";
+
+    if(history.length){
+      historyBox.style.display="block";
+      historyList.innerHTML = history.map(h=>`<li>${h}</li>`).join("");
+    }
+  }
+}
+loadUI();
+
+/* ===== ACCOUNT ===== */
+function registerAccount(){
+  if(!accGame.value || !accDiscord.value){
+    alert("❌ Nhập đầy đủ thông tin");
+    return;
+  }
+  localStorage.setItem("account",JSON.stringify({
+    game:accGame.value.trim(),
+    discord:accDiscord.value.trim()
+  }));
+  location.reload();
+}
+
+function logout(){
+  localStorage.clear();
+  location.reload();
+}
+
+/* ===== MATCH ===== */
+function registerMatch(){
+  const acc = JSON.parse(localStorage.getItem("account"));
+  if(!acc){
+    alert("❌ Chưa đăng ký tài khoản");
+    return;
+  }
+  if(localStorage.getItem("matchRegistered")){
+    alert("❌ Đã đăng ký rồi");
     return;
   }
 
-  const data = {
-    content: 
-`📢 **ĐĂNG KÝ THI ĐẤU MỚI**
-🎮 Game: **${game}**
-💬 Discord: **${discord}**
-⏰ Thời gian: ${new Date().toLocaleString()}`
-  };
+  const last = localStorage.getItem("lastMatchTime");
+  if(last && Date.now()-last < COOLDOWN){
+    alert("⏳ Chờ thêm chút nhé");
+    return;
+  }
 
-  fetch(WEBHOOK_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data)
-  })
-  .then(() => {
-    alert("✅ Đăng ký thành công!");
-    document.getElementById("gameName").value = "";
-    document.getElementById("discordName").value = "";
-  })
-  .catch(() => {
-    alert("❌ Gửi thất bại!");
+  const time = new Date().toLocaleString();
+  fetch(WEBHOOK_URL,{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({
+      content:
+`🏆 **ĐĂNG KÝ THI ĐẤU**
+🎮 Game: **${acc.game}**
+💬 Discord: **${acc.discord}**
+⏰ ${time}`
+    })
+  }).then(()=>{
+    localStorage.setItem("matchRegistered","true");
+    localStorage.setItem("lastMatchTime",Date.now());
+    const h = JSON.parse(localStorage.getItem("matchHistory"))||[];
+    h.push("🏆 "+time);
+    localStorage.setItem("matchHistory",JSON.stringify(h));
+    location.reload();
   });
 }
+const ALLOWED_STAGE = ["3 High","2 Low","2 Mid","2 High"];
+
+/* ===== LOAD ACCOUNT ===== */
+function loadAccount(){
+  const acc = JSON.parse(localStorage.getItem("account"));
+  if(!acc) return;
+
+  accBox.style.display = "none";
+  userInfo.style.display = "block";
+  showGame.innerText = acc.game;
+  showDiscord.innerText = acc.discord;
+  showStage.innerText = acc.stage;
+}
+loadAccount();
+
+/* ===== REGISTER ===== */
+function registerAccount(){
+  const game = accGame.value.trim();
+  const discord = accDiscord.value.trim();
+  const stage = accStage.value;
+
+  if(!game || !discord || !stage){
+    alert("❌ Nhập đầy đủ thông tin");
+    return;
+  }
+
+  if(!ALLOWED_STAGE.includes(stage)){
+    alert("❌ Stage không hợp lệ");
+    return;
+  }
+
+  localStorage.setItem("account", JSON.stringify({
+    game,
+    discord,
+    stage
+  }));
+
+  loadAccount();
+}
+
+/* ===== LOGOUT ===== */
+function logout(){
+  localStorage.clear();
+  location.reload();
+}
 </script>
+</div>
 
 </body>
 </html>
-
 
 
 
