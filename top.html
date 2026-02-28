@@ -879,6 +879,42 @@ body{
   background: #020617;
   color: #e5e7eb;
 }
+#music-player{
+  position:fixed;
+  bottom:18px;
+  left:18px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+
+  background:rgba(0,0,0,.6);
+  padding:10px 14px;
+  border-radius:16px;
+  z-index:9999;
+}
+
+#soundToggle{
+  width:42px;
+  height:42px;
+  border-radius:50%;
+  background:#1e90ff;
+  color:#fff;
+  font-size:22px;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+}
+
+#soundToggle.muted{
+  background:#ef4444;
+}
+
+#volumeSlider{
+  width:110px;
+  cursor:pointer;
+}
 
 </style>
 </head>
@@ -1115,13 +1151,10 @@ members.forEach(m=>{
 
 </div>
 <script>
-/* ===== CONFIG ===== */
-const ACC_WEBHOOK_URL   = "https://discordapp.com/api/webhooks/1477274176841846957/69h52lIfkTobx6cq5nQMYcZ-wn7xMQDC2Q9xsjfKCxd2cwUl0EH0LW9HXDRm0aoVojO6";
-const MATCH_WEBHOOK_URL = "";
+const ACC_WEBHOOK_URL   = "LINK_WEBHOOK_BOT_ĐĂNG_KÝ_ACC";
+const MATCH_WEBHOOK_URL = "LINK_WEBHOOK_BOT_THI_ĐẤU";
 const COOLDOWN = 60000;
-const ALLOWED_STAGE = ["3 High","2 Low","2 Mid","2 High"];
 
-/* ===== LOAD UI ===== */
 function loadUI(){
   const acc = JSON.parse(localStorage.getItem("account"));
   const done = localStorage.getItem("matchRegistered");
@@ -1130,10 +1163,8 @@ function loadUI(){
   if(acc){
     accBox.style.display="none";
     userInfo.style.display="block";
-
     showGame.innerText = acc.game;
     showDiscord.innerText = acc.discord;
-    showStage.innerText = acc.stage;
 
     matchStatus.innerHTML = done
       ? "🟢 <b>Đã đăng ký thi đấu</b>"
@@ -1150,7 +1181,6 @@ function loadUI(){
 }
 loadUI();
 
-/* ===== REGISTER ACCOUNT (FIXED) ===== */
 function registerAccount(){
   const game = accGame.value.trim();
   const discord = accDiscord.value.trim();
@@ -1168,14 +1198,14 @@ function registerAccount(){
 
   const time = new Date().toLocaleString();
 
-  // LƯU ACCOUNT
+  // Lưu account
   localStorage.setItem("account", JSON.stringify({
     game,
     discord,
     stage
   }));
 
-  // 👉 BOT ĐĂNG KÝ ACC
+  // 👉 BOT ĐĂNG KÝ TÀI KHOẢN
   fetch(ACC_WEBHOOK_URL,{
     method:"POST",
     headers:{ "Content-Type":"application/json" },
@@ -1187,9 +1217,48 @@ function registerAccount(){
 🎯 Stage: **${stage}**
 ⏰ ${time}`
     })
-  }).catch(err=>console.error(err));
+  }).then(()=>{
+    loadAccount();
+  });
+}
+const ALLOWED_STAGE = ["3 High","2 Low","2 Mid","2 High"];
 
-  loadUI();
+/* ===== LOAD ACCOUNT ===== */
+function loadAccount(){
+  const acc = JSON.parse(localStorage.getItem("account"));
+  if(!acc) return;
+
+  accBox.style.display = "none";
+  userInfo.style.display = "block";
+  showGame.innerText = acc.game;
+  showDiscord.innerText = acc.discord;
+  showStage.innerText = acc.stage;
+}
+loadAccount();
+
+/* ===== REGISTER ===== */
+function registerAccount(){
+  const game = accGame.value.trim();
+  const discord = accDiscord.value.trim();
+  const stage = accStage.value;
+
+  if(!game || !discord || !stage){
+    alert("❌ Nhập đầy đủ thông tin");
+    return;
+  }
+
+  if(!ALLOWED_STAGE.includes(stage)){
+    alert("❌ Stage không hợp lệ");
+    return;
+  }
+
+  localStorage.setItem("account", JSON.stringify({
+    game,
+    discord,
+    stage
+  }));
+
+  loadAccount();
 }
 
 /* ===== LOGOUT ===== */
@@ -1197,58 +1266,96 @@ function logout(){
   localStorage.clear();
   location.reload();
 }
-
-/* ===== REGISTER MATCH (GIỮ LOGIC CŨ) ===== */
-function registerMatch(){
-  const acc = JSON.parse(localStorage.getItem("account"));
-  if(!acc){
-    alert("❌ Chưa đăng ký tài khoản");
-    return;
-  }
-
-  if(localStorage.getItem("matchRegistered")){
-    alert("❌ Đã đăng ký rồi");
-    return;
-  }
-
-  const last = localStorage.getItem("lastMatchTime");
-  if(last && Date.now()-last < COOLDOWN){
-    alert("⏳ Chờ thêm chút nhé");
-    return;
-  }
-
-  const time = new Date().toLocaleString();
-
-  fetch(MATCH_WEBHOOK_URL,{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({
-      content:
-`🏆 **ĐĂNG KÝ THI ĐẤU**
-🎮 Game: **${acc.game}**
-💬 Discord: **${acc.discord}**
-🎯 Stage: **${acc.stage}**
-⏰ ${time}`
-    })
-  }).then(()=>{
-    localStorage.setItem("matchRegistered","true");
-    localStorage.setItem("lastMatchTime",Date.now());
-
-    const h = JSON.parse(localStorage.getItem("matchHistory")) || [];
-    h.push("🏆 " + time);
-    localStorage.setItem("matchHistory",JSON.stringify(h));
-
-    location.reload();
-  });
-}
 </script>
 </div>
+<!-- MUSIC PLAYER -->
+<div id="music-player">
+  <div id="soundToggle">🔊</div>
+  <input type="range" id="volumeSlider" min="0" max="100" value="100">
+</div>
+
+<!-- YOUTUBE PLAYER ẨN -->
+<div id="yt-player"></div>
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+let player;
+let started = false;
+let isMuted = false;
+
+function onYouTubeIframeAPIReady(){
+  player = new YT.Player('yt-player',{
+    height:'0',
+    width:'0',
+    videoId:'G-9EEDWvg9E',
+    playerVars:{
+      autoplay:0,
+      loop:1,
+      playlist:'G-9EEDWvg9E',
+      controls:0
+    },
+    events:{
+      onReady:()=>{
+        player.setVolume(100);
+      }
+    }
+  });
+}
+
+/* click lần đầu để phát nhạc */
+document.addEventListener("click",()=>{
+  if(started || !player) return;
+  player.playVideo();
+  started = true;
+});
+
+/* icon loa */
+soundToggle.onclick = ()=>{
+  if(!player) return;
+
+  if(!started){
+    player.playVideo();
+    started = true;
+  }
+
+  isMuted = !isMuted;
+
+  if(isMuted){
+    player.mute();
+    volumeSlider.value = 0;
+    soundToggle.textContent = "🔇";
+    soundToggle.classList.add("muted");
+  }else{
+    player.unMute();
+    player.setVolume(100);
+    volumeSlider.value = 100;
+    soundToggle.textContent = "🔊";
+    soundToggle.classList.remove("muted");
+  }
+};
+
+/* slider âm lượng */
+volumeSlider.addEventListener("input",()=>{
+  if(!player) return;
+
+  const v = volumeSlider.value;
+  player.setVolume(v);
+
+  if(v == 0){
+    player.mute();
+    soundToggle.textContent = "🔇";
+    soundToggle.classList.add("muted");
+    isMuted = true;
+  }else{
+    player.unMute();
+    soundToggle.textContent = "🔊";
+    soundToggle.classList.remove("muted");
+    isMuted = false;
+  }
+});
+</script>
 
 </body>
 </html>
-
-
-
 
 
 
