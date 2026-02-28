@@ -657,6 +657,42 @@ body{
     50%{transform:translateY(-8px)}
     100%{transform:translateY(0)}
 }
+#music-player{
+  position:fixed;
+  bottom:18px;
+  left:18px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+
+  background:rgba(0,0,0,.6);
+  padding:10px 14px;
+  border-radius:16px;
+  z-index:9999;
+}
+
+#soundToggle{
+  width:42px;
+  height:42px;
+  border-radius:50%;
+  background:#1e90ff;
+  color:#fff;
+  font-size:22px;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+}
+
+#soundToggle.muted{
+  background:#ef4444;
+}
+
+#volumeSlider{
+  width:110px;
+  cursor:pointer;
+}
 </style>
 </head>
 
@@ -823,6 +859,91 @@ body{
 <div id="discordJoin" onclick="window.open('https://discord.gg/yourlink')">
     💬
 </div>
+<!-- MUSIC PLAYER -->
+<div id="music-player">
+  <div id="soundToggle">🔊</div>
+  <input type="range" id="volumeSlider" min="0" max="100" value="100">
+</div>
+
+<!-- YOUTUBE PLAYER ẨN -->
+<div id="yt-player"></div>
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+let player;
+let started = false;
+let isMuted = false;
+
+function onYouTubeIframeAPIReady(){
+  player = new YT.Player('yt-player',{
+    height:'0',
+    width:'0',
+    videoId:'G-9EEDWvg9E',
+    playerVars:{
+      autoplay:0,
+      loop:1,
+      playlist:'G-9EEDWvg9E',
+      controls:0
+    },
+    events:{
+      onReady:()=>{
+        player.setVolume(100);
+      }
+    }
+  });
+}
+
+/* click lần đầu để phát nhạc */
+document.addEventListener("click",()=>{
+  if(started || !player) return;
+  player.playVideo();
+  started = true;
+});
+
+/* icon loa */
+soundToggle.onclick = ()=>{
+  if(!player) return;
+
+  if(!started){
+    player.playVideo();
+    started = true;
+  }
+
+  isMuted = !isMuted;
+
+  if(isMuted){
+    player.mute();
+    volumeSlider.value = 0;
+    soundToggle.textContent = "🔇";
+    soundToggle.classList.add("muted");
+  }else{
+    player.unMute();
+    player.setVolume(100);
+    volumeSlider.value = 100;
+    soundToggle.textContent = "🔊";
+    soundToggle.classList.remove("muted");
+  }
+};
+
+/* slider âm lượng */
+volumeSlider.addEventListener("input",()=>{
+  if(!player) return;
+
+  const v = volumeSlider.value;
+  player.setVolume(v);
+
+  if(v == 0){
+    player.mute();
+    soundToggle.textContent = "🔇";
+    soundToggle.classList.add("muted");
+    isMuted = true;
+  }else{
+    player.unMute();
+    soundToggle.textContent = "🔊";
+    soundToggle.classList.remove("muted");
+    isMuted = false;
+  }
+});
+</script>
 
 </div>
 
