@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Allies Clan</title>
+
+<style>
+
+body{
+  font-family:Arial, sans-serif;
+
+  background: linear-gradient(
+    135deg,
+    #0B3C5D,
+    #328CC1,
+    #0B3C5D
+  );
+
+  background-size: 400% 400%;
+  animation: bgMove 15s ease infinite;
+
+  color:white;
+}
+
+/* animate nền giống trang chính */
+@keyframes bgMove{
+  0%{background-position:0% 50%}
+  50%{background-position:100% 50%}
+  100%{background-position:0% 50%}
+}
+h2{
+  text-align:center;
+  margin:30px 0;
+}
+
+/* ===== CLAN GRID ===== */
+.clan-grid{
+  max-width:1000px;
+  margin:0 auto;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:24px;
+  padding:20px;
+}
+
+.clan-card{
+  background:rgba(0,0,0,.45);
+  border-radius:18px;
+  padding:20px;
+  text-align:center;
+  box-shadow:0 12px 30px rgba(0,0,0,.6);
+  transition:.25s;
+}
+
+.clan-card:hover{
+  transform:translateY(-6px) scale(1.03);
+  box-shadow:0 0 25px rgba(0,234,255,.6);
+}
+
+/* avatar */
+.clan-avatar{
+  width:110px;
+  height:110px;
+  margin:0 auto 12px;
+  border-radius:50%;
+  background-size:cover;
+  background-position:center;
+  border:4px solid #00eaff;
+  box-shadow:0 0 18px #00eaff;
+}
+
+.clan-name{
+  font-size:18px;
+  font-weight:bold;
+  margin-bottom:6px;
+}
+
+.clan-desc{
+  font-size:14px;
+  color:#cbd5e1;
+  margin-bottom:14px;
+}
+
+.clan-actions{
+  display:flex;
+  gap:10px;
+  justify-content:center;
+}
+
+.clan-actions a{
+  text-decoration:none;
+  padding:8px 14px;
+  border-radius:8px;
+  font-size:13px;
+  font-weight:600;
+  transition:.2s;
+}
+
+.view-clan{
+  background:white;
+  color:#1e90ff;
+}
+
+.view-clan:hover{
+  box-shadow:0 0 12px #00eaff;
+}
+
+.join-discord{
+  background:#5865F2;
+  color:white;
+}
+
+.join-discord:hover{
+  box-shadow:0 0 15px rgba(88,101,242,.9);
+}
+html, body{
+  margin:0;
+  padding:0;
+  width:100%;
+}
+
+.navbar{
+  position:fixed;
+  top:16px;
+  left:50%;
+  transform:translateX(-50%);
+
+  width:94%;
+  max-width:1200px;
+  height:58px;
+
+  display:flex;
+  align-items:center;
+  gap:24px;
+
+  padding:0 18px;
+
+  background:linear-gradient(180deg,#0e2a47,#0b1f35);
+  border-radius:18px;
+
+  box-shadow:
+    0 0 0 2px #1e90ff,
+    0 8px 24px rgba(0,0,0,.45);
+
+  z-index:9999;
+}
+
+.nav-tools{
+  position:relative;
+  margin-left:auto;   /* ĐẨY SANG CUỐI NAVBAR */
+}
+
+/* nút */
+.tools-btn{
+  color:#ddd;
+  font-weight:600;
+  padding:8px 14px;
+  border-radius:12px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  transition:.25s;
+}
+
+.tools-btn:hover{
+  background:rgb(26,82,204);
+  color:#00eaff;
+  box-shadow:0 0 12px rgba(0,234,255,.6);
+}
+
+/* dropdown */
+.tools-dropdown{
+  position:absolute;
+  top:120%;
+  right:0;
+
+  min-width:190px;
+  background:rgba(10,20,40,.97);
+  border-radius:14px;
+  padding:8px;
+
+  display:none;
+  flex-direction:column;
+  gap:4px;
+
+  box-shadow:
+    0 12px 30px rgba(0,0,0,.6),
+    0 0 20px rgba(0,234,255,.3);
+
+  z-index:99999;
+}
+
+/* item */
+.tools-dropdown a{
+  text-decoration:none;
+  color:#e5e7eb;
+  padding:10px 12px;
+  border-radius:10px;
+  font-size:14px;
+  transition:.2s;
+}
+
+.tools-dropdown a:hover{
+  background:#1e90ff;
+  color:white;
+  box-shadow:0 0 12px #00eaff;
+}
+
+/* hover mở */
+.nav-tools:hover .tools-dropdown{
+  display:flex;
+}
+/* ===== ARROW ===== */
+.tools-btn .arrow{
+  font-size:12px;
+  margin-left:4px;
+  transition:.25s;
+  opacity:.8;
+}
+
+/* khi hover (menu mở) → mũi tên xuống */
+.nav-tools:hover .tools-btn .arrow{
+  transform:rotate(180deg); /* ▲ → ▼ */
+}
+
+/* chừa chỗ cho content */
+.nav-space{
+  height:90px;
+}
+
+/* LOGO */
+.nav-logo{
+  width:36px;
+  height:36px;
+  border-radius:10px;
+  object-fit:cover;
+}
+
+/* MENU GIỮA */
+.nav-center{
+  display:flex;
+  gap: 22px;
+
+  margin-left:auto;
+  margin-right:auto;
+}
+
+.nav-item{
+  color:#e5e7eb;
+  text-decoration:none;
+  font-size:14px;
+  font-weight:600;
+
+  display:flex;
+  align-items:center;
+  gap:6px;
+
+  padding:6px 10px;
+  border-radius:10px;
+  transition:.2s;
+}
+
+.nav-item:hover{
+  color:#38bdf8;
+  background:rgba(56,189,248,.12);
+}
+
+/* TOOLS */
+.nav-tools{
+  margin-left:auto; /* ĐẨY QUA PHẢI */
+  position:relative;
+}
+
+.tools-btn{
+  color:#e5e7eb;
+  font-size:14px;
+  font-weight:600;
+
+  display:flex;
+  align-items:center;
+  gap:6px;
+
+  padding:6px 10px;
+  border-radius:10px;
+  cursor:pointer;
+  transition:.2s;
+}
+
+.tools-btn:hover{
+  color:#38bdf8;
+  background:rgba(56,189,248,.12);
+}
+
+.arrow{
+  font-size:11px;
+  transition:.25s;
+}
+
+/* DROPDOWN */
+.tools-dropdown{
+  position:absolute;
+  top:120%;
+  right:0;
+
+  min-width:180px;
+  padding:8px;
+
+  background:#0b1f35;
+  border-radius:14px;
+
+  box-shadow:
+    0 0 0 2px #1e90ff,
+    0 12px 30px rgba(0,0,0,.6);
+
+  display:none;
+  flex-direction:column;
+  gap:4px;
+}
+
+.nav-tools:hover .tools-dropdown{
+  display:flex;
+}
+
+.nav-tools:hover .arrow{
+  transform:rotate(180deg);
+}
+
+.tools-dropdown a{
+  color:#e5e7eb;
+  text-decoration:none;
+  font-size:14px;
+
+  padding:8px 10px;
+  border-radius:10px;
+  transition:.2s;
+}
+
+.tools-dropdown a:hover{
+  color:#38bdf8;
+  background:rgba(56,189,248,.15);
+}
+
+.nav-tools:hover .tools-dropdown{
+  display:flex;
+}
+
+.tools-dropdown a{
+  color:#e5e7eb;
+  text-decoration:none;
+  font-size:14px;
+
+  padding:8px 10px;
+  border-radius:10px;
+  transition:.2s;
+}
+
+.tools-dropdown a:hover{
+  background:rgba(56,189,248,.15);
+  color:#38bdf8;
+}
+</style>
+</head>
+
+<body>
+<!-- ===== NAVBAR ===== -->
+<div class="navbar">
+  <div class="nav-left">
+    <img src="images/logo.png" class="nav-logo" alt="Logo">
+  </div>
+
+  <div class="nav-center">
+    <a href="index.html" class="nav-item">
+      🏠 <span>Trang chủ</span>
+    </a>
+    <a href="top.html" class="nav-item">
+      📊 <span>Bảng xếp hạng</span>
+    </a>
+    <a href="staff.html" class="nav-item">
+      👥 <span>Staff Clan</span>
+    </a>
+    <a href="about.html" class="nav-item">
+      📘 <span>Giới thiệu</span>
+      <!-- ===== TOOLS MENU (RIGHT END) ===== -->
+    </a>
+<div class="nav-tools">
+  <div class="tools-btn">
+    🧰 <span>Công cụ</span>
+    <span class="arrow">▲</span>
+  </div>
+
+  <div class="tools-dropdown">
+    <a href="mainers.html">🛠️ Mainers List</a>
+    <a href="allies.html">🤝 Allies Clan</a>
+  </div>
+</div>
+    </a>
+  </div>
+</div>
+
+<!-- CHỪA KHOẢNG TRỐNG TRÁNH CHE NỘI DUNG -->
+<div class="nav-space"></div>
+
+<h2>🤝 Allies Clan List</h2>
+
+<div class="clan-grid">
+
+  <!-- CLAN 1 -->
+  <div class="clan-card">
+    <div class="clan-avatar"
+      style="background-image:url('images/clan1.png')"></div>
+
+    <div class="clan-name">...</div>
+    <div class="clan-desc">...</div>
+
+    <div class="clan-actions">
+      <a href="clan-senseless.html" class="view-clan">👁 View Clan</a>
+      <a href="https://discord.gg/senselessfish" target="_blank"
+         class="join-discord">💬 Discord</a>
+    </div>
+  </div>
+
+  <!-- CLAN 2 -->
+  <div class="clan-card">
+    <div class="clan-avatar"
+      style="background-image:url('images/clan2.png')"></div>
+
+    <div class="clan-name">...</div>
+    <div class="clan-desc">...</div>
+
+    <div class="clan-actions">
+      <a href="#" class="view-clan">👁 View Clan</a>
+      <a href="https://discord.gg/xxxx" target="_blank"
+         class="join-discord">💬 Discord</a>
+    </div>
+  </div>
+
+    <!-- CLAN 2 -->
+  <div class="clan-card">
+    <div class="clan-avatar"
+      style="background-image:url('images/clan2.png')"></div>
+
+    <div class="clan-name">...</div>
+    <div class="clan-desc">...</div>
+
+    <div class="clan-actions">
+      <a href="#" class="view-clan">👁 View Clan</a>
+      <a href="https://discord.gg/xxxx" target="_blank"
+         class="join-discord">💬 Discord</a>
+    </div>
+  </div>
+
+      <!-- CLAN 2 -->
+  <div class="clan-card">
+    <div class="clan-avatar"
+      style="background-image:url('images/clan2.png')"></div>
+
+    <div class="clan-name">...</div>
+    <div class="clan-desc">...</div>
+
+    <div class="clan-actions">
+      <a href="#" class="view-clan">👁 View Clan</a>
+      <a href="https://discord.gg/xxxx" target="_blank"
+         class="join-discord">💬 Discord</a>
+    </div>
+  </div>
+
+        <!-- CLAN 2 -->
+  <div class="clan-card">
+    <div class="clan-avatar"
+      style="background-image:url('images/clan2.png')"></div>
+
+    <div class="clan-name">...</div>
+    <div class="clan-desc">...</div>
+
+    <div class="clan-actions">
+      <a href="#" class="view-clan">👁 View Clan</a>
+      <a href="https://discord.gg/xxxx" target="_blank"
+         class="join-discord">💬 Discord</a>
+    </div>
+  </div>
+
+        <!-- CLAN 2 -->
+  <div class="clan-card">
+    <div class="clan-avatar"
+      style="background-image:url('images/clan2.png')"></div>
+
+    <div class="clan-name">...</div>
+    <div class="clan-desc">...</div>
+
+    <div class="clan-actions">
+      <a href="#" class="view-clan">👁 View Clan</a>
+      <a href="https://discord.gg/xxxx" target="_blank"
+         class="join-discord">💬 Discord</a>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

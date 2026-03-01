@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Mainers List | SenselessFish</title>
+
+<style>
+body{
+    margin:0;
+    font-family:Arial, sans-serif;
+    background:linear-gradient(135deg,#0B3C5D,#328CC1,#0B3C5D);
+    background-size:400% 400%;
+    animation:bgMove 15s ease infinite;
+    color:white;
+    text-align:center;
+}
+@keyframes bgMove{
+    0%{background-position:0% 50%}
+    50%{background-position:100% 50%}
+    100%{background-position:0% 50%}
+}
+
+/* BUTTON */
+.btn{
+    padding:14px 30px;
+    margin:10px;
+    border:none;
+    border-radius:8px;
+    background:#1464A0;
+    color:white;
+    cursor:pointer;
+    transition:.2s;
+}
+.btn:hover{
+    transform:scale(1.07);
+    box-shadow:0 0 15px #00eaff;
+}
+
+.staff-card{
+    background:linear-gradient(180deg,#0c2236,#091a2b);
+    border-radius:20px;
+    padding:20px;
+    width:220px;
+    height:220px;              /* ← QUAN TRỌNG */
+    box-shadow:0 20px 40px rgba(0,0,0,.55);
+    transition:.3s;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+}
+.staff-card:hover{
+    transform:translateY(-10px) scale(1.05);
+}
+.staff-card:hover{
+    transform:translateY(-12px) scale(1.04);
+}
+.staff-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, 220px);
+    gap:50px;                 /* ← tăng mạnh khoảng cách */
+    justify-content:center;
+    width:90%;
+    margin:50px auto;
+}
+.staff-card{
+    border-radius:20px;
+    overflow:hidden;          /* ← tránh shadow chồng */
+}
+
+/* NAME */
+.name{
+    font-size:20px;
+    font-weight:bold;
+    color:#b26bff;
+    margin-bottom:16px;
+}
+
+/* VIEW DISCORD */
+.view-dis{
+    display:inline-block;
+    padding:10px 26px;
+    background:white;
+    color:black;
+    border-radius:20px;
+    font-weight:bold;
+    text-decoration:none;
+    transition:.2s;
+}
+.view-dis:hover{
+    transform:scale(1.1);
+    box-shadow:0 0 18px white;
+}
+/* Hover (PC) */
+#discordJoin:hover{
+    transform:translateX(-50%) scale(1.12);
+    box-shadow:
+        0 12px 28px rgba(88,101,242,.9),
+        0 0 30px rgba(88,101,242,1);
+}
+/* ===== DISCORD FLOAT BUTTON ===== */
+#discordJoin{
+    position:fixed;
+    bottom:14px;
+    left:50%;
+    transform:translateX(-50%);
+    width:52px;
+    height:52px;
+
+    background:#5865F2;
+    border-radius:14px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    font-size:22px;
+    cursor:pointer;
+    z-index:20;
+
+    box-shadow:
+        0 8px 20px rgba(88,101,242,.6),
+        0 0 18px rgba(88,101,242,.8);
+
+    animation:
+        discordFloat 2.6s ease-in-out infinite,
+        discordGlow 1.8s ease-in-out infinite;
+
+    transition:.25s;
+}
+
+/* Hover (PC) */
+#discordJoin:hover{
+    transform:translateX(-50%) scale(1.12);
+    box-shadow:
+        0 12px 28px rgba(88,101,242,.9),
+        0 0 30px rgba(88,101,242,1);
+}
+
+/* ===== DISCORD FLOAT BUTTON ===== */
+#discordJoin{
+    position:fixed;
+    bottom:14px;
+    left:50%;
+    transform:translateX(-50%);
+    width:52px;
+    height:52px;
+
+    background:#5865F2;
+    border-radius:14px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    font-size:22px;
+    cursor:pointer;
+    z-index:20;
+
+    box-shadow:
+        0 8px 20px rgba(88,101,242,.6),
+        0 0 18px rgba(88,101,242,.8);
+
+    animation:
+        discordFloat 2.6s ease-in-out infinite,
+        discordGlow 1.8s ease-in-out infinite;
+
+    transition:.25s;
+}
+
+/* Hover (PC) */
+#discordJoin:hover{
+    transform:translateX(-50%) scale(1.12);
+    box-shadow:
+        0 12px 28px rgba(88,101,242,.9),
+        0 0 30px rgba(88,101,242,1);
+}
+
+/* ===== FLOAT UP DOWN ===== */
+@keyframes discordFloat{
+    0%   { transform:translateX(-50%) translateY(0); }
+    50%  { transform:translateX(-50%) translateY(-10px); }
+    100% { transform:translateX(-50%) translateY(0); }
+}
+
+/* ===== GLOW PULSE ===== */
+@keyframes discordGlow{
+    0%{
+        box-shadow:
+            0 6px 18px rgba(88,101,242,.6),
+            0 0 12px rgba(88,101,242,.7);
+    }
+    50%{
+        box-shadow:
+            0 12px 30px rgba(88,101,242,.9),
+            0 0 28px rgba(88,101,242,1);
+    }
+    100%{
+        box-shadow:
+            0 6px 18px rgba(88,101,242,.6),
+            0 0 12px rgba(88,101,242,.7);
+    }
+}
+/* ===== NAVBAR ===== */
+.navbar{
+  position:fixed;
+  top:0;
+  left:50%;
+  transform:translateX(-50%);
+  width:95%;
+  max-width:1200px;
+  height:64px;
+
+  background:rgba(0,0,0,.85);
+  backdrop-filter:blur(10px);
+
+  border-radius:18px;
+  padding:0 20px;
+
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+
+  z-index:9999;
+  box-shadow:0 10px 30px rgba(0,0,0,.6);
+}
+
+/* nút */
+.tools-btn{
+  color:#ddd;
+  font-weight:600;
+  padding:8px 14px;
+  border-radius:12px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  transition:.25s;
+}
+
+.tools-btn:hover{
+  background:rgb(26,82,204);
+  color:#00eaff;
+  box-shadow:0 0 12px rgba(0,234,255,.6);
+}
+
+/* dropdown */
+.tools-dropdown{
+  position:absolute;
+  top:120%;
+  right:0;
+
+  min-width:190px;
+  background:rgba(10,20,40,.97);
+  border-radius:14px;
+  padding:8px;
+
+  display:none;
+  flex-direction:column;
+  gap:4px;
+
+  box-shadow:
+    0 12px 30px rgba(0,0,0,.6),
+    0 0 20px rgba(0,234,255,.3);
+
+  z-index:99999;
+}
+
+/* item */
+.tools-dropdown a{
+  text-decoration:none;
+  color:#e5e7eb;
+  padding:10px 12px;
+  border-radius:10px;
+  font-size:14px;
+  transition:.2s;
+}
+
+.tools-dropdown a:hover{
+  background:#1e90ff;
+  color:white;
+  box-shadow:0 0 12px #00eaff;
+}
+
+/* hover mở */
+.nav-tools:hover .tools-dropdown{
+  display:flex;
+}
+/* ===== ARROW ===== */
+.tools-btn .arrow{
+  font-size:12px;
+  margin-left:4px;
+  transition:.25s;
+  opacity:.8;
+}
+
+/* khi hover (menu mở) → mũi tên xuống */
+.nav-tools:hover .tools-btn .arrow{
+  transform:rotate(180deg); /* ▲ → ▼ */
+}
+
+/* khoảng trống tránh che nội dung */
+.nav-space{
+  height:90px;
+}
+
+/* LOGO */
+.nav-logo{
+  height:42px;
+  cursor:pointer;
+  transition:.25s;
+}
+.nav-logo:hover{
+  transform:scale(1.08);
+  filter:drop-shadow(0 0 10px #00eaff);
+}
+
+/* MENU */
+.nav-center{
+  display:flex;
+  gap:22px;
+}
+
+.nav-item{
+  color:#ddd;
+  text-decoration:none;
+  font-size:15px;
+  font-weight:600;
+
+  display:flex;
+  align-items:center;
+  gap:6px;
+
+  padding:8px 14px;
+  border-radius:12px;
+  transition:.25s;
+}
+
+.nav-item:hover{
+  background:rgba(255,255,255,.1);
+  color:#00eaff;
+  box-shadow:0 0 12px rgba(0,234,255,.6);
+  transform:translateY(-2px);
+}
+
+/* ===== MOBILE ===== */
+@media (max-width:768px){
+  .navbar{
+    height:auto;
+    padding:12px;
+  }
+  .nav-center{
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:10px;
+  }
+  .nav-item{
+    font-size:13px;
+    padding:6px 10px;
+  }
+}
+/* ===== NAVBAR GRADIENT ===== */
+.navbar{
+  position: fixed;
+  top: 0;
+
+  /* xích sang trái nhẹ */
+  left: 50%;
+  transform: translateX(calc(-50% - 60px));
+
+  width: 95%;
+  max-width: 1200px;
+  height: 64px;
+
+  /* GRADIENT */
+  background: linear-gradient(
+    135deg,
+    rgba(10,20,40,.95),
+    rgba(30,60,120,.9),
+    rgba(10,20,40,.95)
+  );
+
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 0 22px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  z-index: 9999;
+
+  box-shadow:
+    0 10px 30px rgba(0,0,0,.6),
+    0 0 25px rgba(30,144,255,.4);
+}
+
+/* tránh che nội dung */
+.nav-space{
+  height: 92px;
+}
+/* LOGO */
+.nav-logo{
+  height:42px;
+  cursor:pointer;
+  transition:.25s;
+}
+.nav-logo:hover{
+  transform:scale(1.08);
+  filter:drop-shadow(0 0 10px #00eaff);
+}
+
+/* MENU */
+.nav-center{
+  display:flex;
+  gap:22px;
+}
+
+.nav-item{
+  color:#ddd;
+  text-decoration:none;
+  font-size:15px;
+  font-weight:600;
+
+  display:flex;
+  align-items:center;
+  gap:6px;
+
+  padding:8px 14px;
+  border-radius:12px;
+  transition:.25s;
+}
+
+.nav-item:hover{
+  background:rgb(26, 82, 204);
+  color:#00eaff;
+  box-shadow:0 0 12px rgba(0,234,255,.6);
+  transform:translateY(-2px);
+}
+
+/* ===== MOBILE ===== */
+@media (max-width:768px){
+  .navbar{
+    height:auto;
+    padding:12px;
+  }
+  .nav-center{
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:10px;
+  }
+  .nav-item{
+    font-size:13px;
+    padding:6px 10px;
+  }
+}
+.navbar::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:20px;
+  padding:1px;
+  background:linear-gradient(135deg,#00eaff,#1e90ff,#9d4edd);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;
+          mask-composite:exclude;
+  pointer-events:none;
+}
+/* ===== DOLPHINS ===== */
+#dolphin-layer{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  overflow:hidden;
+  z-index:5; /* dưới icon nhạc */
+}
+
+.dolphin{
+  position:absolute;
+  top:-60px;
+  user-select:none;
+  animation: fall linear forwards;
+}
+
+/* animation rơi */
+@keyframes fall{
+  to{
+    transform: translateY(110vh);
+  }
+}
+</style>
+</head>
+
+<body>
+<!-- DOLPHIN LAYER -->
+<div id="dolphin-layer"></div>
+<!-- NAVBAR -->
+<div class="navbar">
+  <img src="images/logo.png" class="nav-logo">
+  <div class="nav-center">
+    <a href="index.html" class="nav-item">
+      🏠 <span>Trang chủ</span>
+    </a>
+    <a href="top.html" class="nav-item">
+      📊 <span>Bảng xếp hạng</span>
+    </a>
+    <a href="staff.html" class="nav-item">
+      👥 <span>Staff Clan</span>
+    </a>
+    <a href="about.html" class="nav-item">
+      📘 <span>Giới thiệu</span>
+      <!-- ===== TOOLS MENU (RIGHT END) ===== -->
+    </a>
+<div class="nav-tools">
+  <div class="tools-btn">
+    🧰 <span>Công cụ</span>
+    <span class="arrow">▲</span>
+  </div>
+
+  <div class="tools-dropdown">
+    <a href="mainers.html">🛠️ Mainers List</a>
+    <a href="allies.html">🤝 Allies Clan</a>
+  </div>
+</div>
+    </a>
+  </div>
+</div>
+
+<div class="nav-space"></div>
+
+<h1>🛠️ Mainers List</h1>
+
+<div class="staff-grid">
+
+<div class="staff-card mainer">
+    <div class="name">@Khánh linhhh</div>
+    <a class="view-dis" href="https://discord.com/users/1296742619900280862" target="_blank">
+        View Mainers
+    </a>
+</div>
+
+<div class="staff-card mainer">
+    <div class="name">@Hani</div>
+    <a class="view-dis" href="https://discord.com/users/1314578953008058477" target="_blank">
+        View Mainers
+    </a>
+</div>
+
+<div class="staff-card mainer">
+    <div class="name">@Rika 🐻</div>
+    <a class="view-dis" href="https://discord.com/users/1374334753242873908" target="_blank">
+        View Mainers
+    </a>
+</div>
+
+<div class="staff-card mainer">
+    <div class="name">@beo.neo</div>
+    <a class="view-dis" href="https://discord.com/users/1069498778266107964" target="_blank">
+        View Mainers
+    </a>
+</div>
+
+<div class="staff-card mainer">
+    <div class="name">@hshsjshshhhh</div>
+    <a class="view-dis" href="https://discord.com/users/1247371689311076458" target="_blank">
+        View Mainers
+    </a>
+</div>
+
+<div class="staff-card mainer">
+    <div class="name">@AstyGDM</div>
+    <a class="view-dis" href="https://discord.com/users/1475357115181957304" target="_blank">
+        View Mainers
+    </a>
+</div>
+
+<div class="staff-card mainer">
+    <div class="name">@Miruibel</div>
+    <a class="view-dis" href="https://discord.com/users/1252251272338473042" target="_blank">
+        View Mainers
+    </a>
+</div>
+
+<div class="staff-card mainer">
+    <div class="name">@Cá Chép Om Dưa</div>
+    <a class="view-dis" href="https://discord.com/users/1101852529538650122" target="_blank">
+        View Mainers
+    </a>
+</div>
+
+<div class="staff-card mainer">
+    <div class="name">@Toki</div>
+    <a class="view-dis" href="https://discord.com/users/1463134822863081576" target="_blank">
+        View Mainers
+    </a>
+</div>
+
+<div id="discordJoin" onclick="window.open('https://discord.gg/yourlink')">
+    💬
+</div>
+<script>
+const dolphinLayer = document.getElementById("dolphin-layer");
+const dolphinIcon = "🐬";
+
+/* tạo 1 con cá heo */
+function spawnDolphin(){
+  const d = document.createElement("div");
+  d.className = "dolphin";
+  d.textContent = dolphinIcon;
+
+  /* random vị trí ngang */
+  const x = Math.random() * 100;
+  d.style.left = x + "vw";
+
+  /* random size (chiều sâu) */
+  const size = Math.random() * 24 + 12; // 12px → 36px
+  d.style.fontSize = size + "px";
+
+  /* càng nhỏ càng tối */
+  const darkness = Math.max(0.35, size / 36);
+  d.style.opacity = darkness;
+
+  /* random thời gian rơi */
+  const duration = Math.random() * 6 + 6; // 6s → 12s
+  d.style.animationDuration = duration + "s";
+
+  dolphinLayer.appendChild(d);
+
+  /* xóa sau khi rơi xong */
+  setTimeout(()=>{
+    d.remove();
+  }, duration * 1000);
+}
+
+/* rơi ít thôi */
+setInterval(spawnDolphin, 500);
+</script>
+</div>
+
+</body>
+
+</html>
+
