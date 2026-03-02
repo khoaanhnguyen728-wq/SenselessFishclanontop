@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Luật Clan | SenselessFish</title>
+
+<style>
+*{
+  box-sizing:border-box;
+}
+
+body{
+  margin:0;
+  font-family:Arial, sans-serif;
+  background:linear-gradient(135deg,#0B3C5D,#328CC1,#0B3C5D);
+  background-size:400% 400%;
+  animation:bgMove 15s ease infinite;
+  color:white;
+}
+
+@keyframes bgMove{
+  0%{background-position:0% 50%}
+  50%{background-position:100% 50%}
+  100%{background-position:0% 50%}
+}
+
+/* ===== NAVBAR (GIỐNG TRANG CHÍNH) ===== */
+.navbar{
+  position:fixed;
+  top:0;
+  left:50%;
+  transform:translateX(-50%);
+  width:95%;
+  max-width:1200px;
+  height:64px;
+
+  background:linear-gradient(
+    135deg,
+    rgba(10,20,40,.95),
+    rgba(30,60,120,.9),
+    rgba(10,20,40,.95)
+  );
+
+  backdrop-filter:blur(10px);
+  border-radius:20px;
+  padding:0 22px;
+
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  z-index:9999;
+
+  box-shadow:
+    0 10px 30px rgba(0,0,0,.6),
+    0 0 25px rgba(30,144,255,.4);
+}
+
+.nav-center{
+  display:flex;
+  gap:22px;
+}
+
+.nav-item{
+  color:#ddd;
+  text-decoration:none;
+  font-size:15px;
+  font-weight:600;
+  padding:8px 14px;
+  border-radius:12px;
+  transition:.25s;
+}
+
+.nav-item:hover{
+  background:rgb(26,82,204);
+  color:#00eaff;
+  box-shadow:0 0 12px rgba(0,234,255,.6);
+}
+
+/* chừa khoảng trống navbar */
+.nav-space{height:92px}
+
+/* ===== RULES ===== */
+.rules-wrap{
+  max-width:900px;
+  margin:0 auto;
+  padding:20px;
+}
+
+.rules-title{
+  text-align:center;
+  font-size:32px;
+  font-weight:900;
+  margin-bottom:30px;
+  letter-spacing:1px;
+}
+
+.rule-card{
+  background:rgba(0,0,0,.45);
+  border-radius:16px;
+  padding:18px 22px;
+  margin-bottom:18px;
+  box-shadow:0 15px 35px rgba(0,0,0,.6);
+  transition:.25s;
+  border-left:4px solid #1e90ff;
+}
+
+.rule-card:hover{
+  transform:translateY(-4px);
+  box-shadow:0 20px 45px rgba(0,0,0,.75);
+}
+
+.rule-card h3{
+  margin:0 0 8px;
+  font-size:18px;
+  color:#e5e7eb;
+}
+
+.rule-card p{
+  margin:0;
+  font-size:14px;
+  color:#cbd5f5;
+  line-height:1.6;
+}
+
+/* MOBILE */
+@media(max-width:768px){
+  .rules-title{font-size:24px}
+}
+/* ===== NAVBAR GRADIENT ===== */
+.navbar{
+  position: fixed;
+  top: 0;
+
+  /* xích sang trái nhẹ */
+  left: 50%;
+  transform: translateX(calc(-50% - 60px));
+
+  width: 95%;
+  max-width: 1200px;
+  height: 64px;
+
+  background: linear-gradient(
+    135deg,
+    rgba(10,20,40,.95),
+    rgba(30,60,120,.9),
+    rgba(10,20,40,.95)
+  );
+
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 0 22px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  z-index: 9999;
+
+  box-shadow:
+    0 10px 30px rgba(0,0,0,.6),
+    0 0 25px rgba(30,144,255,.4);
+}
+
+/* viền gradient */
+.navbar::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:20px;
+  padding:1px;
+  background:linear-gradient(135deg,#00eaff,#1e90ff,#9d4edd);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;
+          mask-composite:exclude;
+  pointer-events:none;
+}
+
+/* chừa khoảng trống cho nav */
+.nav-space{
+  height: 92px;
+}
+
+/* LOGO */
+.nav-logo{
+  height:42px;
+  cursor:pointer;
+  transition:.25s;
+}
+.nav-logo:hover{
+  transform:scale(1.08);
+  filter:drop-shadow(0 0 10px #00eaff);
+}
+
+/* MENU CENTER */
+.nav-center{
+  display:flex;
+  gap:22px;
+  align-items:center;
+}
+
+/* ITEM */
+.nav-item{
+  color:#ddd;
+  text-decoration:none;
+  font-size:15px;
+  font-weight:600;
+
+  display:flex;
+  align-items:center;
+  gap:6px;
+
+  padding:8px 14px;
+  border-radius:12px;
+  transition:.25s;
+}
+
+.nav-item:hover{
+  background:rgb(26, 82, 204);
+  color:#00eaff;
+  box-shadow:0 0 12px rgba(0,234,255,.6);
+  transform:translateY(-2px);
+}
+
+/* ===== TOOLS DROPDOWN ===== */
+.nav-tools{
+  position:relative;
+}
+
+.tools-btn{
+  color:#ddd;
+  font-weight:600;
+  padding:8px 14px;
+  border-radius:12px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  transition:.25s;
+}
+
+.tools-btn:hover{
+  background:rgb(26,82,204);
+  color:#00eaff;
+  box-shadow:0 0 12px rgba(0,234,255,.6);
+}
+
+/* dropdown */
+.tools-dropdown{
+  position:absolute;
+  top:110%;
+  right:0;
+  min-width:180px;
+
+  background:rgba(10,20,40,.95);
+  border-radius:14px;
+  padding:8px;
+
+  display:none;
+  flex-direction:column;
+  gap:4px;
+
+  box-shadow:
+    0 12px 30px rgba(0,0,0,.6),
+    0 0 20px rgba(0,234,255,.25);
+
+  z-index:9999;
+}
+
+/* dropdown item */
+.tools-dropdown a{
+  text-decoration:none;
+  color:#e5e7eb;
+  padding:10px 12px;
+  border-radius:10px;
+  font-size:14px;
+  transition:.2s;
+}
+
+.tools-dropdown a:hover{
+  background:#1e90ff;
+  color:white;
+  box-shadow:0 0 12px #00eaff;
+}
+
+/* hover mở dropdown */
+.nav-tools:hover .tools-dropdown{
+  display:flex;
+}
+
+/* ARROW */
+.tools-btn .arrow{
+  font-size:12px;
+  margin-left:4px;
+  transition:.25s;
+  opacity:.8;
+}
+
+.nav-tools:hover .tools-btn .arrow{
+  transform:rotate(180deg);
+}
+
+/* ===== MOBILE ===== */
+@media (max-width:768px){
+  .navbar{
+    height:auto;
+    padding:12px;
+  }
+  .nav-center{
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:10px;
+  }
+  .nav-item{
+    font-size:13px;
+    padding:6px 10px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<!-- ===== NAVBAR ===== -->
+<div class="navbar">
+  <div class="nav-left">
+    <img src="images/logo.png" class="nav-logo" alt="Logo">
+  </div>
+
+  <div class="nav-center">
+    <a href="index.html" class="nav-item">
+      🏠 <span>Trang chủ</span>
+    </a>
+    <a href="top.html" class="nav-item">
+      📊 <span>Bảng xếp hạng</span>
+    </a>
+    <a href="staff.html" class="nav-item">
+      👥 <span>Staff Clan</span>
+    </a>
+    <a href="about.html" class="nav-item">
+      📘 <span>Giới thiệu</span>
+    </a>
+
+    <!-- THÊM LUẬT -->
+    <a href="rules.html" class="nav-item">
+      📜 <span>Luật</span>
+    </a>
+
+    <div class="nav-tools">
+      <div class="tools-btn">
+        🧰 <span>Công cụ</span>
+        <span class="arrow">▲</span>
+      </div>
+
+      <div class="tools-dropdown">
+        <a href="mainers.html">🛠️ Mainers List</a>
+        <a href="allies.html">🤝 Allies Clan</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="nav-space"></div>
+
+<!-- RULES CONTENT -->
+<div class="rules-wrap">
+  <div class="rules-title">📜 LUẬT CLAN</div>
+
+  <div class="rule-card">
+    <h3>Nội Dung chứa NSFW – Gore</h3>
+    <p>
+      <strong>Không được phép gửi những nội dung và content có chứa NSFW, gore</strong> 
+      hay còn được biết đến là nội dung khiêu dâm, phản cảm và hình ảnh máu me.<br><br>
+      <strong>Gây khó chịu và ám ảnh cho người khác, đặc biệt là trẻ em.</strong>
+    </p>
+  </div>
+
+  <div class="rule-card">
+    <h3>Phân biệt chủng tộc – Phân biệt vùng miền</h3>
+    <p>
+      <strong>Phân biệt chủng tộc:</strong> Là khi bạn sử dụng những ngôn từ xúc phạm người da màu 
+      như <strong>nigger, nigga</strong> – <strong>điều này sẽ bị cấm tuyệt đối.</strong><br><br>
+
+      <strong>Phân biệt vùng miền:</strong> Những từ như 
+      <strong>Bắc Kỳ, Nam Kỳ, Trung Kỳ</strong> 
+      sẽ bị <strong>cấm tuyệt đối</strong> ở server này và 
+      <strong>các server khác có liên quan</strong> bất kể lý do gì.
+    </p>
+  </div>
+
+  <div class="rule-card">
+    <h3>Raid & Spamming</h3>
+    <p>
+      <strong>Raid và spamming</strong> là khi bạn gửi những tin nhắn rác 
+      <strong>liên tục</strong> vào server.<br><br>
+      <strong>Hành vi này gây ảnh hưởng và khó chịu cho người khác</strong> 
+      và sẽ bị xử lý theo luật.
+    </p>
+  </div>
+
+  <div class="rule-card">
+    <h3>Tuyên truyền sai sự thật – Nội dung cấm</h3>
+    <p>
+      <strong>Nghiêm cấm tuyên truyền những nội dung không đúng sự thật</strong> 
+      hoặc các nội dung bị cấm như game 18+, giết người.<br><br>
+      <strong>Vi phạm sẽ bị ban ngay lập tức.</strong><br><br>
+      <strong>Nghiêm cấm các nội dung và ngôn từ liên quan đến cái chết</strong>, 
+      ví dụ như <strong>Tự Tử</strong>.
+    </p>
+  </div>
+
+  <div class="rule-card">
+    <h3>Hình phạt</h3>
+    <p>
+      <strong>Vi phạm luật tùy theo mức độ</strong> sẽ bị:
+      <strong>cảnh cáo, mute, kick hoặc ban vĩnh viễn.</strong>
+    </p>
+  </div>
+</div>
+
+</body>
+</html>
