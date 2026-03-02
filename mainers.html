@@ -490,6 +490,83 @@ body{
     transform: translateY(110vh);
   }
 }
+/* ===== TOOLS DROPDOWN ===== */
+.nav-tools{
+  position:relative;
+}
+
+.tools-btn{
+  color:#ddd;
+  font-weight:600;
+  padding:8px 14px;
+  border-radius:12px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  transition:.25s;
+}
+
+.tools-btn:hover{
+  background:rgb(26,82,204);
+  color:#00eaff;
+  box-shadow:0 0 12px rgba(0,234,255,.6);
+}
+
+/* dropdown box */
+.tools-dropdown{
+  position:absolute;
+  top:110%;
+  right:0;
+  min-width:180px;
+
+  background:rgba(10,20,40,.95);
+  border-radius:14px;
+  padding:8px;
+
+  display:none;
+  flex-direction:column;
+  gap:4px;
+
+  box-shadow:
+    0 12px 30px rgba(0,0,0,.6),
+    0 0 20px rgba(0,234,255,.25);
+
+  z-index:9999;
+}
+
+/* item */
+.tools-dropdown a{
+  text-decoration:none;
+  color:#e5e7eb;
+  padding:10px 12px;
+  border-radius:10px;
+  font-size:14px;
+  transition:.2s;
+}
+
+.tools-dropdown a:hover{
+  background:#1e90ff;
+  color:white;
+  box-shadow:0 0 12px #00eaff;
+}
+
+/* hover mở */
+.nav-tools:hover .tools-dropdown{
+  display:flex;
+}
+/* ===== ARROW ===== */
+.tools-btn .arrow{
+  font-size:12px;
+  margin-left:4px;
+  transition:.25s;
+  opacity:.8;
+}
+
+/* khi hover (menu mở) → mũi tên xuống */
+.nav-tools:hover .tools-btn .arrow{
+  transform:rotate(180deg); /* ▲ → ▼ */
+}
 </style>
 </head>
 
@@ -511,6 +588,9 @@ body{
     </a>
     <a href="about.html" class="nav-item">
       📘 <span>Giới thiệu</span>
+    <a href="rules.html" class="nav-item">
+  📜 <span>Luật</span>
+</a>
       <!-- ===== TOOLS MENU (RIGHT END) ===== -->
     </a>
 <div class="nav-tools">
