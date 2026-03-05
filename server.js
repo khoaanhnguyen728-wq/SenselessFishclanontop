@@ -8,7 +8,12 @@ Client,
 GatewayIntentBits
 } = require("discord.js")
 
+/* EXPRESS */
+
 const app = express()
+app.use(express.json())
+
+/* DISCORD CLIENT */
 
 const client = new Client({
 intents:[GatewayIntentBits.Guilds]
@@ -38,7 +43,7 @@ fs.writeFileSync("top.json",JSON.stringify(top,null,2))
 /* BOT READY */
 
 client.once("ready",()=>{
-console.log("BOT ONLINE")
+console.log("✅ BOT ONLINE")
 })
 
 /* COMMAND HANDLER */
@@ -112,22 +117,12 @@ app.get("/top",(req,res)=>{
 res.json(top)
 })
 
+/* START SERVER */
+
 app.listen(3000,()=>{
-console.log("API RUNNING")
+console.log("🌐 API RUNNING : 3000")
 })
+
+/* LOGIN BOT */
 
 client.login(process.env.TOKEN)
-const express = require("express")
-const fs = require("fs")
-
-const app = express()
-app.use(express.json())
-
-// đọc top
-app.get("/top", (req,res)=>{
-    const data = JSON.parse(fs.readFileSync("top.json"))
-    res.json(data)
-})
-
-app.listen(3000, ()=>console.log("Server running"))
-
