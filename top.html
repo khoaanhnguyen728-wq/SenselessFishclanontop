@@ -145,6 +145,8 @@ body{
     border-radius:50%;
     margin:auto;
     background:#222;
+    background-size:cover;
+    background-position:center;
 }
 
 /* GLOW */
@@ -1075,6 +1077,7 @@ body{
     </a>
     <a href="about.html" class="nav-item">
       📘 <span>Giới thiệu</span>
+    </a>
     <a href="rules.html" class="nav-item">
   📜 <span>Luật</span>
 </a>
@@ -1114,9 +1117,9 @@ body{
 
 <!-- ===== TOP 2 ===== -->
 <div class="top-card top-2">
-    <div class="avatar silver"
-         style="background-image:url('https://www.roblox.com/headshot-thumbnail/image?userId=261&width=150&height=150&format=png')">
-    </div>
+<div class="avatar silver" id="top2-avatar"></div>
+<div class="rank silver">2</div>
+<div class="name" id="top2-name">Loading...</div>
     <div class="rank silver">2</div>
     <div class="name">Top 2</div>
     <div class="stage">Member</div>
@@ -1132,9 +1135,9 @@ body{
     <div class="crown">👑</div>
 
     <div class="top-card top-1">
-        <div class="avatar gold"
-             style="background-image:url('https://www.roblox.com/headshot-thumbnail/image?userId=1&width=150&height=150&format=png')">
-        </div>
+<div class="avatar gold" id="top1-avatar"></div>
+<div class="rank gold">1</div>
+<div class="name" id="top1-name">Loading...</div>
 
         <div class="rank gold">1</div>
         <div class="name">Top 1</div>
@@ -1150,9 +1153,9 @@ body{
 
 <!-- ===== TOP 3 ===== -->
 <div class="top-card top-3">
-    <div class="avatar bronze"
-         style="background-image:url('https://www.roblox.com/headshot-thumbnail/image?userId=156&width=150&height=150&format=png')">
-    </div>
+<div class="avatar bronze" id="top3-avatar"></div>
+<div class="rank bronze">3</div>
+<div class="name" id="top3-name">Loading...</div>
     <div class="rank bronze">3</div>
     <div class="name">Top 3</div>
     <div class="stage">Member</div>
@@ -1546,6 +1549,128 @@ async function loadTop(){
 }
 
 loadTop();
+
+</script>
+<script>
+
+async function loadTop(){
+
+const res = await fetch("http://localhost:3000/top")
+const data = await res.json()
+
+console.log(data)
+
+}
+
+loadTop()
+
+</script>
+<script>
+
+async function loadTop(){
+
+const res = await fetch("http://localhost:3000/top")
+const data = await res.json()
+
+/* TOP 1 */
+if(data[1]){
+document.querySelector(".top-1 .name").innerText = data[1].name
+document.querySelector(".top-1 .avatar").style.backgroundImage =
+`url(${data[1].avatar})`
+}
+
+/* TOP 2 */
+if(data[2]){
+document.querySelector(".top-2 .name").innerText = data[2].name
+document.querySelector(".top-2 .avatar").style.backgroundImage =
+`url(${data[2].avatar})`
+}
+
+/* TOP 3 */
+if(data[3]){
+document.querySelector(".top-3 .name").innerText = data[3].name
+document.querySelector(".top-3 .avatar").style.backgroundImage =
+`url(${data[3].avatar})`
+}
+
+}
+
+loadTop()
+
+</script>
+<script>
+
+const API = "https://senselessfishclanontop-1.onrender.com/top"
+
+async function loadTop(){
+
+const res = await fetch(API)
+const data = await res.json()
+
+/* TOP 1 2 3 */
+
+for(let i=1;i<=3;i++){
+
+if(!data[i]) continue
+
+document.getElementById(`top${i}-name`).innerText = data[i].name
+document.getElementById(`top${i}-avatar`).style.backgroundImage =
+`url(${data[i].avatar})`
+document.getElementById(`top${i}-avatar`).style.backgroundSize="cover"
+
+}
+
+/* TOP 4 → 20 */
+
+const list = document.getElementById("rank-list")
+
+for(let i=4;i<=20;i++){
+
+if(!data[i]) continue
+
+list.innerHTML += `
+<div class="rank-row">
+<div>#${i}</div>
+<img src="${data[i].avatar}" width="40" style="border-radius:50%">
+<div>${data[i].name}</div>
+</div>
+`
+
+}
+
+}
+
+loadTop()
+
+</script>
+<script>
+
+async function loadTop(){
+
+const res = await fetch("http://localhost:3000/top")
+const data = await res.json()
+
+if(data[1]){
+document.getElementById("top1-name").innerText = data[1].name
+document.getElementById("top1-avatar").style.backgroundImage =
+`url(${data[1].avatar})`
+}
+
+if(data[2]){
+document.getElementById("top2-name").innerText = data[2].name
+document.getElementById("top2-avatar").style.backgroundImage =
+`url(${data[2].avatar})`
+}
+
+if(data[3]){
+document.getElementById("top3-name").innerText = data[3].name
+document.getElementById("top3-avatar").style.backgroundImage =
+`url(${data[3].avatar})`
+}
+
+}
+
+loadTop()
 
 </script>
 
