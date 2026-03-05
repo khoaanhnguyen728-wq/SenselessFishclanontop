@@ -1,4 +1,12 @@
-const { REST, Routes, SlashCommandBuilder } = require('discord.js');
+const { 
+Client,
+GatewayIntentBits,
+REST,
+Routes,
+SlashCommandBuilder
+} = require("discord.js");
+
+/* COMMANDS */
 
 const commands = [
 
@@ -83,22 +91,38 @@ o.setName("user")
 .setRequired(true)
 )
 
-].map(c=>c.toJSON());
+].map(c => c.toJSON());
 
-const { Client, GatewayIntentBits } = require("discord.js");
+/* BOT */
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds]
 });
 
-client.once("ready", () => {
+client.once("ready", async () => {
+
   console.log(`Bot online: ${client.user.tag}`);
+
+  /* AUTO REGISTER COMMAND */
+
+  const rest = new REST({ version: "10" })
+  .setToken(process.env.DISCORD_TOKEN);
+
+  try {
+
+    console.log("Đang đăng ký slash commands...");
+
+    await rest.put(
+      Routes.applicationCommands("1476208651835408506"),
+      { body: commands }
+    );
+
+    console.log("Đăng ký lệnh thành công!");
+
+  } catch (err) {
+    console.error(err);
+  }
+
 });
 
 client.login(process.env.DISCORD_TOKEN);
-
-rest.put(
-Routes.applicationCommands("1476208651835408506"),
-{ body: commands }
-);
-
