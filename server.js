@@ -1,12 +1,13 @@
 require("dotenv").config()
 
+const { Client, GatewayIntentBits } = require("discord.js")
+
+const client = new Client({
+  intents: ["GUILDS"]
+})
 const express = require("express")
 const fs = require("fs")
 
-const {
-Client,
-GatewayIntentBits
-} = require("discord.js")
 
 /* EXPRESS */
 
@@ -14,10 +15,6 @@ const app = express()
 app.use(express.json())
 
 /* DISCORD CLIENT */
-
-const client = new Client({
-intents:[GatewayIntentBits.Guilds]
-})
 
 /* DATABASE */
 
