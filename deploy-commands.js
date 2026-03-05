@@ -16,13 +16,41 @@ new SlashCommandBuilder()
 new SlashCommandBuilder()
 .setName("strike")
 .setDescription("Strike member")
-.addUserOption(o=>o.setName("user").setDescription("user").setRequired(true))
+.addUserOption(o=>o.setName("user").setDescription("user").setRequired(true)),
+
+// ===== SET TOP =====
+new SlashCommandBuilder()
+.setName("settop")
+.setDescription("Set member to leaderboard")
+.addUserOption(o=>
+o.setName("user")
+.setDescription("user")
+.setRequired(true))
+.addIntegerOption(o=>
+o.setName("top")
+.setDescription("Top position (1-20)")
+.setMinValue(1)
+.setMaxValue(20)
+.setRequired(true)
+),
+
+// ===== REMOVE TOP =====
+new SlashCommandBuilder()
+.setName("detop")
+.setDescription("Remove member from leaderboard")
+.addUserOption(o=>
+o.setName("user")
+.setDescription("user")
+.setRequired(true)
+)
 
 ].map(c=>c.toJSON());
 
+
 const rest = new REST({version:"10"}).setToken("BOT_TOKEN");
+
 
 rest.put(
 Routes.applicationCommands("CLIENT_ID"),
 {body:commands}
-)
+);
