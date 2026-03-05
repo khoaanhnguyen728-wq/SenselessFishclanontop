@@ -3,7 +3,7 @@ require("dotenv").config()
 const { Client, GatewayIntentBits } = require("discord.js")
 
 const client = new Client({
-  intents: ["GUILDS"]
+  intents: [GatewayIntentBits.Guilds]
 })
 const express = require("express")
 const fs = require("fs")
@@ -39,7 +39,7 @@ fs.writeFileSync("top.json",JSON.stringify(top,null,2))
 
 /* BOT READY */
 
-client.once("ready",()=>{
+client.once("clientReady",()=>{
 console.log("✅ BOT ONLINE")
 })
 
