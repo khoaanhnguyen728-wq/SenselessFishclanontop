@@ -1,25 +1,28 @@
-require("dotenv").config()
+const { REST, Routes, SlashCommandBuilder } = require('discord.js');
 
-const {REST,Routes,SlashCommandBuilder} = require("discord.js")
-
-const commands=[
+const commands = [
 
 new SlashCommandBuilder()
 .setName("promote")
-.setDescription("promote member")
+.setDescription("Promote member")
 .addUserOption(o=>o.setName("user").setDescription("user").setRequired(true))
 .addStringOption(o=>o.setName("rank").setDescription("rank").setRequired(true)),
 
 new SlashCommandBuilder()
 .setName("demote")
-.setDescription("demote member")
+.setDescription("Demote member")
+.addUserOption(o=>o.setName("user").setDescription("user").setRequired(true)),
+
+new SlashCommandBuilder()
+.setName("strike")
+.setDescription("Strike member")
 .addUserOption(o=>o.setName("user").setDescription("user").setRequired(true))
 
-].map(c=>c.toJSON())
+].map(c=>c.toJSON());
 
-const rest = new REST({version:"10"}).setToken(process.env.TOKEN)
+const rest = new REST({version:"10"}).setToken("BOT_TOKEN");
 
 rest.put(
-Routes.applicationCommands("1476208651835408506"),
+Routes.applicationCommands("CLIENT_ID"),
 {body:commands}
 )
