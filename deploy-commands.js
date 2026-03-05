@@ -85,9 +85,20 @@ o.setName("user")
 
 ].map(c=>c.toJSON());
 
-const rest = new REST({ version: "10" }).setToken(process.env.BOT_TOKEN);
+const { Client, GatewayIntentBits } = require("discord.js");
+
+const client = new Client({
+  intents: [GatewayIntentBits.Guilds]
+});
+
+client.once("ready", () => {
+  console.log(`Bot online: ${client.user.tag}`);
+});
+
+client.login(process.env.DISCORD_TOKEN);
 
 rest.put(
 Routes.applicationCommands("1476208651835408506"),
 { body: commands }
 );
+
