@@ -1,79 +1,50 @@
+const { Client, GatewayIntentBits } = require('discord.js');
 const express = require("express");
-const { Client, GatewayIntentBits } = require("discord.js");
-const fs = require("fs");
 const cors = require("cors");
 
 const app = express();
 app.use(cors());
-app.use(express.json());
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds]
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildPresences
+  ]
 });
 
-const TOKEN = process.env.DISCORD_TOKEN;
+let membersCache = [];
 
-let members = [];
+client.once("ready", async () => {
 
-if (fs.existsSync("members.json")) {
-  members = JSON.parse(fs.readFileSync("members.json"));
-}
+  console.log("BOT READY");
 
-function save() {
-  fs.writeFileSync("members.json", JSON.stringify(members, null, 2));
-}
+  const guild = await client.guilds.fetch("SERVER_ID");
+  const members = await guild.members.fetch();
 
-client.on("ready", () => {
-  console.log(`Bot online ${client.user.tag}`);
+  membersCache = members.map(m => ({
+    name: m.user.username,
+    avatar: m.user.displayAvatarURL(),
+    online: m.presence?.status === "online"
+  }));
+
 });
 
-client.on("interactionCreate", async interaction => {
-  if (!interaction.isChatInputCommand()) return;
+app.get("/members", (req,res)=>{
 
-  if (interaction.commandName === "promote") {
-    const user = interaction.options.getUser("user");
-    const rank = interaction.options.getString("rank");
+  const total = membersCache.length;
+  const online = membersCache.filter(m=>m.online).length;
 
-    let member = members.find(m => m.id === user.id);
+  res.json({
+    total,
+    online,
+    members:membersCache
+  });
 
-    if (!member) {
-      member = {
-        id: user.id,
-        name: user.username,
-        avatar: user.displayAvatarURL(),
-        rank: rank
-      };
-      members.push(member);
-    } else {
-      member.rank = rank;
-    }
-
-    save();
-
-    await interaction.reply(`Promoted ${user.username} → ${rank}`);
-  }
-
-  if (interaction.commandName === "demote") {
-    const user = interaction.options.getUser("user");
-    const rank = interaction.options.getString("rank");
-
-    let member = members.find(m => m.id === user.id);
-
-    if (member) {
-      member.rank = rank;
-      save();
-    }
-
-    await interaction.reply(`Demoted ${user.username} → ${rank}`);
-  }
 });
 
-app.get("/members", (req, res) => {
-  res.json(members);
-});
-
-client.login(TOKEN);
-
-app.listen(3000, () => {
+app.listen(3000, ()=>{
   console.log("API RUNNING");
 });
+
+client.login(process.env.TOKEN);
