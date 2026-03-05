@@ -793,10 +793,41 @@ body{
     transform: translateY(110vh);
   }
 }
+.discord-stats{
+display:flex;
+gap:40px;
+margin-top:20px;
+}
+
+.stat{
+background:#111;
+padding:20px;
+border-radius:10px;
+font-size:20px;
+}
+
+.stat span{
+display:block;
+font-size:30px;
+font-weight:bold;
+}
 </style>
 </head>
 
 <body>
+<div class="discord-stats">
+
+<div class="stat">
+Total Members
+<span id="totalMembers">0</span>
+</div>
+
+<div class="stat">
+Online
+<span id="onlineMembers">0</span>
+</div>
+
+</div>
 <!-- DOLPHIN LAYER -->
 <div id="dolphin-layer"></div>
 <!-- ===== GIF FLOAT BUTTON ===== -->
@@ -1096,8 +1127,21 @@ function spawnDolphin(){
 /* rơi ít thôi */
 setInterval(spawnDolphin, 500);
 </script>
+<script>
+
+fetch("https://YOUR_RENDER_URL/members")
+.then(res=>res.json())
+.then(data=>{
+
+document.getElementById("totalMembers").innerText = data.total;
+document.getElementById("onlineMembers").innerText = data.online;
+
+});
+
+</script>
     
 </div>
 
 </body>
 </html>
+
