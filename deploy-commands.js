@@ -36,7 +36,7 @@ o.setName("user")
 .setRequired(true)
 ),
 
-/* SET RANK A B C D */
+/* SET RANK */
 new SlashCommandBuilder()
 .setName("setrank")
 .setDescription("Set skill rank")
@@ -85,10 +85,9 @@ o.setName("user")
 
 ].map(c=>c.toJSON());
 
-
-const rest = new REST({ version: "10" }).setToken("BOT_TOKEN");
+const rest = new REST({ version: "10" }).setToken(process.env.BOT_TOKEN);
 
 rest.put(
-Routes.applicationCommands("CLIENT_ID"),
+Routes.applicationCommands("1476208651835408506"),
 { body: commands }
 );
