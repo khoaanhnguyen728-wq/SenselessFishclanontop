@@ -1493,6 +1493,61 @@ setInterval(spawnDolphin,500);
   </div>
 </div>
 </script>
+<script>
+
+async function loadTop(){
+
+  const res = await fetch("data/top.json");
+  const data = await res.json();
+
+  for(let i=1;i<=20;i++){
+
+    if(!data[i]) continue;
+
+    const name = data[i].name || "Unknown";
+    const robloxId = data[i].robloxId;
+
+    if(i <= 3){
+
+      const card = document.querySelector(`#top${i}`);
+
+      if(card){
+
+        card.querySelector(".name").innerText = name;
+
+        if(robloxId){
+
+          const avatar =
+          `https://www.roblox.com/headshot-thumbnail/image?userId=${robloxId}&width=150&height=150&format=png`;
+
+          card.querySelector(".avatar").style.backgroundImage = `url(${avatar})`;
+          card.querySelector(".avatar").style.backgroundSize = "cover";
+
+        }
+
+      }
+
+    }else{
+
+      const row = document.createElement("div");
+      row.className = "rank-row";
+
+      row.innerHTML = `
+        <div style="width:35px;font-weight:bold">#${i}</div>
+        <div>${name}</div>
+      `;
+
+      document.getElementById("rankList").appendChild(row);
+
+    }
+
+  }
+
+}
+
+loadTop();
+
+</script>
 
 </body>
 </html>
