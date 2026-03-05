@@ -19,7 +19,7 @@ client.once("ready", async () => {
 
   console.log("BOT READY");
 
-  const guild = await client.guilds.fetch("SERVER_ID");
+  const guild = await client.guilds.fetch("1281275478036189284");
   const members = await guild.members.fetch();
 
   membersCache = members.map(m => ({
@@ -48,3 +48,4 @@ app.listen(3000, ()=>{
 });
 
 client.login(process.env.TOKEN);
+
