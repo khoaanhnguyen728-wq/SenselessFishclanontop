@@ -117,3 +117,17 @@ console.log("API RUNNING")
 })
 
 client.login(process.env.TOKEN)
+const express = require("express")
+const fs = require("fs")
+
+const app = express()
+app.use(express.json())
+
+// đọc top
+app.get("/top", (req,res)=>{
+    const data = JSON.parse(fs.readFileSync("top.json"))
+    res.json(data)
+})
+
+app.listen(3000, ()=>console.log("Server running"))
+
