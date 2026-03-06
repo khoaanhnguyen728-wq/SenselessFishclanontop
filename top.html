@@ -1492,7 +1492,7 @@ setInterval(spawnDolphin,500);
 
 async function loadTop(){
 
-const res = await fetch("https://senselessfishclanontop-1.onrender.com/top?"+Date.now())
+const res = await fetch("https://senselessfishclanontop-1.onrender.com/top"+Date.now())
 const data = await res.json()
 
 if(data[1]){
@@ -1518,4 +1518,5 @@ loadTop()
 
 </body>
 </html>
+
 
