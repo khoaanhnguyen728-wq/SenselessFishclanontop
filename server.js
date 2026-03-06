@@ -22,12 +22,14 @@ let top = {}
 
 /* LOAD FILE */
 
+/* LOAD FILE */
+
 if(fs.existsSync("database.json")){
-  database = JSON.parse(fs.readFileSync("database.json"))
+  database = JSON.parse(fs.readFileSync("database.json","utf8"))
 }
 
 if(fs.existsSync("top.json")){
-  top = JSON.parse(fs.readFileSync("top.json"))
+  top = JSON.parse(fs.readFileSync("top.json","utf8"))
 }
 
 /* đảm bảo top 1-20 tồn tại */
@@ -177,3 +179,4 @@ console.log("🌐 API RUNNING : "+PORT)
 /* LOGIN */
 
 client.login(process.env.TOKEN)
+
