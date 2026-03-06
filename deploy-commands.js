@@ -31,6 +31,14 @@ o.setName("top")
 .setMinValue(1)   // thấp nhất
 .setMaxValue(20)  // cao nhất
 )
+new SlashCommandBuilder()
+.setName("detop")
+.setDescription("remove player from top")
+.addUserOption(o=>
+o.setName("user")
+.setDescription("member")
+.setRequired(true)
+),
 
 ].map(c=>c.toJSON())
 
@@ -42,3 +50,4 @@ Routes.applicationCommands(process.env.CLIENT_ID),
 ).then(()=>{
 console.log("✅ Commands deployed!")
 }).catch(console.error)
+
