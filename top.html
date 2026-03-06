@@ -140,13 +140,11 @@ body{
 
 /* AVATAR */
 .avatar{
-    width:110px;
-    height:110px;
-    border-radius:50%;
-    margin:auto;
-    background:#222;
-    background-size:cover;
-    background-position:center;
+width:120px;
+height:120px;
+border-radius:50%;
+background-size:cover;
+background-position:center;
 }
 
 /* GLOW */
@@ -1115,57 +1113,49 @@ body{
 
 <div class="top-wrapper">
 
-<!-- ===== TOP 2 ===== -->
+<!-- TOP 2 -->
 <div class="top-card top-2">
 <div class="avatar silver" id="top2-avatar"></div>
 <div class="rank silver">2</div>
 <div class="name" id="top2-name">Loading...</div>
-    <div class="rank silver">2</div>
-    <div class="name">Top 2</div>
-    <div class="stage">Member</div>
-    <button class="view-profile"
-            onclick="window.open('https://www.roblox.com/users/261/profile')">
-        View Profile
-    </button>
+<div class="stage">Member</div>
+
+<button class="view-profile">
+View Profile
+</button>
 </div>
 
-<!-- ===== TOP 1 ===== -->
+<!-- TOP 1 -->
 <div class="top-1-wrapper">
 
-    <div class="crown">👑</div>
+<div class="crown">👑</div>
 
-    <div class="top-card top-1">
+<div class="top-card top-1">
 <div class="avatar gold" id="top1-avatar"></div>
 <div class="rank gold">1</div>
 <div class="name" id="top1-name">Loading...</div>
+<div class="stage">Leader</div>
 
-        <div class="rank gold">1</div>
-        <div class="name">Top 1</div>
-        <div class="stage">Leader</div>
-
-        <button class="view-profile"
-                onclick="window.open('https://www.roblox.com/users/1/profile')">
-            View Profile
-        </button>
-    </div>
+<button class="view-profile">
+View Profile
+</button>
+</div>
 
 </div>
 
-<!-- ===== TOP 3 ===== -->
+<!-- TOP 3 -->
 <div class="top-card top-3">
 <div class="avatar bronze" id="top3-avatar"></div>
 <div class="rank bronze">3</div>
 <div class="name" id="top3-name">Loading...</div>
-    <div class="rank bronze">3</div>
-    <div class="name">Top 3</div>
-    <div class="stage">Member</div>
-    <button class="view-profile"
-            onclick="window.open('https://www.roblox.com/users/156/profile')">
-        View Profile
-    </button>
-</div>
+<div class="stage">Member</div>
+
+<button class="view-profile">
+View Profile
+</button>
 </div>
 
+</div>
 
 </div>
 
@@ -1500,35 +1490,22 @@ setInterval(spawnDolphin,500);
 
 async function loadTop(){
 
-const res = await fetch("https://senselessfishclanontop-1.onrender.com/top?nocache="+Date.now())
+const res = await fetch("https://senselessfishclanontop-1.onrender.com/top?"+Date.now())
 const data = await res.json()
 
-console.log("TOP:",data)
-
-for(let i=1;i<=3;i++){
-
-if(!data[i]) continue
-
-document.getElementById("top"+i+"-name").innerText = data[i].name
-document.getElementById("top"+i+"-avatar").src = data[i].avatar
-
+if(data[1]){
+document.getElementById("top1-name").innerText = data[1].name
+document.getElementById("top1-avatar").style.backgroundImage = `url(${data[1].avatar})`
 }
 
-const list = document.getElementById("rank-list")
-list.innerHTML=""
+if(data[2]){
+document.getElementById("top2-name").innerText = data[2].name
+document.getElementById("top2-avatar").style.backgroundImage = `url(${data[2].avatar})`
+}
 
-for(let i=4;i<=20;i++){
-
-if(!data[i]) continue
-
-list.innerHTML += `
-<div class="rank-row">
-<span>#${i}</span>
-<img src="${data[i].avatar}" width="40">
-<span>${data[i].name}</span>
-</div>
-`
-
+if(data[3]){
+document.getElementById("top3-name").innerText = data[3].name
+document.getElementById("top3-avatar").style.backgroundImage = `url(${data[3].avatar})`
 }
 
 }
@@ -1537,7 +1514,5 @@ loadTop()
 
 </script>
 
-
 </body>
 </html>
-
