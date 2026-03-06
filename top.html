@@ -1498,114 +1498,14 @@ setInterval(spawnDolphin,500);
 </script>
 <script>
 
-async function loadTop(){
-
-  const res = await fetch("data/top.json");
-  const data = await res.json();
-
-  for(let i=1;i<=20;i++){
-
-    if(!data[i]) continue;
-
-    const name = data[i].name || "Unknown";
-    const robloxId = data[i].robloxId;
-
-    if(i <= 3){
-
-      const card = document.querySelector(`#top${i}`);
-
-      if(card){
-
-        card.querySelector(".name").innerText = name;
-
-        if(robloxId){
-
-          const avatar =
-          `https://www.roblox.com/headshot-thumbnail/image?userId=${robloxId}&width=150&height=150&format=png`;
-
-          card.querySelector(".avatar").style.backgroundImage = `url(${avatar})`;
-          card.querySelector(".avatar").style.backgroundSize = "cover";
-
-        }
-
-      }
-
-    }else{
-
-      const row = document.createElement("div");
-      row.className = "rank-row";
-
-      row.innerHTML = `
-        <div style="width:35px;font-weight:bold">#${i}</div>
-        <div>${name}</div>
-      `;
-
-      document.getElementById("rankList").appendChild(row);
-
-    }
-
-  }
-
-}
-
-loadTop();
-
-</script>
-<script>
-
-async function loadTop(){
-
-const res = await fetch("http://localhost:3000/top")
-const data = await res.json()
-
-console.log(data)
-
-}
-
-loadTop()
-
-</script>
-<script>
-
-async function loadTop(){
-
-const res = await fetch("http://localhost:3000/top")
-const data = await res.json()
-
-/* TOP 1 */
-if(data[1]){
-document.querySelector(".top-1 .name").innerText = data[1].name
-document.querySelector(".top-1 .avatar").style.backgroundImage =
-`url(${data[1].avatar})`
-}
-
-/* TOP 2 */
-if(data[2]){
-document.querySelector(".top-2 .name").innerText = data[2].name
-document.querySelector(".top-2 .avatar").style.backgroundImage =
-`url(${data[2].avatar})`
-}
-
-/* TOP 3 */
-if(data[3]){
-document.querySelector(".top-3 .name").innerText = data[3].name
-document.querySelector(".top-3 .avatar").style.backgroundImage =
-`url(${data[3].avatar})`
-}
-
-}
-
-loadTop()
-
-</script>
-<script>
-
 const API = "https://senselessfishclanontop-1.onrender.com/top"
 
 async function loadTop(){
 
 const res = await fetch(API)
 const data = await res.json()
+
+console.log("TOP DATA:",data)
 
 /* TOP 1 2 3 */
 
@@ -1614,15 +1514,16 @@ for(let i=1;i<=3;i++){
 if(!data[i]) continue
 
 document.getElementById(`top${i}-name`).innerText = data[i].name
+
 document.getElementById(`top${i}-avatar`).style.backgroundImage =
 `url(${data[i].avatar})`
-document.getElementById(`top${i}-avatar`).style.backgroundSize="cover"
 
 }
 
 /* TOP 4 → 20 */
 
 const list = document.getElementById("rank-list")
+list.innerHTML = ""
 
 for(let i=4;i<=20;i++){
 
@@ -1635,84 +1536,6 @@ list.innerHTML += `
 <div>${data[i].name}</div>
 </div>
 `
-
-}
-
-}
-
-loadTop()
-
-</script>
-<script>
-
-async function loadTop(){
-
-const res = await fetch("http://localhost:3000/top")
-const data = await res.json()
-
-if(data[1]){
-document.getElementById("top1-name").innerText = data[1].name
-document.getElementById("top1-avatar").style.backgroundImage =
-`url(${data[1].avatar})`
-}
-
-if(data[2]){
-document.getElementById("top2-name").innerText = data[2].name
-document.getElementById("top2-avatar").style.backgroundImage =
-`url(${data[2].avatar})`
-}
-
-if(data[3]){
-document.getElementById("top3-name").innerText = data[3].name
-document.getElementById("top3-avatar").style.backgroundImage =
-`url(${data[3].avatar})`
-}
-
-}
-
-loadTop()
-
-</script>
-<script>
-
-async function loadTop(){
-
-const res = await fetch("http://localhost:3000/top")
-const data = await res.json()
-
-/* TOP 1 2 3 */
-
-for(let i=1;i<=3;i++){
-
-const player = data[i]
-if(!player) continue
-
-const card = document.querySelector(".top-"+i)
-
-card.querySelector(".name").innerText = player.name
-card.querySelector(".avatar").style.backgroundImage = `url(${player.avatar})`
-
-}
-
-/* TOP 4-20 */
-
-const list = document.querySelector(".rank-list")
-
-for(let i=4;i<=20;i++){
-
-const p = data[i]
-if(!p) continue
-
-const row = document.createElement("div")
-row.className="rank-row"
-
-row.innerHTML = `
-<div class="rank">${i}</div>
-<img src="${p.avatar}" width="40" style="border-radius:50%">
-<div>${p.name}</div>
-`
-
-list.appendChild(row)
 
 }
 
