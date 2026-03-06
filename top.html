@@ -1228,6 +1228,7 @@ Login Discord
 </div>
 
 </div>
+<button onclick="logoutDiscord()">Logout</button>
 
 
 <!-- ===== REGISTER TOURNAMENT ===== -->
@@ -1280,13 +1281,28 @@ window.location.href=url;
 
 function loadUser(){
 
-const hash = window.location.hash;
+let token = null
 
-if(!hash) return;
+/* 1. lấy token từ URL */
+const hash = window.location.hash
 
-const token = new URLSearchParams(hash.substring(1)).get("access_token");
+if(hash){
+token = new URLSearchParams(hash.substring(1)).get("access_token")
 
-if(!token) return;
+if(token){
+localStorage.setItem("discord_token", token)
+window.location.hash = ""   // xoá token khỏi URL
+}
+}
+
+/* 2. nếu không có hash thì lấy từ localStorage */
+if(!token){
+token = localStorage.getItem("discord_token")
+}
+
+if(!token) return
+
+/* 3. lấy thông tin user */
 
 fetch("https://discord.com/api/users/@me",{
 headers:{
@@ -1296,25 +1312,29 @@ authorization:"Bearer "+token
 .then(res=>res.json())
 .then(user=>{
 
-discordUser=user;
+discordUser=user
 
-document.getElementById("loginStatus").innerHTML="🟢 Đã đăng nhập";
-document.getElementById("registerStatus").innerHTML="🟢 Đã đăng nhập";
+document.getElementById("loginStatus").innerHTML="🟢 Đã đăng nhập"
+document.getElementById("registerStatus").innerHTML="🟢 Đã đăng nhập"
 
-document.getElementById("loginBox").style.display="none";
-document.getElementById("userBox").style.display="block";
+document.getElementById("loginBox").style.display="none"
+document.getElementById("userBox").style.display="block"
 
-document.getElementById("userName").innerText=user.username;
+document.getElementById("userName").innerText=user.username
 
 document.getElementById("userAvatar").src=
 "https://cdn.discordapp.com/avatars/"
-+user.id+"/"+user.avatar+".png";
++user.id+"/"+user.avatar+".png"
 
-});
+})
 
 }
 
-loadUser();
+loadUser()
+function logoutDiscord(){
+localStorage.removeItem("discord_token")
+location.reload()
+}
 
 
 /* ===== REGISTER ===== */
@@ -1516,7 +1536,7 @@ loadTop()
 
 </script>
 
+
 </body>
 </html>
-
 
