@@ -1673,6 +1673,54 @@ document.getElementById("top3-avatar").style.backgroundImage =
 loadTop()
 
 </script>
+<script>
+
+async function loadTop(){
+
+const res = await fetch("http://localhost:3000/top")
+const data = await res.json()
+
+/* TOP 1 2 3 */
+
+for(let i=1;i<=3;i++){
+
+const player = data[i]
+if(!player) continue
+
+const card = document.querySelector(".top-"+i)
+
+card.querySelector(".name").innerText = player.name
+card.querySelector(".avatar").style.backgroundImage = `url(${player.avatar})`
+
+}
+
+/* TOP 4-20 */
+
+const list = document.querySelector(".rank-list")
+
+for(let i=4;i<=20;i++){
+
+const p = data[i]
+if(!p) continue
+
+const row = document.createElement("div")
+row.className="rank-row"
+
+row.innerHTML = `
+<div class="rank">${i}</div>
+<img src="${p.avatar}" width="40" style="border-radius:50%">
+<div>${p.name}</div>
+`
+
+list.appendChild(row)
+
+}
+
+}
+
+loadTop()
+
+</script>
 
 </body>
 </html>
