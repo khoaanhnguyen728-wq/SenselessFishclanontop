@@ -121,8 +121,33 @@ console.error(err)
 if(!interaction.replied){
 interaction.reply("❌ Bot error")
 }
+/* DETOP */
+
+if(interaction.commandName === "detop"){
+
+await interaction.deferReply()
+
+const user = interaction.options.getUser("user")
+
+let removed = false
+
+for(let i=1;i<=20;i++){
+
+if(top[i] && top[i].id === user.id){
+top[i] = null
+removed = true
 }
 
+}
+
+saveTop()
+
+if(removed){
+await interaction.editReply(`❌ ${user.username} removed from TOP`)
+}else{
+await interaction.editReply(`⚠️ ${user.username} not in TOP`)
+}
+}
 })
 
 /* API */
@@ -146,3 +171,4 @@ console.log("🌐 API RUNNING : "+PORT)
 /* LOGIN */
 
 client.login(process.env.TOKEN)
+
