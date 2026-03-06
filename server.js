@@ -22,8 +22,6 @@ let top = {}
 
 /* LOAD FILE */
 
-/* LOAD FILE */
-
 if(fs.existsSync("database.json")){
   database = JSON.parse(fs.readFileSync("database.json","utf8"))
 }
@@ -35,7 +33,9 @@ if(fs.existsSync("top.json")){
 /* đảm bảo top 1-20 tồn tại */
 
 for(let i=1;i<=20;i++){
-  if(!top[i]) top[i] = null
+  if(top[i] === undefined){
+    top[i] = null
+  }
 }
 
 /* SAVE */
@@ -107,6 +107,14 @@ await interaction.deferReply()
 const user = interaction.options.getUser("user")
 const topRank = interaction.options.getInteger("top")
 
+/* remove user khỏi top cũ */
+
+for(let i=1;i<=20;i++){
+  if(top[i] && top[i].id === user.id){
+    top[i] = null
+  }
+}
+
 top[topRank] = {
   id:user.id,
   name:user.username,
@@ -129,12 +137,10 @@ const user = interaction.options.getUser("user")
 let removed = false
 
 for(let i=1;i<=20;i++){
-
-if(top[i] && top[i].id === user.id){
-top[i] = null
-removed = true
-}
-
+  if(top[i] && top[i].id === user.id){
+    top[i] = null
+    removed = true
+  }
 }
 
 saveTop()
@@ -165,7 +171,17 @@ res.json(database)
 })
 
 app.get("/top",(req,res)=>{
-res.json(top)
+
+/* đảm bảo format đúng */
+
+let result = {}
+
+for(let i=1;i<=20;i++){
+result[i] = top[i] || null
+}
+
+res.json(result)
+
 })
 
 /* START SERVER */
@@ -179,4 +195,3 @@ console.log("🌐 API RUNNING : "+PORT)
 /* LOGIN */
 
 client.login(process.env.TOKEN)
-
