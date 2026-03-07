@@ -1142,51 +1142,57 @@ body{
 <h2>🏆🏆🏆</h2>
 
 <div class="top-wrapper">
-
-<!-- TOP 2 -->
-<div class="top-card top-2">
-<div class="avatar silver" id="top2-avatar"></div>
-<div class="rank silver">2</div>
-<div class="name" id="top2-name">Loading...</div>
-<div class="stage">Member</div>
-
-<button class="view-profile">
-View Profile
-</button>
+    <div class="top-card top-2">
+        <div class="avatar silver" id="top2-avatar"></div>
+        <div class="name" id="top2-name">Trống</div>
+        <button class="view-profile" id="btn-top2">Discord Profile</button>
+    </div>
+    <div class="top-1-wrapper">
+        <div class="top-card top-1">
+            <div class="avatar gold" id="top1-avatar"></div>
+            <div class="name" id="top1-name">Trống</div>
+            <button class="view-profile" id="btn-top1">Discord Profile</button>
+        </div>
+    </div>
+    <div class="top-card top-3">
+        <div class="avatar bronze" id="top3-avatar"></div>
+        <div class="name" id="top3-name">Trống</div>
+        <button class="view-profile" id="btn-top3">Discord Profile</button>
+    </div>
 </div>
 
-<!-- TOP 1 -->
-<div class="top-1-wrapper">
+<script>
+async function loadTop() {
+    try {
+        const res = await fetch("https://senselessfishclanontop-1.onrender.com/top?" + Date.now());
+        const data = await res.json();
+        const rankList = document.getElementById("rankList");
+        rankList.innerHTML = "";
 
-<div class="crown">👑</div>
+        for (let i = 1; i <= 20; i++) {
+            const p = data[i];
+            if (p) {
+                // Link profile Discord dựa trên ID
+                const discordUrl = `https://discord.com/users/${p.id}`;
 
-<div class="top-card top-1">
-<div class="avatar gold" id="top1-avatar"></div>
-<div class="rank gold">1</div>
-<div class="name" id="top1-name">Loading...</div>
-<div class="stage">Leader</div>
-
-<button class="view-profile">
-View Profile
-</button>
-</div>
-
-</div>
-
-<!-- TOP 3 -->
-<div class="top-card top-3">
-<div class="avatar bronze" id="top3-avatar"></div>
-<div class="rank bronze">3</div>
-<div class="name" id="top3-name">Loading...</div>
-<div class="stage">Member</div>
-
-<button class="view-profile">
-View Profile
-</button>
-</div>
-
-</div>
-
+                if (i <= 3) {
+                    document.getElementById(`top${i}-name`).innerText = p.name;
+                    document.getElementById(`top${i}-avatar`).style.backgroundImage = `url(${p.avatar})`;
+                    document.getElementById(`btn-top${i}`).onclick = () => window.open(discordUrl);
+                } else {
+                    rankList.innerHTML += `
+                        <div class="rank-row" onclick="window.open('${discordUrl}')" style="cursor:pointer">
+                            <div class="rank-pos">#${i}</div>
+                            <div class="rank-avatar" style="background-image:url('${p.avatar}')"></div>
+                            <div class="rank-name" style="flex:1; margin-left:10px">${p.name}</div>
+                            <div style="color:#5865F2; font-weight:bold;">View Discord</div>
+                        </div>`;
+                }
+            }
+        }
+    } catch (err) { console.error("Lỗi tải Top:", err); }
+}
+</script>
 </div>
 
 <!-- TOP 4–20 -->
@@ -1569,6 +1575,5 @@ window.onload = loadTop;
 
 </body>
 </html>
-
 
 
