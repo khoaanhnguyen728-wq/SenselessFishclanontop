@@ -28,21 +28,27 @@ function saveTop() { fs.writeFileSync("top.json", JSON.stringify(top, null, 2));
 
 client.on("interactionCreate", async interaction => {
     if (!interaction.isChatInputCommand()) return;
-    const { commandName, options } = interaction;
 
     try {
-        if (commandName === "settop") {
-            await interaction.deferReply();
-            const user = options.getUser("user");
-            const topRank = options.getInteger("top");
+        // Cố gắng deferReply ngay lập tức
+        await interaction.deferReply().catch(err => console.error("Lỗi Defer:", err));
 
-            if (topRank < 1 || topRank > 20) return interaction.editReply("Chỉ hỗ trợ Top 1 - 20");
+        if (interaction.commandName === "settop") {
+            const user = interaction.options.getUser("user");
+            const topRank = interaction.options.getInteger("top");
 
-            // Xóa user nếu đang ở top khác
-            for (let i in top) {
-                if (top[i] && top[i].id === user.id) top[i] = null;
+            if (topRank < 1 || topRank > 20) {
+                return interaction.editReply("❌ Chỉ hỗ trợ Top 1 - 20");
             }
 
+            // Logic xóa user khỏi top cũ
+            for (let i = 1; i <= 20; i++) {
+                if (top[i] && top[i].id === user.id) {
+                    top[i] = null;
+                }
+            }
+
+            // Gán top mới
             top[topRank] = {
                 id: user.id,
                 name: user.username,
@@ -53,26 +59,31 @@ client.on("interactionCreate", async interaction => {
             await interaction.editReply(`👑 Đã đặt **${user.username}** vào **TOP ${topRank}**`);
         }
 
-        if (commandName === "detop") {
-            await interaction.deferReply();
-            const user = options.getUser("user");
-            let found = false;
-            for (let i in top) {
+        if (interaction.commandName === "detop") {
+            const user = interaction.options.getUser("user");
+            let removed = false;
+
+            for (let i = 1; i <= 20; i++) {
                 if (top[i] && top[i].id === user.id) {
                     top[i] = null;
-                    found = true;
+                    removed = true;
                 }
             }
-            if (found) {
+
+            if (removed) {
                 saveTop();
                 await interaction.editReply(`❌ Đã xóa **${user.username}** khỏi bảng xếp hạng.`);
             } else {
-                await interaction.editReply(`⚠️ Không tìm thấy người dùng này trong Top.`);
+                await interaction.editReply(`⚠️ Không tìm thấy người dùng **${user.username}** trong bảng xếp hạng.`);
             }
         }
+
     } catch (err) {
-        console.error(err);
-        if (!interaction.replied) await interaction.editReply("❌ Có lỗi xảy ra.");
+        console.error("Lỗi xử lý lệnh:", err);
+        // Kiểm tra nếu interaction vẫn còn hợp lệ thì mới báo lỗi cho user
+        if (interaction.deferred || interaction.replied) {
+            await interaction.editReply("❌ Có lỗi xảy ra khi thực hiện lệnh này.").catch(() => {});
+        }
     }
 });
 
@@ -83,3 +94,4 @@ app.get("/top", (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("🌐 API RUNNING ON PORT: " + PORT));
 client.login(process.env.TOKEN);
+
