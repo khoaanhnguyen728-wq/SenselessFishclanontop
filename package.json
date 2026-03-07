@@ -1,14 +1,12 @@
 {
-  "name": "senseless-fish-backend",
+  "name": "senseless-fish-bot",
   "version": "1.0.0",
   "main": "server.js",
   "dependencies": {
-    "cors": "^2.8.5",
     "discord.js": "^14.x.x",
+    "express": "^4.x.x",
     "dotenv": "^16.x.x",
-    "express": "^4.x.x"
-  },
-  "scripts": {
-    "start": "node server.js"
+    "cors": "^2.8.5",
+    "axios": "^1.7.0" 
   }
 }
