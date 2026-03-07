@@ -1383,9 +1383,11 @@ members.forEach(m=>{
 <div style="text-align:left; margin:10px 0;">
 <label style="font-weight:bold;">🎮 Roblox ID</label>
 <input 
-    type="number"
+    type="text"
     id="robloxId"
     placeholder="Nhập Roblox ID"
+    inputmode="numeric"
+    pattern="[0-9]*"
     style="
         width:100%;
         padding:10px;
@@ -1739,6 +1741,7 @@ window.onload = () => {
 
 </body>
 </html>
+
 
 
 
