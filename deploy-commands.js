@@ -29,9 +29,11 @@ o.setName("top")
 .setDescription("top 1-20")
 .setRequired(true)
 .setMinValue(1)   // thấp nhất
-.setMaxValue(20)  // cao nhất
-)
+.setMaxValue(20)
+),
+
 new SlashCommandBuilder()
+.setName("detop")
 .setName("detop")
 .setDescription("remove player from top")
 .addUserOption(o=>
@@ -50,4 +52,3 @@ Routes.applicationCommands(process.env.CLIENT_ID),
 ).then(()=>{
 console.log("✅ Commands deployed!")
 }).catch(console.error)
-
