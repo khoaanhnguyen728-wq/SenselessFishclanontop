@@ -3,6 +3,7 @@ const { Client, GatewayIntentBits } = require("discord.js");
 const express = require("express");
 const fs = require("fs");
 const cors = require("cors");
+const axios = require("axios");
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 const app = express();
@@ -11,20 +12,23 @@ app.use(cors());
 
 let top = {};
 
-// Khởi tạo & Đảm bảo luôn đủ 20 slot trong bộ nhớ
-if (!fs.existsSync("top.json")) fs.writeFileSync("top.json", "{}");
-try {
-    top = JSON.parse(fs.readFileSync("top.json", "utf8"));
-} catch (e) {
-    top = {};
+// Load Database
+if (fs.existsSync("top.json")) {
+    try {
+        top = JSON.parse(fs.readFileSync("top.json", "utf8"));
+    } catch (e) {
+        top = {};
+    }
 }
 
-// Quan trọng: Đảm bảo dữ liệu luôn đủ từ 1-20 để Frontend không bị lỗi
+// Đảm bảo đủ 20 slot
 for (let i = 1; i <= 20; i++) {
     if (top[i] === undefined) top[i] = null;
 }
 
-function saveTop() { fs.writeFileSync("top.json", JSON.stringify(top, null, 2)); }
+function saveTop() { 
+    fs.writeFileSync("top.json", JSON.stringify(top, null, 2)); 
+}
 
 client.on("interactionCreate", async interaction => {
     if (!interaction.isChatInputCommand()) return;
@@ -33,87 +37,51 @@ client.on("interactionCreate", async interaction => {
     try {
         if (commandName === "settop") {
             await interaction.deferReply();
-            const user = options.getUser("user");
+            const robloxId = options.getString("roblox_id"); // Nhập ID Roblox
+            const displayName = options.getString("name");   // Nhập tên hiển thị
             const topRank = options.getInteger("top");
 
             if (topRank < 1 || topRank > 20) return interaction.editReply("Chỉ hỗ trợ Top 1 - 20");
 
-            // Xóa user nếu đang ở top khác
+            // Lấy ảnh đại diện từ Roblox dựa trên ID
+            const thumbRes = await axios.get(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${robloxId}&size=150x150&format=Png&isCircular=false`);
+            const avatarUrl = thumbRes.data.data[0]?.imageUrl || "https://tr.rbxcdn.com/30day-avatar/150/150/AvatarHeadshot/Png/isCircular=false";
+
+            // Xóa người cũ nếu trùng ID
             for (let i in top) {
-                if (top[i] && top[i].id === user.id) top[i] = null;
+                if (top[i] && top[i].id === robloxId) top[i] = null;
             }
 
             top[topRank] = {
-                id: user.id,
-                name: user.username,
-                avatar: user.displayAvatarURL({ extension: 'png', size: 256 })
+                id: robloxId,
+                name: displayName,
+                avatar: avatarUrl
             };
 
             saveTop();
-            await interaction.editReply(`👑 Đã đặt **${user.username}** vào **TOP ${topRank}**`);
+            await interaction.editReply(`👑 Đã đặt **${displayName}** (Roblox ID: ${robloxId}) vào **TOP ${topRank}**`);
         }
 
         if (commandName === "detop") {
             await interaction.deferReply();
-            const user = options.getUser("user");
-            let found = false;
-            for (let i in top) {
-                if (top[i] && top[i].id === user.id) {
-                    top[i] = null;
-                    found = true;
-                }
-            }
-            if (found) {
+            const topRank = options.getInteger("top");
+            if (top[topRank]) {
+                const oldName = top[topRank].name;
+                top[topRank] = null;
                 saveTop();
-                await interaction.editReply(`❌ Đã xóa **${user.username}** khỏi bảng xếp hạng.`);
+                await interaction.editReply(`❌ Đã xóa **${oldName}** khỏi TOP ${topRank}`);
             } else {
-                await interaction.editReply(`⚠️ Không tìm thấy người dùng này trong Top.`);
+                await interaction.editReply(`⚠️ Vị trí TOP ${topRank} đang trống.`);
             }
         }
     } catch (err) {
         console.error(err);
-        if (!interaction.replied) await interaction.editReply("❌ Có lỗi xảy ra.");
+        if (!interaction.replied) await interaction.editReply("❌ Lỗi: Có thể ID Roblox không hợp lệ.");
     }
 });
 
-const axios = require("axios"); // Bạn cần chạy: npm install axios
-
-// ... (giữ nguyên các phần cũ của server.js)
-
-app.get("/roblox/:username", async (req, res) => {
-    try {
-        const username = req.params.username;
-
-        // 1. Lấy UserId từ Username
-        const userRes = await axios.post("https://users.roblox.com/v1/usernames/users", {
-            usernames: [username],
-            excludeBannedUsers: true
-        });
-
-        if (!userRes.data.data.length) {
-            return res.status(404).json({ error: "Không tìm thấy User" });
-        }
-
-        const userId = userRes.data.data[0].id;
-        const displayName = userRes.data.data[0].displayName;
-
-        // 2. Lấy Ảnh đại diện (Headshot)
-        const thumbRes = await axios.get(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=150x150&format=Png&isCircular=true`);
-        const avatarUrl = thumbRes.data.data[0].imageUrl;
-
-        res.json({
-            userId,
-            username,
-            displayName,
-            avatarUrl
-        });
-    } catch (err) {
-        res.status(500).json({ error: "Lỗi kết nối Roblox API" });
-    }
-});
-app.get("/top", (req, res) => {
-    res.json(top);
-});
+// API cho Web
+app.get("/top", (req, res) => res.json(top));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("🌐 API RUNNING ON PORT: " + PORT));
