@@ -1508,18 +1508,18 @@ async function loadTop() {
   const rankList = document.getElementById("rankList");
   
   try {
-    // Thêm timestamp để ép trình duyệt lấy dữ liệu mới nhất
+    // Thêm timestamp để tránh bị cache dữ liệu cũ
     const res = await fetch("https://senselessfishclanontop-1.onrender.com/top?" + Date.now());
     const data = await res.json();
 
-    // XÓA DỮ LIỆU CŨ TRƯỚC KHI NAP MỚI (Tránh mất/lặp Top 4-20)
+    // 1. XÓA SẠCH danh sách cũ và các card Top 1-2-3 để nạp mới
     rankList.innerHTML = "";
 
     for (let i = 1; i <= 20; i++) {
       const p = data[i];
       
       if (p) {
-        // Hiển thị Top 1, 2, 3 vào các Card tương ứng
+        // Nếu CÓ người ở vị trí này
         if (i === 1) {
           document.getElementById("top1-name").innerText = p.name;
           document.getElementById("top1-avatar").style.backgroundImage = `url(${p.avatar})`;
@@ -1530,32 +1530,39 @@ async function loadTop() {
           document.getElementById("top3-name").innerText = p.name;
           document.getElementById("top3-avatar").style.backgroundImage = `url(${p.avatar})`;
         } else {
-          // HIỂN THỊ TOP 4 ĐẾN 20
+          // Hiển thị cho Top 4-20
           rankList.innerHTML += `
-            <div class="rank-row" onclick="window.open('https://discord.com')">
-              <div class="rank-avatar" style="background-image:url('${p.avatar}')"></div>
+            <div class="rank-row">
               <div class="rank-pos">#${i}</div>
+              <div class="rank-avatar" style="background-image:url('${p.avatar}')"></div>
               <div class="rank-name" style="flex:1; margin-left:10px">${p.name}</div>
               <div style="color:#ffd966">Member</div>
             </div>`;
         }
       } else {
-        // Nếu vị trí đó trống (null), hiển thị mặc định
+        // Nếu TRỐNG (null), hiển thị mặc định để không bị mất hàng
         if (i <= 3) {
           document.getElementById(`top${i}-name`).innerText = "Trống";
           document.getElementById(`top${i}-avatar`).style.backgroundImage = "url('images/logo.png')";
+        } else {
+          rankList.innerHTML += `
+            <div class="rank-row" style="opacity: 0.5;">
+              <div class="rank-pos">#${i}</div>
+              <div class="rank-avatar" style="background-color: #222;"></div>
+              <div class="rank-name" style="flex:1; margin-left:10px">Chưa có dữ liệu</div>
+              <div style="color:#888">Trống</div>
+            </div>`;
         }
       }
     }
   } catch (err) {
-    console.error("Lỗi tải dữ liệu Top:", err);
+    console.error("Lỗi kết nối Server:", err);
   }
 }
 
-// Chạy hàm khi trang web tải xong
+// Xóa đoạn "const members = [...]" cũ của bạn đi vì nó gây xung đột dữ liệu
 window.onload = loadTop;
 </script>
 
 </body>
 </html>
-
