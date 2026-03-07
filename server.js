@@ -22,7 +22,7 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
+    GatewayIntentBits.MessageContent // BẮT BUỘC phải bật cái này trong Discord Developer Portal -> Bot
   ]
 });
 
