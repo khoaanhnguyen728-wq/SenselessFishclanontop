@@ -61,6 +61,28 @@ async function startBot() {
 
     await client.login(process.env.TOKEN);
 }
+if (commandName === "detop") {
+    await interaction.deferReply();
+
+    const user = options.getUser("user");
+
+    let removed = false;
+
+    for (let i in top) {
+        if (top[i] && top[i].id === user.id) {
+            top[i] = null;
+            removed = true;
+        }
+    }
+
+    if (!removed) {
+        return interaction.editReply(`❌ ${user.username} không có trong bảng TOP.`);
+    }
+
+    saveTop();
+
+    await interaction.editReply(`🗑️ Đã xoá **${user.username}** khỏi bảng TOP.`);
+}
 
 app.get("/top", (req, res) => { res.json(top); });
 
