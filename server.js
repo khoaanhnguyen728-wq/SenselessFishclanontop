@@ -10,9 +10,9 @@ const {
   EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
-  ButtonStyle
+  ButtonStyle,
+  StringSelectMenuBuilder
 } = require("discord.js");
-
 const app = express();
 app.use(express.json());
 app.use(cors());
@@ -32,6 +32,7 @@ if (!fs.existsSync("register.json")) fs.writeFileSync("register.json", "[]");
 
 let top = JSON.parse(fs.readFileSync("top.json", "utf8"));
 let register = JSON.parse(fs.readFileSync("register.json", "utf8"));
+const selectedMatch = new Map();
 
 // đảm bảo đủ 20 slot
 for (let i = 1; i <= 20; i++) {
@@ -51,16 +52,42 @@ client.once("ready", () => {
   console.log("🤖 Bot online: " + client.user.tag);
 });
 
-// ===== BUTTON =====
 client.on("interactionCreate", async (interaction) => {
-  if (!interaction.isButton()) return;
 
-  if (interaction.customId === "score_match") {
+  // ===== DROPDOWN =====
+  if (interaction.isStringSelectMenu()) {
+
+    const value = interaction.values[0];
+    selectedMatch.set(interaction.user.id, value);
+
     await interaction.reply({
-      content: "Referee nhập score dạng: `!score 5-3`",
+      content: "✅ Đã chọn: " + value,
       ephemeral: true
     });
+
   }
+
+  // ===== BUTTON SCORE =====
+  if (interaction.isButton()) {
+
+    if (interaction.customId === "score_match") {
+
+      if (!selectedMatch.has(interaction.user.id)) {
+        return interaction.reply({
+          content: "❌ Bạn phải chọn dropdown trước!",
+          ephemeral: true
+        });
+      }
+
+      await interaction.reply({
+        content: "📊 Referee nhập score dạng: `!score 5-3`",
+        ephemeral: true
+      });
+
+    }
+
+  }
+
 });
 
 // ===== SCORE COMMAND =====
@@ -179,17 +206,36 @@ app.post("/register", async (req, res) => {
         text: "SenselessFish Clan System"
       });
 
-    const button = new ButtonBuilder()
-      .setCustomId("score_match")
-      .setLabel("Nhập Score")
-      .setStyle(ButtonStyle.Primary);
+const dropdown = new StringSelectMenuBuilder()
+  .setCustomId("match_select")
+  .setPlaceholder("Xem thông tin / Liên hệ")
+  .addOptions([
+    {
+      label: "P1: " + discord,
+      value: "p1"
+    },
+    {
+      label: "P2: " + robloxId,
+      value: "p2"
+    },
+    {
+      label: "Trọng tài",
+      value: "ref"
+    }
+  ]);
 
-    const row = new ActionRowBuilder().addComponents(button);
+const scoreBtn = new ButtonBuilder()
+  .setCustomId("score_match")
+  .setLabel("Nhập Score")
+  .setStyle(ButtonStyle.Primary);
 
-    await channel.send({
-      embeds: [embed],
-      components: [row]
-    });
+const row1 = new ActionRowBuilder().addComponents(dropdown);
+const row2 = new ActionRowBuilder().addComponents(scoreBtn);
+
+await channel.send({
+  embeds: [embed],
+  components: [row1, row2]
+});
 
     res.json({
       success: true,
