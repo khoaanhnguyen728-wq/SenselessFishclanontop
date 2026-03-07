@@ -1262,66 +1262,76 @@ members.forEach(m=>{
         🚀 Đăng ký thi đấu
     </button>
 </div>
+<div id="userBox" style="display:none; text-align:center; margin-top:10px;">
+    <img id="userAvatar" style="width:60px;border-radius:50%; border: 2px solid #5865F2;">
+    <p id="userName" style="margin:5px 0; font-weight:bold;"></p>
+    <button onclick="localStorage.removeItem('discord_token'); location.reload();" 
+            style="font-size:11px; background:#444; border:none; color:white; padding:4px 8px; border-radius:4px; cursor:pointer;">
+        Đăng xuất
+    </button>
+</div>
 <script>
 const CLIENT_ID = "1476208651835408506";
 const REDIRECT_URI = window.location.origin + window.location.pathname;
 let discordUser = null;
 
-async function loadTop() {
-    const rankList = document.getElementById("rankList");
-    try {
-        const res = await fetch("https://senselessfishclanontop-1.onrender.com/top?t=" + Date.now());
-        const data = await res.json();
-        rankList.innerHTML = "";
+// HÀM QUAN TRỌNG: Kiểm tra và hiển thị thông tin người dùng
+async function checkLogin() {
+    // 1. Lấy token từ URL (sau khi Discord chuyển hướng về) hoặc từ bộ nhớ máy (LocalStorage)
+    const urlParams = new URLSearchParams(window.location.hash.substring(1));
+    let token = urlParams.get("access_token");
 
-        for (let i = 1; i <= 20; i++) {
-            const p = data[i];
-            if (p) {
-                const profileUrl = `https://www.roblox.com/users/${p.id}/profile`;
-                if (i <= 3) {
-                    document.getElementById(`top${i}-name`).innerText = p.name;
-                    document.getElementById(`top${i}-avatar`).style.backgroundImage = `url(${p.avatar})`;
-                    // Gán link cho nút View Profile
-                    const btn = document.querySelector(`.top-${i} .view-profile`);
-                    if(btn) btn.onclick = () => window.open(profileUrl);
-                } else {
-                    rankList.innerHTML += `
-                        <div class="rank-row" onclick="window.open('${profileUrl}')" style="cursor:pointer">
-                            <div class="rank-avatar" style="background-image:url('${p.avatar}')"></div>
-                            <div class="rank-pos">#${i}</div>
-                            <div class="rank-name" style="flex:1; margin-left:10px">${p.name}</div>
-                            <div style="color:#ffd966">Member</div>
-                        </div>`;
-                }
-            }
+    if (token) {
+        localStorage.setItem("discord_token", token);
+        // Xóa token trên URL để bảo mật và làm sạch link
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else {
+        token = localStorage.getItem("discord_token");
+    }
+
+    if (!token) return; // Nếu không có token thì thoát
+
+    try {
+        // 2. Gọi API Discord để lấy thông tin tài khoản
+        const response = await fetch("https://discord.com/api/users/@me", {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+            const user = await response.json();
+            discordUser = user;
+
+            // 3. Cập nhật giao diện Web
+            document.getElementById("loginStatus").innerText = "🟢 Đã đăng nhập";
+            document.getElementById("registerStatus").innerText = "🟢 Sẵn sàng";
+            document.getElementById("loginBox").style.display = "none";
+            document.getElementById("userBox").style.display = "block";
+            document.getElementById("userName").innerText = user.username;
+            
+            // Hiển thị ảnh đại diện Discord
+            const avatarUrl = user.avatar 
+                ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
+                : "https://cdn.discordapp.com/embed/avatars/0.png";
+            document.getElementById("userAvatar").src = avatarUrl;
+        } else {
+            // Nếu token hết hạn hoặc lỗi
+            localStorage.removeItem("discord_token");
         }
-    } catch (err) { console.error(err); }
+    } catch (err) {
+        console.error("Lỗi Login Discord:", err);
+    }
 }
 
-function loginDiscord(){
+function loginDiscord() {
+    // Chuyển hướng sang trang ủy quyền của Discord
     window.location.href = `https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=identify`;
 }
 
-function loadUser(){
-    let token = new URLSearchParams(window.location.hash.substring(1)).get("access_token") || localStorage.getItem("discord_token");
-    if(token){
-        localStorage.setItem("discord_token", token);
-        window.location.hash = "";
-        fetch("https://discord.com/api/users/@me", { headers: { authorization: "Bearer " + token } })
-        .then(res => res.json())
-        .then(user => {
-            if(user.id) {
-                discordUser = user;
-                document.getElementById("loginStatus").innerText = "🟢 Đã đăng nhập";
-                document.getElementById("registerStatus").innerText = "🟢 Sẵn sàng";
-                document.getElementById("loginBox").style.display = "none";
-                document.getElementById("userBox").style.display = "block";
-                document.getElementById("userName").innerText = user.username;
-                document.getElementById("userAvatar").src = `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`;
-            }
-        });
-    }
-}
+// Cập nhật lại window.onload để chạy hàm kiểm tra khi vừa mở trang
+window.onload = () => {
+    loadTop();   // Hàm tải bảng xếp hạng đã có của bạn
+    checkLogin(); // Kiểm tra đăng nhập
+};
 
 async function registerStage() {
     if (!discordUser) {
@@ -1559,5 +1569,6 @@ window.onload = loadTop;
 
 </body>
 </html>
+
 
 
