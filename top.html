@@ -1727,52 +1727,7 @@ window.onload = () => {
 };
 </script>
 <script>
-async function registerMatch() {
-    // 1. Lấy dữ liệu từ giao diện
-    // Lưu ý: Đảm bảo các thẻ <input> hoặc <select> của bạn có đúng ID này
-    const stage = document.getElementById("stage")?.value;
-    const discordName = discordUser ? `${discordUser.username}` : "Ẩn danh";
-    
-    if (!discordUser) {
-        alert("Bạn cần Đăng nhập Discord trước!");
-        return;
-    }
-
-    if (!stage) {
-        alert("Vui lòng chọn Stage!");
-        return;
-    }
-
-    // Hiển thị trạng thái đang xử lý
-    const btn = document.querySelector("button[onclick='registerMatch()']");
-    if(btn) btn.innerText = "Đang đăng ký...";
-
-    try {
-        const res = await fetch("https://senselessfishclanontop-1.onrender.com/register", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                discord: discordName,
-                robloxId: "Chưa nhập", // Bạn có thể thêm input id="roblox" để lấy thực tế
-                stage: stage,
-                time: new Date().toLocaleString("vi-VN")
-            })
-        });
-
-        const data = await res.json();
-        
-        if (data.success) {
-            alert("✅ Đăng ký thành công! Kiểm tra Discord ngay.");
-        } else {
-            alert("❌ Lỗi: " + (data.error || "Không thể gửi tin nhắn"));
-        }
-    } catch (err) {
-        console.error(err);
-        alert("❌ Lỗi kết nối đến Server Render!");
-    } finally {
-        if(btn) btn.innerText = "Đăng Ký Thi Đấu";
-    }
-}
+  
 </script>
 
 </body>
