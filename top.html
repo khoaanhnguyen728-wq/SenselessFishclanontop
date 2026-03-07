@@ -1016,6 +1016,34 @@ body{
 .nav-tools:hover .tools-btn .arrow{
   transform:rotate(180deg); /* ▲ → ▼ */
 }
+/* Trang trí lại Select Stage giống ảnh */
+#stage {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: 2px solid #22c55e; /* Màu viền xanh lá */
+    background: #020617;      /* Nền tối */
+    color: white;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    appearance: none;         /* Xóa icon mặc định của trình duyệt */
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 18px;
+    transition: 0.3s;
+}
+
+#stage:hover {
+    box-shadow: 0 0 15px rgba(34, 197, 94, 0.4);
+}
+
+#stage option {
+    background: #0f172a;
+    color: white;
+    padding: 10px;
+}
 </style>
 </head>
 
@@ -1215,20 +1243,24 @@ members.forEach(m=>{
             <button onclick="localStorage.removeItem('discord_token'); location.reload();" style="font-size:10px; background:none; border:none; color:gray; cursor:pointer;">Đăng xuất</button>
         </div>
     </div>
-
-    <div class="register-box">
-        <h3>🏆 Đăng ký thi đấu</h3>
-        <div id="registerStatus">🔴 Cần Login Discord</div>
-        
+<div class="register-box">
+    <h3>🏆 Đăng ký thi đấu</h3>
+    <div id="registerStatus">🔴 Chưa đăng nhập</div>
+    
+    <div style="text-align: left; margin: 15px 0;">
+        <label style="display:block; margin-bottom:8px; font-weight:bold;">🎯 Chọn Stage</label>
         <select id="stage">
             <option value="">-- Chọn Stage --</option>
-            <option value="Member">Member</option>
-            <option value="Mainers">Mainers</option>
-            <option value="Tester">Tester</option>
+            <option value="🔥 3 High">🔥 3 High</option>
+            <option value="❄️ 2 Low">❄️ 2 Low</option>
+            <option value="⚡ 2 Mid">⚡ 2 Mid</option>
+            <option value="💎 2 High">💎 2 High</option>
         </select>
-
-        <button id="btnRegister" onclick="registerStage()" class="btn">🚀 Gửi Đăng Ký</button>
     </div>
+
+    <button onclick="registerStage()" class="btn">
+        🚀 Đăng ký thi đấu
+    </button>
 </div>
 <script>
 const CLIENT_ID = "1476208651835408506";
@@ -1292,28 +1324,47 @@ function loadUser(){
 }
 
 async function registerStage() {
-    if (!discordUser) return alert("Hãy Login Discord trước!");
+    if (!discordUser) {
+        return alert("❗ Bạn cần Login Discord trước!");
+    }
+
+    // Nếu bạn đã bỏ ô nhập GameName, hãy xóa dòng const game này.
+    // Nếu vẫn để ô nhập, code sẽ lấy giá trị đó.
+    const gameInput = document.getElementById("gameName")?.value || "Không xác định";
     const stage = document.getElementById("stage").value;
-    if (!stage) return alert("Chọn Stage!");
 
-    await fetch("https://discord.com/api/webhooks/1476817074558074951/YwvQgSD5DQOEioO55Ix7nHGkXAPcQJUYbDgDYHAynGQApiyPD-lQxb-xkUZKrU0Qlvn1", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            embeds: [{
-                title: "🏆 ĐĂNG KÝ MỚI",
-                fields: [
-                    { name: "Người dùng", value: `<@${discordUser.id}>`, inline: true },
-                    { name: "Stage", value: stage, inline: true }
-                ],
-                thumbnail: { url: `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png` }
-            }]
-        })
+    if (!stage) {
+        return alert("Vui lòng chọn Stage!");
+    }
+
+    // Lấy thời gian hiện tại theo định dạng VN
+    const currentTime = new Date().toLocaleString('en-US', { 
+        year: 'numeric', 
+        month: 'numeric', 
+        day: 'numeric', 
+        hour: 'numeric', 
+        minute: 'numeric', 
+        second: 'numeric', 
+        hour12: true 
     });
-    alert("✅ Đã gửi đơn đăng ký!");
-}
 
-window.onload = () => { loadTop(); loadUser(); };
+    try {
+        await fetch("https://discord.com/api/webhooks/1476817074558074951/YwvQgSD5DQOEioO55Ix7nHGkXAPcQJUYbDgDYHAynGQApiyPD-lQxb-xkUZKrU0Qlvn1", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                content: `🏆 **ĐĂNG KÝ THI ĐẤU MỚI**\n` +
+                         `🎮 **Game:** ${gameInput}\n` +
+                         `👤 **Discord:** ${discordUser.username}\n` +
+                         `📊 **Stage:** ${stage}\n` +
+                         `⏰ **Thời gian:** ${currentTime}`
+            })
+        });
+        alert("✅ Gửi đơn đăng ký thành công!");
+    } catch (e) {
+        alert("❌ Lỗi khi gửi đơn!");
+    }
+}
 
 </script>
 
@@ -1508,4 +1559,5 @@ window.onload = loadTop;
 
 </body>
 </html>
+
 
