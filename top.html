@@ -1506,6 +1506,8 @@ async function registerStage() {
 
     if (lastRegister) {
         const diff = (now - lastRegister) / 1000;
+        
+        const REGISTER_COOLDOWN = 600; // 10 phút
 
         if (diff < REGISTER_COOLDOWN) {
             const remain = Math.ceil(REGISTER_COOLDOWN - diff);
@@ -1517,23 +1519,19 @@ async function registerStage() {
 
     try {
 
-        await fetch("https://discord.com/api/webhooks/1479819803933016104/kuAz1hPctZ7H7QSNeVmqx9SxIQ1I0BFUWaLQWwheYYm5b-fHnWzKOYrOA0vN9ZD7Uxfu", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-
-            body: JSON.stringify({
-                content:
-`🏆 **ĐĂNG KÝ THI ĐẤU**
-
-👤 Discord: **${discordUser.username}**
-🆔 Roblox ID: **${robloxId}**
-📊 Stage: **${stage}**
-⏰ Time: ${currentTime}`
-            })
-        });
-
+await fetch("https://senselessfishclanontop-1.onrender.com/register",{  
+ method:"POST",  
+ headers:{  
+ "Content-Type":"application/json"  
+ },  
+ body:JSON.stringify({  
+   discord: discordUser.username,  
+   discordId: discordUser.id,  
+   robloxId: robloxId,  
+   stage: stage,  
+   time: currentTime  
+ })  
+});
         /* lưu thời gian gửi */
         localStorage.setItem("last_register_time", now);
 
@@ -1741,11 +1739,3 @@ window.onload = () => {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
