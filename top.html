@@ -1120,7 +1120,7 @@ body{
 <div class="avatar silver" id="top2-avatar"></div>
 <div class="rank silver">2</div>
 <div class="name" id="top2-name">Loading...</div>
-<div class="stage">Top 2</div>
+<div class="stage">Member</div>
 
 <button class="view-profile">
 View Profile
@@ -1136,7 +1136,7 @@ View Profile
 <div class="avatar gold" id="top1-avatar"></div>
 <div class="rank gold">1</div>
 <div class="name" id="top1-name">Loading...</div>
-<div class="stage">Top 1</div>
+<div class="stage">Leader</div>
 
 <button class="view-profile">
 View Profile
@@ -1150,7 +1150,7 @@ View Profile
 <div class="avatar bronze" id="top3-avatar"></div>
 <div class="rank bronze">3</div>
 <div class="name" id="top3-name">Loading...</div>
-<div class="stage">Top 3</div>
+<div class="stage">Member</div>
 
 <button class="view-profile">
 View Profile
@@ -1203,175 +1203,183 @@ members.forEach(m=>{
 </div>
 <!-- ===== REGISTER WRAPPER ===== -->
 <div class="register-wrapper">
+    <div class="register-box">
+        <h3>🧍 Tài khoản</h3>
+        <div id="loginStatus">🔴 Chưa đăng nhập</div>
+        <div id="loginBox">
+            <button onclick="loginDiscord()" class="btn">Login Discord</button>
+        </div>
+        <div id="userBox" style="display:none; text-align:center; margin-top:10px;">
+            <img id="userAvatar" style="width:60px;border-radius:50%; border: 2px solid #5865F2;">
+            <p id="userName" style="margin:5px 0; font-weight:bold;"></p>
+            <button onclick="localStorage.removeItem('discord_token'); location.reload();" style="font-size:10px; background:none; border:none; color:gray; cursor:pointer;">Đăng xuất</button>
+        </div>
+    </div>
 
-<!-- ===== LOGIN DISCORD ===== -->
-<div class="register-box">
+    <div class="register-box">
+        <h3>🏆 Đăng ký thi đấu</h3>
+        <div id="registerStatus">🔴 Cần Login Discord</div>
+        
+        <select id="stage">
+            <option value="">-- Chọn Stage --</option>
+            <option value="Member">Member</option>
+            <option value="Mainers">Mainers</option>
+            <option value="Tester">Tester</option>
+        </select>
 
-<h3>🧍 Đăng ký tài khoản</h3>
-
-<div id="loginStatus">
-🔴 Chưa đăng nhập
-</div>
-
-<div id="loginBox">
-<button onclick="loginDiscord()" class="btn">
-Login Discord
-</button>
-</div>
-
-<div id="userBox" style="display:none; text-align:center; margin-top:10px;">
-
-<img id="userAvatar" style="width:60px;border-radius:50%;">
-
-<p id="userName"></p>
-
-</div>
-
-</div>
-
-
-<!-- ===== REGISTER TOURNAMENT ===== -->
-<div class="register-box">
-
-<h3>🏆 Đăng ký thi đấu</h3>
-
-<div id="registerStatus">
-🔴 Chưa đăng nhập
-</div>
-
-<input id="gameName" placeholder="Tên trong game">
-
-<select id="stage">
-<option value="">-- Chọn Stage --</option>
-<option value="Member">Member</option>
-<option value="Mainers">Mainers</option>
-<option value="Tester">Tester</option>
-</select>
-
-<button onclick="registerStage()" class="btn">
-🚀 Đăng ký thi đấu
-</button>
-
+        <button id="btnRegister" onclick="registerStage()" class="btn">🚀 Gửi Đăng Ký</button>
+    </div>
 </div>
 <script>
-
 const CLIENT_ID = "1476208651835408506";
 const REDIRECT_URI = window.location.origin + window.location.pathname;
-
 let discordUser = null;
 
-/* ===== LOGIN ===== */
+/* ==========================================
+   1. PHẦN LOAD BẢNG XẾP HẠNG (TOP 1-20)
+   ========================================== */
+async function loadTop() {
+    const rankList = document.getElementById("rankList");
+    
+    try {
+        // Gọi API lấy dữ liệu top từ server của bạn
+        const res = await fetch("https://senselessfishclanontop-1.onrender.com/top?t=" + Date.now());
+        const data = await res.json();
 
-function loginDiscord(){
+        // XÓA DỮ LIỆU CŨ TRƯỚC KHI NẠP (Quan trọng để không bị lỗi hiển thị)
+        rankList.innerHTML = "";
 
-const url =
-"https://discord.com/oauth2/authorize"
-+ "?client_id="+CLIENT_ID
-+ "&response_type=token"
-+ "&redirect_uri="+encodeURIComponent(REDIRECT_URI)
-+ "&scope=identify";
+        for (let i = 1; i <= 20; i++) {
+            const p = data[i];
+            
+            if (p) {
+                // p.id lúc này nên là Roblox ID để link Profile hoạt động
+                const profileUrl = `https://www.roblox.com/users/${p.id}/profile`;
 
-window.location.href=url;
-
+                if (i === 1) {
+                    document.getElementById("top1-name").innerText = p.name;
+                    document.getElementById("top1-avatar").style.backgroundImage = `url(${p.avatar})`;
+                    document.querySelector(".top-1 .view-profile").onclick = () => window.open(profileUrl);
+                } else if (i === 2) {
+                    document.getElementById("top2-name").innerText = p.name;
+                    document.getElementById("top2-avatar").style.backgroundImage = `url(${p.avatar})`;
+                    document.querySelector(".top-2 .view-profile").onclick = () => window.open(profileUrl);
+                } else if (i === 3) {
+                    document.getElementById("top3-name").innerText = p.name;
+                    document.getElementById("top3-avatar").style.backgroundImage = `url(${p.avatar})`;
+                    document.querySelector(".top-3 .view-profile").onclick = () => window.open(profileUrl);
+                } else {
+                    // Hiển thị Top 4 đến 20
+                    rankList.innerHTML += `
+                        <div class="rank-row" onclick="window.open('${profileUrl}')" style="cursor:pointer">
+                            <div class="rank-avatar" style="background-image:url('${p.avatar}')"></div>
+                            <div class="rank-pos">#${i}</div>
+                            <div class="rank-name" style="flex:1; margin-left:10px">${p.name}</div>
+                            <div style="color:#ffd966">Member</div>
+                        </div>`;
+                }
+            } else {
+                // Nếu vị trí trống
+                if (i <= 3) {
+                    document.getElementById(`top${i}-name`).innerText = "Trống";
+                    document.getElementById(`top${i}-avatar`).style.backgroundImage = "url('images/logo.png')";
+                    document.querySelector(`.top-${i} .view-profile`).onclick = null;
+                } else {
+                    rankList.innerHTML += `
+                        <div class="rank-row" style="opacity:0.5">
+                            <div class="rank-avatar" style="background-color:#222"></div>
+                            <div class="rank-pos">#${i}</div>
+                            <div class="rank-name" style="flex:1; margin-left:10px">Chưa có dữ liệu</div>
+                            <div style="color:#888">Trống</div>
+                        </div>`;
+                }
+            }
+        }
+    } catch (err) {
+        console.error("Lỗi tải Top:", err);
+    }
 }
 
-
-/* ===== LOAD USER ===== */
+/* ==========================================
+   2. PHẦN LOGIN DISCORD (GIỮ NGUYÊN AVATAR)
+   ========================================== */
+function loginDiscord(){
+    const url = `https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=identify`;
+    window.location.href = url;
+}
 
 function loadUser(){
+    const hash = window.location.hash;
+    let token = hash ? new URLSearchParams(hash.substring(1)).get("access_token") : localStorage.getItem("discord_token");
 
-let token = null
+    if(token){
+        localStorage.setItem("discord_token", token);
+        window.location.hash = ""; 
 
-/* 1. lấy token từ URL */
-const hash = window.location.hash
-
-if(hash){
-token = new URLSearchParams(hash.substring(1)).get("access_token")
-
-if(token){
-localStorage.setItem("discord_token", token)
-window.location.hash = ""   // xoá token khỏi URL
-}
-}
-
-/* 2. nếu không có hash thì lấy từ localStorage */
-if(!token){
-token = localStorage.getItem("discord_token")
-}
-
-if(!token) return
-
-/* 3. lấy thông tin user */
-
-fetch("https://discord.com/api/users/@me",{
-headers:{
-authorization:"Bearer "+token
-}
-})
-.then(res=>res.json())
-.then(user=>{
-
-discordUser=user
-
-document.getElementById("loginStatus").innerHTML="🟢 Đã đăng nhập"
-document.getElementById("registerStatus").innerHTML="🟢 Đã đăng nhập"
-
-document.getElementById("loginBox").style.display="none"
-document.getElementById("userBox").style.display="block"
-
-document.getElementById("userName").innerText=user.username
-
-document.getElementById("userAvatar").src=
-"https://cdn.discordapp.com/avatars/"
-+user.id+"/"+user.avatar+".png"
-
-})
-
+        fetch("https://discord.com/api/users/@me", {
+            headers: { authorization: "Bearer " + token }
+        })
+        .then(res => res.json())
+        .then(user => {
+            if(user.id) {
+                discordUser = user;
+                document.getElementById("loginStatus").innerHTML = "🟢 Đã đăng nhập";
+                document.getElementById("registerStatus").innerHTML = "🟢 Sẵn sàng";
+                document.getElementById("loginBox").style.display = "none";
+                document.getElementById("userBox").style.display = "block";
+                document.getElementById("userName").innerText = user.username;
+                document.getElementById("userAvatar").src = `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`;
+            }
+        })
+        .catch(() => localStorage.removeItem("discord_token"));
+    }
 }
 
-loadUser()
+/* ==========================================
+   3. PHẦN ĐĂNG KÝ (ĐÃ BỎ NHẬP TÊN ROBLOX)
+   ========================================== */
+async function registerStage() {
+    if (!discordUser) {
+        alert("❗ Bạn cần Login Discord trước khi đăng ký!");
+        return;
+    }
 
+    const stage = document.getElementById("stage").value;
+    if (!stage) {
+        alert("Vui lòng chọn Stage!");
+        return;
+    }
 
-/* ===== REGISTER ===== */
-
-function registerStage(){
-
-if(!discordUser){
-alert("❗ Bạn cần login Discord trước");
-return;
+    // Gửi thông báo về Webhook Discord
+    try {
+        await fetch("https://discord.com/api/webhooks/1476817074558074951/YwvQgSD5DQOEioO55Ix7nHGkXAPcQJUYbDgDYHAynGQApiyPD-lQxb-xkUZKrU0Qlvn1", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                content: "🏆 **ĐƠN ĐĂNG KÝ THI ĐẤU MỚI**",
+                embeds: [{
+                    color: 3447003,
+                    thumbnail: { url: `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png` },
+                    fields: [
+                        { name: "👤 Người đăng ký", value: `<@${discordUser.id}>`, inline: true },
+                        { name: "🆔 Discord Name", value: discordUser.username, inline: true },
+                        { name: "📊 Stage chọn", value: stage, inline: false }
+                    ],
+                    timestamp: new Date()
+                }]
+            })
+        });
+        alert("✅ Đăng ký thành công! Admin sẽ kiểm tra tài khoản của bạn.");
+    } catch (e) {
+        alert("Có lỗi khi gửi đơn, vui lòng thử lại sau.");
+    }
 }
 
-const game=document.getElementById("gameName").value;
-const stage=document.getElementById("stage").value;
-
-if(!game || !stage){
-alert("Điền đầy đủ thông tin");
-return;
-}
-
-fetch("https://discord.com/api/webhooks/1476817074558074951/YwvQgSD5DQOEioO55Ix7nHGkXAPcQJUYbDgDYHAynGQApiyPD-lQxb-xkUZKrU0Qlvn1",{
-
-method:"POST",
-
-headers:{
-"Content-Type":"application/json"
-},
-
-body:JSON.stringify({
-
-content:
-"🏆 **Đăng ký thi đấu**\n"
-+"Discord: "+discordUser.username+"\n"
-+"Game: "+game+"\n"
-+"Stage: "+stage
-
-})
-
-});
-
-alert("✅ Đăng ký thành công!");
-
-}
+// Chạy khởi tạo khi vào trang
+window.onload = () => {
+    loadTop();
+    loadUser();
+};
 
 </script>
 
@@ -1566,4 +1574,3 @@ window.onload = loadTop;
 
 </body>
 </html>
-
