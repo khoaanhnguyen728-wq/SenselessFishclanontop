@@ -1504,47 +1504,58 @@ setInterval(spawnDolphin,500);
 </div>
 </script>
 <script>
+async function loadTop() {
+  const rankList = document.getElementById("rankList");
+  
+  try {
+    // Thêm timestamp để tránh bị cache trình duyệt
+    const res = await fetch("https://senselessfishclanontop-1.onrender.com/top?t=" + Date.now());
+    if (!res.ok) throw new Error("Server error");
+    const data = await res.json();
 
-async function loadTop(){
+    // 1. Clear danh sách cũ (Quan trọng)
+    rankList.innerHTML = "";
 
-try{
-
-const res = await fetch("/top")
-const data = await res.json()
-
-if(data["1"]){
-document.getElementById("top1-name").innerText = data["1"].name
-document.getElementById("top1-avatar").style.backgroundImage =
-`url(${data["1"].avatar})`
-}else{
-document.getElementById("top1-name").innerText = "Empty"
+    for (let i = 1; i <= 20; i++) {
+      const p = data[i];
+      
+      // Nếu có dữ liệu người chơi
+      if (p) {
+        if (i === 1) {
+          document.getElementById("top1-name").innerText = p.name;
+          document.getElementById("top1-avatar").style.backgroundImage = `url(${p.avatar})`;
+        } else if (i === 2) {
+          document.getElementById("top2-name").innerText = p.name;
+          document.getElementById("top2-avatar").style.backgroundImage = `url(${p.avatar})`;
+        } else if (i === 3) {
+          document.getElementById("top3-name").innerText = p.name;
+          document.getElementById("top3-avatar").style.backgroundImage = `url(${p.avatar})`;
+        } else {
+          // Từ Top 4 trở đi
+          rankList.innerHTML += `
+            <div class="rank-row" onclick="window.open('https://discord.com')">
+              <div class="rank-pos">#${i}</div>
+              <img src="${p.avatar}" width="40" style="border-radius:50%">
+              <div class="rank-name" style="flex:1; margin-left:10px">${p.name}</div>
+              <div style="color:#ffd966">Member</div>
+            </div>`;
+        }
+      } else {
+        // Nếu vị trí đó trống (Null)
+        if (i <= 3) {
+          document.getElementById(`top${i}-name`).innerText = "Trống";
+          document.getElementById(`top${i}-avatar`).style.backgroundImage = `url('images/logo.png')`;
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Lỗi load Top:", err);
+    rankList.innerHTML = "<p style='color:red'>Không thể kết nối với máy chủ...</p>";
+  }
 }
 
-if(data["2"]){
-document.getElementById("top2-name").innerText = data["2"].name
-document.getElementById("top2-avatar").style.backgroundImage =
-`url(${data["2"].avatar})`
-}else{
-document.getElementById("top2-name").innerText = "Empty"
-}
-
-if(data["3"]){
-document.getElementById("top3-name").innerText = data["3"].name
-document.getElementById("top3-avatar").style.backgroundImage =
-`url(${data["3"].avatar})`
-}else{
-document.getElementById("top3-name").innerText = "Empty"
-}
-
-}catch(err){
-console.log(err)
-}
-
-}
-
-loadTop()
-setInterval(loadTop,5000)
-
+// Chạy hàm khi trang web tải xong
+window.onload = loadTop;
 </script>
 <script>
 
