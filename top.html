@@ -1405,7 +1405,7 @@ members.forEach(m=>{
 </div>
 <script>
 const CLIENT_ID = "1476208651835408506";
-const REDIRECT_URI = window.location.origin + window.location.pathname;
+const REDIRECT_URI = "https://khoaanhnguyen728-wq.github.io/SenselessFishclan/top.html";
 let discordUser = null;
 
 // HÀM QUAN TRỌNG: Kiểm tra và hiển thị thông tin người dùng
@@ -1697,7 +1697,10 @@ async function loadTop() {
 }
 
 // Xóa đoạn "const members = [...]" cũ của bạn đi vì nó gây xung đột dữ liệu
-window.onload = loadTop;
+window.onload = () => {
+  loadTop();
+  checkLogin();
+};
 </script>
 
 </body>
