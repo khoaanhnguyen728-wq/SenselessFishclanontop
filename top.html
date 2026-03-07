@@ -1504,33 +1504,47 @@ setInterval(spawnDolphin,500);
 </div>
 </script>
 <script>
-
 async function loadTop(){
 
 const res = await fetch("https://senselessfishclanontop-1.onrender.com/top?"+Date.now())
 const data = await res.json()
 
-if(data[1]){
-document.getElementById("top1-name").innerText = data[1].name
-document.getElementById("top1-avatar").style.backgroundImage = `url(${data[1].avatar})`
+for(let i=1;i<=20;i++){
+
+const p = data[i]
+if(!p) continue
+
+if(i===1){
+document.getElementById("top1-name").innerText = p.name
+document.getElementById("top1-avatar").style.backgroundImage = `url(${p.avatar})`
 }
 
-if(data[2]){
-document.getElementById("top2-name").innerText = data[2].name
-document.getElementById("top2-avatar").style.backgroundImage = `url(${data[2].avatar})`
+if(i===2){
+document.getElementById("top2-name").innerText = p.name
+document.getElementById("top2-avatar").style.backgroundImage = `url(${p.avatar})`
 }
 
-if(data[3]){
-document.getElementById("top3-name").innerText = data[3].name
-document.getElementById("top3-avatar").style.backgroundImage = `url(${data[3].avatar})`
+if(i===3){
+document.getElementById("top3-name").innerText = p.name
+document.getElementById("top3-avatar").style.backgroundImage = `url(${p.avatar})`
+}
+
+if(i>=4){
+rankList.innerHTML += `
+<div class="rank-row">
+<div>#${i}</div>
+<img src="${p.avatar}" width="40">
+<div>${p.name}</div>
+</div>
+`
+}
+
 }
 
 }
 
 loadTop()
-
 </script>
 
 </body>
 </html>
-
