@@ -27,7 +27,11 @@ if(fs.existsSync("database.json")){
 }
 
 if(fs.existsSync("top.json")){
-  top = JSON.parse(fs.readFileSync("top.json","utf8"))
+try{
+top = JSON.parse(fs.readFileSync("top.json","utf8"))
+}catch{
+top = {}
+}
 }
 
 /* đảm bảo top 1-20 tồn tại */
