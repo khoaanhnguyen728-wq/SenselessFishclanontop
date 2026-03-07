@@ -28,27 +28,21 @@ function saveTop() { fs.writeFileSync("top.json", JSON.stringify(top, null, 2));
 
 client.on("interactionCreate", async interaction => {
     if (!interaction.isChatInputCommand()) return;
+    const { commandName, options } = interaction;
 
     try {
-        // Cố gắng deferReply ngay lập tức
-        await interaction.deferReply().catch(err => console.error("Lỗi Defer:", err));
+        if (commandName === "settop") {
+            await interaction.deferReply();
+            const user = options.getUser("user");
+            const topRank = options.getInteger("top");
 
-        if (interaction.commandName === "settop") {
-            const user = interaction.options.getUser("user");
-            const topRank = interaction.options.getInteger("top");
+            if (topRank < 1 || topRank > 20) return interaction.editReply("Chỉ hỗ trợ Top 1 - 20");
 
-            if (topRank < 1 || topRank > 20) {
-                return interaction.editReply("❌ Chỉ hỗ trợ Top 1 - 20");
+            // Xóa user nếu đang ở top khác
+            for (let i in top) {
+                if (top[i] && top[i].id === user.id) top[i] = null;
             }
 
-            // Logic xóa user khỏi top cũ
-            for (let i = 1; i <= 20; i++) {
-                if (top[i] && top[i].id === user.id) {
-                    top[i] = null;
-                }
-            }
-
-            // Gán top mới
             top[topRank] = {
                 id: user.id,
                 name: user.username,
@@ -59,34 +53,64 @@ client.on("interactionCreate", async interaction => {
             await interaction.editReply(`👑 Đã đặt **${user.username}** vào **TOP ${topRank}**`);
         }
 
-        if (interaction.commandName === "detop") {
-            const user = interaction.options.getUser("user");
-            let removed = false;
-
-            for (let i = 1; i <= 20; i++) {
+        if (commandName === "detop") {
+            await interaction.deferReply();
+            const user = options.getUser("user");
+            let found = false;
+            for (let i in top) {
                 if (top[i] && top[i].id === user.id) {
                     top[i] = null;
-                    removed = true;
+                    found = true;
                 }
             }
-
-            if (removed) {
+            if (found) {
                 saveTop();
                 await interaction.editReply(`❌ Đã xóa **${user.username}** khỏi bảng xếp hạng.`);
             } else {
-                await interaction.editReply(`⚠️ Không tìm thấy người dùng **${user.username}** trong bảng xếp hạng.`);
+                await interaction.editReply(`⚠️ Không tìm thấy người dùng này trong Top.`);
             }
         }
-
     } catch (err) {
-        console.error("Lỗi xử lý lệnh:", err);
-        // Kiểm tra nếu interaction vẫn còn hợp lệ thì mới báo lỗi cho user
-        if (interaction.deferred || interaction.replied) {
-            await interaction.editReply("❌ Có lỗi xảy ra khi thực hiện lệnh này.").catch(() => {});
-        }
+        console.error(err);
+        if (!interaction.replied) await interaction.editReply("❌ Có lỗi xảy ra.");
     }
 });
 
+const axios = require("axios"); // Bạn cần chạy: npm install axios
+
+// ... (giữ nguyên các phần cũ của server.js)
+
+app.get("/roblox/:username", async (req, res) => {
+    try {
+        const username = req.params.username;
+
+        // 1. Lấy UserId từ Username
+        const userRes = await axios.post("https://users.roblox.com/v1/usernames/users", {
+            usernames: [username],
+            excludeBannedUsers: true
+        });
+
+        if (!userRes.data.data.length) {
+            return res.status(404).json({ error: "Không tìm thấy User" });
+        }
+
+        const userId = userRes.data.data[0].id;
+        const displayName = userRes.data.data[0].displayName;
+
+        // 2. Lấy Ảnh đại diện (Headshot)
+        const thumbRes = await axios.get(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=150x150&format=Png&isCircular=true`);
+        const avatarUrl = thumbRes.data.data[0].imageUrl;
+
+        res.json({
+            userId,
+            username,
+            displayName,
+            avatarUrl
+        });
+    } catch (err) {
+        res.status(500).json({ error: "Lỗi kết nối Roblox API" });
+    }
+});
 app.get("/top", (req, res) => {
     res.json(top);
 });
@@ -94,4 +118,3 @@ app.get("/top", (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("🌐 API RUNNING ON PORT: " + PORT));
 client.login(process.env.TOKEN);
-
