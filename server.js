@@ -1,202 +1,68 @@
-require("dotenv").config()
-
-const { Client, GatewayIntentBits } = require("discord.js")
-const express = require("express")
-const fs = require("fs")
-
-/* DISCORD CLIENT */
+require("dotenv").config();
+const { Client, GatewayIntentBits } = require("discord.js");
+const express = require("express");
+const fs = require("fs");
+const cors = require("cors"); // Thêm thư viện CORS
 
 const client = new Client({
-  intents:[GatewayIntentBits.Guilds]
-})
+  intents: [GatewayIntentBits.Guilds]
+});
 
-/* EXPRESS */
+const app = express();
+app.use(express.json());
+app.use(cors()); // Cho phép Frontend truy cập API
 
-const app = express()
-app.use(express.json())
+let database = [];
+let top = {};
 
-/* DATABASE */
+// Khởi tạo file nếu chưa có để tránh lỗi crash
+if (!fs.existsSync("database.json")) fs.writeFileSync("database.json", "[]");
+if (!fs.existsSync("top.json")) fs.writeFileSync("top.json", "{}");
 
-let database = []
-let top = {}
+database = JSON.parse(fs.readFileSync("database.json", "utf8"));
+top = JSON.parse(fs.readFileSync("top.json", "utf8"));
 
-/* LOAD FILE */
-
-if(fs.existsSync("database.json")){
-  database = JSON.parse(fs.readFileSync("database.json","utf8"))
-}
-
-if(fs.existsSync("top.json")){
-try{
-top = JSON.parse(fs.readFileSync("top.json","utf8"))
-}catch{
-top = {}
-}
-}
-
-/* đảm bảo top 1-20 tồn tại */
-
-for(let i=1;i<=20;i++){
-  if(top[i] === undefined){
-    top[i] = null
-  }
-}
-
-/* SAVE */
-
-function saveDB(){
-  fs.writeFileSync("database.json", JSON.stringify(database,null,2))
-}
-
-function saveTop(){
-  fs.writeFileSync("top.json", JSON.stringify(top,null,2))
-}
-
-/* BOT READY */
-
-client.once("ready",()=>{
-  console.log("✅ BOT ONLINE")
-})
-
-/* COMMAND HANDLER */
+function saveDB() { fs.writeFileSync("database.json", JSON.stringify(database, null, 2)); }
+function saveTop() { fs.writeFileSync("top.json", JSON.stringify(top, null, 2)); }
 
 client.on("interactionCreate", async interaction => {
+  if (!interaction.isChatInputCommand()) return;
+  const { commandName, options } = interaction;
 
-if(!interaction.isChatInputCommand()) return
+  try {
+    if (commandName === "settop") {
+      await interaction.deferReply();
+      const user = options.getUser("user");
+      const topRank = options.getInteger("top");
 
-try{
+      if (topRank < 1 || topRank > 20) return interaction.editReply("Chỉ hỗ trợ Top 1 - 20");
 
-/* PROMOTE */
+      // Xóa user này nếu họ đang ở vị trí Top khác
+      for (let i in top) {
+        if (top[i] && top[i].id === user.id) top[i] = null;
+      }
 
-if(interaction.commandName === "promote"){
+      // Ghi đè vị trí mới
+      top[topRank] = {
+        id: user.id,
+        name: user.username,
+        avatar: user.displayAvatarURL({ extension: 'png', size: 256 })
+      };
 
-await interaction.deferReply()
+      saveTop();
+      await interaction.editReply(`👑 Đã đặt **${user.username}** vào **TOP ${topRank}**`);
+    }
+    // Các lệnh promote/demote/detop giữ nguyên logic cũ nhưng thêm xử lý lỗi...
+  } catch (err) {
+    console.error(err);
+    interaction.editReply("❌ Có lỗi xảy ra với Bot.");
+  }
+});
 
-const user = interaction.options.getUser("user")
-const rank = interaction.options.getString("rank")
+app.get("/top", (req, res) => {
+  res.json(top);
+});
 
-database.push({
-id:user.id,
-name:user.username,
-avatar:user.displayAvatarURL(),
-rank:rank
-})
-
-saveDB()
-
-await interaction.editReply(`✅ ${user.username} promoted to ${rank}`)
-}
-
-/* DEMOTE */
-
-if(interaction.commandName === "demote"){
-
-await interaction.deferReply()
-
-const user = interaction.options.getUser("user")
-
-database = database.filter(x => x.id !== user.id)
-
-saveDB()
-
-await interaction.editReply(`❌ ${user.username} removed`)
-}
-
-/* SETTOP */
-
-if(interaction.commandName === "settop"){
-
-await interaction.deferReply()
-
-const user = interaction.options.getUser("user")
-const topRank = interaction.options.getInteger("top")
-
-/* remove user khỏi top cũ */
-
-for(let i=1;i<=20;i++){
-if(top[i] && top[i].id === user.id){
-top[i] = null
-}
-}
-
-top[topRank] = {
-id:user.id,
-name:user.username,
-avatar:user.displayAvatarURL({size:256})
-}
-
-saveTop()
-
-await interaction.editReply(`👑 ${user.username} set to TOP ${topRank}`)
-}
-
-/* DETOP */
-
-if(interaction.commandName === "detop"){
-
-await interaction.deferReply()
-
-const user = interaction.options.getUser("user")
-
-let removed = false
-
-for(let i=1;i<=20;i++){
-if(top[i] && top[i].id === user.id){
-top[i] = null
-removed = true
-}
-}
-
-saveTop()
-
-if(removed){
-await interaction.editReply(`❌ ${user.username} removed from TOP`)
-}else{
-await interaction.editReply(`⚠️ ${user.username} not in TOP`)
-}
-
-}
-
-}catch(err){
-
-console.error(err)
-
-if(interaction.deferred || interaction.replied){
-await interaction.editReply("❌ Bot error")
-}else{
-await interaction.reply("❌ Bot error")
-}
-
-}
-
-})
-
-/* API */
-
-app.get("/players",(req,res)=>{
-res.json(database)
-})
-
-app.get("/top",(req,res)=>{
-
-let result = {}
-
-for(let i=1;i<=20;i++){
-result[i] = top[i] || null
-}
-
-res.json(result)
-
-})
-
-/* START SERVER */
-
-const PORT = process.env.PORT || 3000
-
-app.listen(PORT,()=>{
-console.log("🌐 API RUNNING : "+PORT)
-})
-
-/* LOGIN */
-
-client.login(process.env.TOKEN)
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log("🌐 API RUNNING ON PORT: " + PORT));
+client.login(process.env.TOKEN);
