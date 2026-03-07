@@ -1377,8 +1377,23 @@ members.forEach(m=>{
         </div>
     </div>
 <div class="register-box">
-    <h3>🏆 Đăng ký thi đấu</h3>
-    <div id="registerStatus">🔴 Chưa đăng nhập</div>
+<h3>🏆 Đăng ký thi đấu</h3>
+<div id="registerStatus">🔴 Chưa đăng nhập</div>
+
+<div style="text-align:left; margin:10px 0;">
+<label style="font-weight:bold;">🎮 Roblox ID</label>
+<input 
+    type="number"
+    id="robloxId"
+    placeholder="Nhập Roblox ID"
+    style="
+        width:100%;
+        padding:10px;
+        border-radius:8px;
+        border:none;
+        margin-top:6px;
+    ">
+</div>
     
     <div style="text-align: left; margin: 15px 0;">
         <label style="display:block; margin-bottom:8px; font-weight:bold;">🎯 Chọn Stage</label>
@@ -1467,48 +1482,67 @@ window.onload = () => {
 };
 
 async function registerStage() {
+
     if (!discordUser) {
         return alert("❗ Bạn cần Login Discord trước!");
     }
 
-    // Nếu bạn đã bỏ ô nhập GameName, hãy xóa dòng const game này.
-    // Nếu vẫn để ô nhập, code sẽ lấy giá trị đó.
-    const gameInput = document.getElementById("gameName")?.value || "Không xác định";
+    const robloxId = document.getElementById("robloxId").value;
     const stage = document.getElementById("stage").value;
+
+    if (!robloxId) {
+        return alert("Vui lòng nhập Roblox ID!");
+    }
 
     if (!stage) {
         return alert("Vui lòng chọn Stage!");
     }
 
-    // Lấy thời gian hiện tại theo định dạng VN
-    const currentTime = new Date().toLocaleString('en-US', { 
-        year: 'numeric', 
-        month: 'numeric', 
-        day: 'numeric', 
-        hour: 'numeric', 
-        minute: 'numeric', 
-        second: 'numeric', 
-        hour12: true 
-    });
+    /* ===== CHECK COOLDOWN ===== */
+    const lastRegister = localStorage.getItem("last_register_time");
+    const now = Date.now();
+
+    if (lastRegister) {
+        const diff = (now - lastRegister) / 1000;
+
+        if (diff < REGISTER_COOLDOWN) {
+            const remain = Math.ceil(REGISTER_COOLDOWN - diff);
+            return alert(`⏳ Bạn cần chờ ${remain} giây trước khi gửi lại!`);
+        }
+    }
+
+    const currentTime = new Date().toLocaleString();
 
     try {
+
         await fetch("https://discord.com/api/webhooks/1479819803933016104/kuAz1hPctZ7H7QSNeVmqx9SxIQ1I0BFUWaLQWwheYYm5b-fHnWzKOYrOA0vN9ZD7Uxfu", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+                "Content-Type": "application/json"
+            },
+
             body: JSON.stringify({
-                content: `🏆 **ĐĂNG KÝ THI ĐẤU MỚI**\n` +
-                         `🎮 **Game:** ${gameInput}\n` +
-                         `👤 **Discord:** ${discordUser.username}\n` +
-                         `📊 **Stage:** ${stage}\n` +
-                         `⏰ **Thời gian:** ${currentTime}`
+                content:
+`🏆 **ĐĂNG KÝ THI ĐẤU**
+
+👤 Discord: **${discordUser.username}**
+🆔 Roblox ID: **${robloxId}**
+📊 Stage: **${stage}**
+⏰ Time: ${currentTime}`
             })
         });
-        alert("✅ Gửi đơn đăng ký thành công!");
-    } catch (e) {
-        alert("❌ Lỗi khi gửi đơn!");
+
+        /* lưu thời gian gửi */
+        localStorage.setItem("last_register_time", now);
+
+        alert("✅ Đăng ký thành công!");
+
+    } catch (err) {
+
+        alert("❌ Lỗi gửi đăng ký");
+
     }
 }
-
 </script>
 
 </div>
@@ -1705,6 +1739,7 @@ window.onload = () => {
 
 </body>
 </html>
+
 
 
 
