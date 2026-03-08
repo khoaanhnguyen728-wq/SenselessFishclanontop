@@ -3,16 +3,32 @@ const { REST, Routes, SlashCommandBuilder } = require("discord.js");
 
 const commands = [
   new SlashCommandBuilder()
-    .setName("promote")
-    .setDescription("promote member")
-    .addUserOption(o => o.setName("user").setDescription("member").setRequired(true))
-    .addStringOption(o => o.setName("rank").setDescription("rank").setRequired(true)),
+.setName("promote")
+.setDescription("Add staff")
+.addUserOption(o=>
+o.setName("user")
+.setDescription("user")
+.setRequired(true))
+.addStringOption(o=>
+o.setName("permission")
+.setDescription("Role")
+.setRequired(true)
+.addChoices(
+{name:"Founder",value:"Founder"},
+{name:"Owner & Leader",value:"Owner & Leader"},
+{name:"Experience Administrator",value:"Experience Administrator"},
+{name:"Administrator",value:"Administrator"},
+{name:"Manager",value:"Manager"},
+{name:"Mod",value:"Mod"}
+)),
 
   new SlashCommandBuilder()
-    .setName("demote")
-    .setDescription("demote member")
-    .addUserOption(o => o.setName("user").setDescription("member").setRequired(true))
-    .addStringOption(o => o.setName("rank").setDescription("rank").setRequired(true)),
+.setName("demote")
+.setDescription("Remove staff")
+.addUserOption(o=>
+o.setName("user")
+.setDescription("user to remove")
+.setRequired(true)),
 
   new SlashCommandBuilder()
     .setName("settop")
