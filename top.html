@@ -1287,7 +1287,7 @@ async function loadTop() {
         for (let i = 1; i <= 20; i++) {
             const p = data[i];
             if (p) {
-                const discordUrl = `https://discord.com/users/${p.id}`;
+                const discordUrl = p.profile;
 
                 if (i <= 3) {
                     // Cập nhật tên
@@ -1665,30 +1665,22 @@ setInterval(spawnDolphin,500);
 </script>
 <script>
 async function loadTop() {
-  const rankList = document.getElementById("rankList");
-  
+  const rankList = document.getElementById("rank-list");
   try {
-    // Thêm timestamp để tránh bị cache dữ liệu cũ
+    // Thêm Date.now() để tránh bị dính cache trình duyệt
     const res = await fetch("https://senselessfishclanontop-1.onrender.com/top?" + Date.now());
-    const data = await res.json();
+    const topData = await res.json();
 
-    // 1. XÓA SẠCH danh sách cũ và các card Top 1-2-3 để nạp mới
-    rankList.innerHTML = "";
+    rankList.innerHTML = ""; // Xóa trắng danh sách cũ
 
     for (let i = 1; i <= 20; i++) {
-      const p = data[i];
-      
-      if (p) {
-        // Nếu CÓ người ở vị trí này
-        if (i === 1) {
-          document.getElementById("top1-name").innerText = p.username;
-          document.getElementById("top1-avatar").style.backgroundImage = `url(${p.avatar})`;
-        } else if (i === 2) {
-          document.getElementById("top2-name").innerText = p.username;
-          document.getElementById("top2-avatar").style.backgroundImage = `url(${p.avatar})`;
-        } else if (i === 3) {
-          document.getElementById("top3-name").innerText = p.username;
-          document.getElementById("top3-avatar").style.backgroundImage = `url(${p.avatar})`;
+      const p = topData[i]; // Lấy dữ liệu tại vị trí i
+
+      if (p && p.name) {
+        if (i <= 3) {
+          // Hiển thị cho Top 1, 2, 3
+          document.getElementById(`top${i}-name`).innerText = p.name;
+          document.getElementById(`top${i}-avatar`).style.backgroundImage = `url('${p.avatar}')`;
         } else {
           // Hiển thị cho Top 4-20
           rankList.innerHTML += `
@@ -1700,7 +1692,7 @@ async function loadTop() {
             </div>`;
         }
       } else {
-        // Nếu TRỐNG (null), hiển thị mặc định để không bị mất hàng
+        // Nếu vị trí đó chưa có người (null)
         if (i <= 3) {
           document.getElementById(`top${i}-name`).innerText = "Trống";
           document.getElementById(`top${i}-avatar`).style.backgroundImage = "url('images/logo.png')";
@@ -1716,20 +1708,18 @@ async function loadTop() {
       }
     }
   } catch (err) {
-    console.error("Lỗi kết nối Server:", err);
+    console.error("Lỗi tải Top:", err);
   }
 }
-
-// Xóa đoạn "const members = [...]" cũ của bạn đi vì nó gây xung đột dữ liệu
-window.onload = () => {
-  loadTop();
-  checkLogin();
-};
+loadTop();
+window.addEventListener("DOMContentLoaded", () => {
+    loadTop();
+});
 </script>
 <script>
   
 </script>
 
+
 </body>
 </html>
-
