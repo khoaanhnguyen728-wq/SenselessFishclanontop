@@ -15,7 +15,7 @@ o.setName("permission")
 .setRequired(true)
 .addChoices(
 {name:"Founder",value:"Founder"},
-{name:"Leader",value:"Leader"}
+{name:"Leader",value:"Leader"},
 {name:"Owner",value:"Owner"},
 {name:"Experience Administrator",value:"Experience Administrator"},
 {name:"Administrator",value:"Administrator"},
