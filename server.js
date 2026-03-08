@@ -196,6 +196,22 @@ await interaction.reply({
 });
     }
 });
+// ================= DROPDOWN =================
+
+if (interaction.isStringSelectMenu()) {
+
+    if (interaction.customId === "match_info") {
+
+        const value = interaction.values[0];
+
+        await interaction.reply({
+            content: `✅ Bạn đã chọn: ${value}`,
+            ephemeral: true
+        });
+
+    }
+
+}
 
 /* ================= API CHO GIAO DIỆN WEB ================= */
 
