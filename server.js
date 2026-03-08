@@ -73,7 +73,6 @@ client.on("interactionCreate", async interaction => {
         try {
             const user = options.getUser("user");
             const rank = options.getInteger("top");
-            
 top[rank] = {
     id: user.id,
     name: user.username,
@@ -161,7 +160,40 @@ top[rank] = {
             )
             .setTimestamp();
 
-        await interaction.reply({ embeds: [embed] });
+        /* ===== DROPDOWN ===== */
+
+const dropdown = new StringSelectMenuBuilder()
+    .setCustomId("match_info")
+    .setPlaceholder("Xem thông tin / Liên hệ")
+    .addOptions([
+        {
+            label: `P1: ${team1}`,
+            value: "p1"
+        },
+        {
+            label: `P2: ${team2}`,
+            value: "p2"
+        },
+        {
+            label: `Referee: ${ref}`,
+            value: "ref"
+        }
+    ]);
+
+/* ===== SCORE BUTTON ===== */
+
+const scoreBtn = new ButtonBuilder()
+    .setCustomId("score_match")
+    .setLabel("Nhập Score")
+    .setStyle(ButtonStyle.Primary);
+
+const row1 = new ActionRowBuilder().addComponents(dropdown);
+const row2 = new ActionRowBuilder().addComponents(scoreBtn);
+
+await interaction.reply({
+    embeds: [embed],
+    components: [row1, row2]
+});
     }
 });
 
