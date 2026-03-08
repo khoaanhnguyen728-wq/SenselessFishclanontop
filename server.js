@@ -70,21 +70,23 @@ client.on("interactionCreate", async interaction => {
     if (interaction.isChatInputCommand()) {
         const { commandName, options } = interaction;
 
-        /* /promote */
+        /* /promote - Cập nhật name và avatar cho Staff */
         if (commandName === "promote") {
             const user = options.getUser("user");
             const role = options.getString("permission");
 
-            // Kiểm tra nếu user đã là staff chưa để cập nhật hoặc thêm mới
             const index = staff.findIndex(s => s.id === user.id);
+            const staffData = {
+                id: user.id,
+                username: user.username,
+                role: role,
+                avatar: user.displayAvatarURL({ extension: "png", size: 256 })
+            };
+
             if (index !== -1) {
-                staff[index].role = role;
+                staff[index] = staffData;
             } else {
-                staff.push({
-                    id: user.id,
-                    username: user.username,
-                    role: role
-                });
+                staff.push(staffData);
             }
 
             saveStaff();
@@ -119,7 +121,7 @@ client.on("interactionCreate", async interaction => {
             return interaction.reply({ embeds: [embed] });
         }
 
-        /* /settop */
+        /* /settop - Cập nhật name và avatar chính xác cho Top */
         else if (commandName === "settop") {
             const user = options.getUser("user");
             const rank = options.getInteger("top");
@@ -198,8 +200,75 @@ app.get("/staff", (req, res) => {
     res.json(staff);
 });
 
-// Các API Roblox và Register giữ nguyên như cũ...
-// [Đoạn code API cũ của bạn]
+/* ROBLOX API */
+app.get("/roblox/:username", async (req, res) => {
+    try {
+        const username = req.params.username;
+        const userRes = await axios.post("https://users.roblox.com/v1/usernames/users", {
+            usernames: [username],
+            excludeBannedUsers: true
+        });
+
+        if (!userRes.data.data.length) return res.status(404).json({ error: "Không tìm thấy User Roblox" });
+
+        const userId = userRes.data.data[0].id;
+        const thumb = await axios.get(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=150x150&format=Png&isCircular=true`);
+
+        res.json({
+            userId,
+            username,
+            displayName: userRes.data.data[0].displayName,
+            avatarUrl: thumb.data.data[0].imageUrl
+        });
+    } catch {
+        res.status(500).json({ error: "Roblox API lỗi" });
+    }
+});
+
+/* REGISTER API */
+app.post("/register", async (req, res) => {
+    try {
+        const { discord, robloxId, stage, time } = req.body;
+        const channel = await client.channels.fetch(process.env.CHANNEL_ID);
+
+        register.push({ discord, robloxId, stage, time });
+        saveRegister();
+
+        const embed = new EmbedBuilder()
+            .setTitle("🏆 ĐĂNG KÝ THI ĐẤU")
+            .setColor(0x00ff00)
+            .addFields(
+                { name: "👤 Discord", value: discord || "N/A", inline: true },
+                { name: "🆔 Roblox", value: String(robloxId || "N/A"), inline: true },
+                { name: "📊 Stage", value: stage || "N/A", inline: true },
+                { name: "⏰ Time", value: time || "N/A" }
+            )
+            .setFooter({ text: "SenselessFish Clan" })
+            .setTimestamp();
+
+        const dropdown = new StringSelectMenuBuilder()
+            .setCustomId("match_select")
+            .setPlaceholder("Chọn thông tin")
+            .addOptions([
+                { label: "Player " + discord, value: "player" },
+                { label: "Roblox " + robloxId, value: "roblox" },
+                { label: "Referee", value: "ref" }
+            ]);
+
+        const btn = new ButtonBuilder()
+            .setCustomId("score_match")
+            .setLabel("Nhập Score")
+            .setStyle(ButtonStyle.Primary);
+
+        const row1 = new ActionRowBuilder().addComponents(dropdown);
+        const row2 = new ActionRowBuilder().addComponents(btn);
+
+        await channel.send({ embeds: [embed], components: [row1, row2] });
+        res.json({ success: true });
+    } catch {
+        res.status(500).json({ error: "Discord send error" });
+    }
+});
 
 /* ================= SERVER & LOGIN ================= */
 
