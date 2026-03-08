@@ -30,11 +30,21 @@ GatewayIntentBits.MessageContent
 
 /* ================= DATABASE ================= */
 
+
 if(!fs.existsSync("top.json")) fs.writeFileSync("top.json","{}");
 if(!fs.existsSync("register.json")) fs.writeFileSync("register.json","[]");
+;
 
 let top = JSON.parse(fs.readFileSync("top.json","utf8"));
 let register = JSON.parse(fs.readFileSync("register.json","utf8"));
+
+if(!fs.existsSync("staff.json")) fs.writeFileSync("staff.json","[]");
+
+let staff = JSON.parse(fs.readFileSync("staff.json","utf8"));
+
+function saveStaff(){
+fs.writeFileSync("staff.json",JSON.stringify(staff,null,2));
+}
 
 const selectedMatch = new Map();
 
@@ -61,6 +71,25 @@ console.log("🤖 Bot online:",client.user.tag);
 /* ================= INTERACTIONS ================= */
 
 client.on("interactionCreate", async interaction => {
+  
+if(commandName === "promote"){
+
+const user = options.getUser("user");
+const role = options.getString("permission");
+
+const avatar = `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`;
+
+staff.push({
+id:user.id,
+username:user.username,
+avatar:avatar,
+role:role
+});
+
+saveStaff();
+
+return interaction.reply(`✅ ${user.username} đã được thêm vào staff với role **${role}**`);
+}
 
 /* ===== SLASH COMMAND ===== */
 
@@ -77,15 +106,17 @@ const team2 = options.getString("team2");
 const time = options.getString("time");
 const ref = options.getString("ref");
 
-const msg =
-`🏆 **THÔNG BÁO THI ĐẤU**
+const embed = new EmbedBuilder()
+.setTitle("🏆 THÔNG BÁO THI ĐẤU")
+.setColor(0xffcc00)
+.addFields(
+{name:"⚔️ Trận đấu",value:`${team1} vs ${team2}`},
+{name:"⏰ Time",value:time,inline:true},
+{name:"🏁 Ref",value:ref,inline:true}
+)
+.setTimestamp();
 
-⚔️ ${team1} vs ${team2}
-⏰ time: ${time}
-🏁 ref: ${ref}`;
-
-return interaction.reply(msg);
-
+return interaction.reply({embeds:[embed]});
 }
 
 /* /settop */
@@ -97,8 +128,8 @@ const rank = options.getInteger("top");
 
 top[rank] = {
 id:user.id,
-username:user.username,
-avatar:`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
+name:user.username,
+avatar:user.displayAvatarURL({ extension:"png", size:256 })
 };
 
 saveTop();
@@ -213,7 +244,20 @@ res.send("Server running");
 /* TOP API */
 
 app.get("/top",(req,res)=>{
-res.json(top);
+
+const result = {};
+
+for(let i=1;i<=20;i++){
+result[i] = top[i] || null;
+}
+
+res.json(result);
+
+});
+/* STAFF API */
+
+app.get("/staff",(req,res)=>{
+res.json(staff);
 });
 
 /* ROBLOX API */
