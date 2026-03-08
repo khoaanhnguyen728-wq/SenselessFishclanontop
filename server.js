@@ -5,390 +5,185 @@ const cors = require("cors");
 const axios = require("axios");
 
 const {
-Client,
-GatewayIntentBits,
-EmbedBuilder,
-ActionRowBuilder,
-ButtonBuilder,
-ButtonStyle,
-StringSelectMenuBuilder
+  Client,
+  GatewayIntentBits,
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  StringSelectMenuBuilder
 } = require("discord.js");
-
 const app = express();
 app.use(express.json());
 app.use(cors());
 
-/* ================= DISCORD BOT ================= */
-
+// ===== DISCORD BOT =====
 const client = new Client({
-intents:[
-GatewayIntentBits.Guilds,
-GatewayIntentBits.GuildMessages,
-GatewayIntentBits.MessageContent
-]
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent
+  ]
 });
 
-/* ================= DATABASE ================= */
+// ===== FILE SETUP =====
+if (!fs.existsSync("top.json")) fs.writeFileSync("top.json", "{}");
+if (!fs.existsSync("register.json")) fs.writeFileSync("register.json", "[]");
 
-
-if(!fs.existsSync("top.json")) fs.writeFileSync("top.json","{}");
-if(!fs.existsSync("register.json")) fs.writeFileSync("register.json","[]");
-;
-
-let top = JSON.parse(fs.readFileSync("top.json","utf8"));
-let register = JSON.parse(fs.readFileSync("register.json","utf8"));
-
-if(!fs.existsSync("staff.json")) fs.writeFileSync("staff.json","[]");
-
-let staff = JSON.parse(fs.readFileSync("staff.json","utf8"));
-
-function saveStaff(){
-fs.writeFileSync("staff.json",JSON.stringify(staff,null,2));
-}
-
+let top = JSON.parse(fs.readFileSync("top.json", "utf8"));
+let register = JSON.parse(fs.readFileSync("register.json", "utf8"));
 const selectedMatch = new Map();
 
-/* đảm bảo đủ 20 slot */
-
-for(let i=1;i<=20;i++){
-if(top[i] === undefined) top[i] = null;
+for (let i = 1; i <= 20; i++) {
+  if (top[i] === undefined) top[i] = null;
 }
 
-function saveTop(){
-fs.writeFileSync("top.json",JSON.stringify(top,null,2));
+function saveTop() {
+  fs.writeFileSync("top.json", JSON.stringify(top, null, 2));
 }
 
-function saveRegister(){
-fs.writeFileSync("register.json",JSON.stringify(register,null,2));
+function saveRegister() {
+  fs.writeFileSync("register.json", JSON.stringify(register, null, 2));
 }
 
-/* ================= BOT READY ================= */
-
-client.once("ready",()=>{
-console.log("🤖 Bot online:",client.user.tag);
+// ===== BOT READY =====
+client.once("ready", () => {
+  console.log("🤖 Bot online: " + client.user.tag);
 });
 
-/* ================= INTERACTIONS ================= */
+// CHỈ CÓ MỘT HÀM interactionCreate DUY NHẤT
+client.on("interactionCreate", async (interaction) => {
 
-client.on("interactionCreate", async interaction => {
+  // 1. Xử lý Slash Command (/thidau)
+  if (interaction.isChatInputCommand()) {
+    if (interaction.commandName === "thidau") {
+      const team1 = interaction.options.getString("team1");
+      const team2 = interaction.options.getString("team2");
+      const time = interaction.options.getString("time");
+      const ref = interaction.options.getString("ref");
 
-if(!interaction.isChatInputCommand()) return;
+      const msg = `${team1} vs ${team2}\ntime: ${time}\nref: ${ref}`;
+      return await interaction.reply(msg);
+    }
+  }
 
-const { commandName, options } = interaction;
+  // 2. Xử lý Dropdown (chọn p1, p2, ref)
+  if (interaction.isStringSelectMenu()) {
+    const value = interaction.values[0];
+    selectedMatch.set(interaction.user.id, value);
 
-/* PROMOTE */
+    return await interaction.reply({
+      content: "✅ Đã chọn: " + value,
+      ephemeral: true
+    });
+  }
 
-if(commandName === "promote"){
+  // 3. Xử lý Button (nhấn nút nhập score)
+  if (interaction.isButton()) {
+    if (interaction.customId === "score_match") {
+      if (!selectedMatch.has(interaction.user.id)) {
+        return await interaction.reply({
+          content: "❌ Bạn phải chọn dropdown trước!",
+          ephemeral: true
+        });
+      }
 
-const user = options.getUser("user");
-const role = options.getString("permission");
-
-staff.push({
-id:user.id,
-username:user.username,
-role:role
+      return await interaction.reply({
+        content: "📊 Referee nhập score dạng: `!score 5-3`",
+        ephemeral: true
+      });
+    }
+  }
 });
 
-saveStaff();
+// ===== SCORE COMMAND (Prefix !) =====
+client.on("messageCreate", (message) => {
+  if (message.author.bot) return;
+  if (!message.content.startsWith("!score")) return;
 
-return interaction.reply(`✅ ${user.username} đã được thêm vào staff với role **${role}**`);
-}
+  const score = message.content.split(" ")[1];
+  if (!score) return message.reply("Vui lòng nhập score! VD: `!score 5-0`");
 
-/* DEMOTE */
-
-else if(commandName === "demote"){
-
-const user = options.getUser("user");
-
-staff = staff.filter(s => s.id !== user.id);
-
-saveStaff();
-
-return interaction.reply(`❌ ${user.username} đã bị gỡ khỏi staff`);
-}
-
+  message.channel.send(`📊 Score cập nhật: **${score}**`);
 });
 
-/* ===== SLASH COMMAND ===== */
+// ===== API ROUTES =====
+app.get("/", (req, res) => res.send("Server running"));
+app.get("/top", (req, res) => res.json(top));
 
-const {commandName,options} = interaction;
+app.get("/roblox/:username", async (req, res) => {
+  try {
+    const username = req.params.username;
+    const userRes = await axios.post("https://users.roblox.com/v1/usernames/users", {
+      usernames: [username],
+      excludeBannedUsers: true
+    });
+    if (!userRes.data.data.length) return res.status(404).json({ error: "Không tìm thấy User Roblox" });
 
-/* /thidau */
-
-if(commandName === "thidau"){
-
-const team1 = options.getString("team1");
-const team2 = options.getString("team2");
-const time = options.getString("time");
-const ref = options.getString("ref");
-
-const embed = new EmbedBuilder()
-.setTitle("🏆 THÔNG BÁO THI ĐẤU")
-.setColor(0xffcc00)
-.addFields(
-{name:"⚔️ Trận đấu",value:`${team1} vs ${team2}`},
-{name:"⏰ Time",value:time,inline:true},
-{name:"🏁 Ref",value:ref,inline:true}
-)
-.setTimestamp();
-
-return interaction.reply({embeds:[embed]});
-}
-
-/* /settop */
-
-if(commandName === "settop"){
-
-const user = options.getUser("user");
-const rank = options.getInteger("top");
-
-top[rank] = {
-id:user.id,
-name:user.username,
-avatar:user.displayAvatarURL({ extension:"png", size:256 })
-};
-
-saveTop();
-
-return interaction.reply(`✅ ${user.username} đã vào **TOP ${rank}**`);
-
-}
-
-/* /detop */
-
-if(commandName === "detop"){
-
-const user = options.getUser("user");
-
-let found = false;
-
-for(let key in top){
-
-if(top[key] && top[key].id === user.id){
-
-top[key] = null;
-found = true;
-
-}
-
-}
-
-if(found){
-
-saveTop();
-return interaction.reply(`🗑️ Đã xoá ${user.username} khỏi bảng xếp hạng`);
-
-}
-
-return interaction.reply("❌ User này không có trong TOP");
-
-}
-
-/* ===== DROPDOWN ===== */
-
-if(interaction.isStringSelectMenu()){
-
-if(interaction.customId === "match_select"){
-
-const value = interaction.values[0];
-
-selectedMatch.set(interaction.user.id,value);
-
-await interaction.reply({
-content:"✅ Đã chọn: "+value,
-ephemeral:true
+    const userId = userRes.data.data[0].id;
+    const thumbRes = await axios.get(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=150x150&format=Png&isCircular=true`);
+    
+    res.json({
+      userId,
+      username,
+      displayName: userRes.data.data[0].displayName,
+      avatarUrl: thumbRes.data.data[0].imageUrl
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Lỗi Roblox API" });
+  }
 });
 
-}
+app.post("/register", async (req, res) => {
+  try {
+    const { discord, robloxId, stage, time } = req.body;
+    const CHANNEL_ID = process.env.CHANNEL_ID;
+    const channel = await client.channels.fetch(CHANNEL_ID);
 
-}
+    if (!channel) return res.status(500).json({ error: "Không tìm thấy channel Discord" });
 
-/* ===== BUTTON ===== */
+    register.push({ discord, robloxId, stage, time });
+    saveRegister();
 
-if(interaction.isButton()){
+    const embed = new EmbedBuilder()
+      .setTitle("🏆 ĐĂNG KÝ THI ĐẤU")
+      .setColor(0x00ff00)
+      .addFields(
+        { name: "👤 Discord", value: discord || "N/A", inline: true },
+        { name: "🆔 Roblox ID", value: String(robloxId || "N/A"), inline: true },
+        { name: "📊 Stage", value: stage || "N/A", inline: true },
+        { name: "⏰ Time", value: time || "N/A", inline: false }
+      )
+      .setTimestamp()
+      .setFooter({ text: "SenselessFish Clan System" });
 
-if(interaction.customId === "score_match"){
+    const dropdown = new StringSelectMenuBuilder()
+      .setCustomId("match_select")
+      .setPlaceholder("Xem thông tin / Liên hệ")
+      .addOptions([
+        { label: "P1: " + discord, value: "p1" },
+        { label: "P2: " + robloxId, value: "p2" },
+        { label: "Trọng tài", value: "ref" }
+      ]);
 
-if(!selectedMatch.has(interaction.user.id)){
+    const scoreBtn = new ButtonBuilder()
+      .setCustomId("score_match")
+      .setLabel("Nhập Score")
+      .setStyle(ButtonStyle.Primary);
 
-return interaction.reply({
-content:"❌ Bạn phải chọn dropdown trước!",
-ephemeral:true
+    const row1 = new ActionRowBuilder().addComponents(dropdown);
+    const row2 = new ActionRowBuilder().addComponents(scoreBtn);
+
+    await channel.send({ embeds: [embed], components: [row1, row2] });
+    res.json({ success: true, message: "Đã gửi đăng ký!" });
+  } catch (err) {
+    res.status(500).json({ error: "Không thể gửi vào Discord" });
+  }
 });
 
-}
-
-await interaction.reply({
-content:"📊 Ref nhập: `!score 5-3`",
-ephemeral:true
-});
-
-}
-
-}
-
-/* ================= SCORE COMMAND ================= */
-
-client.on("messageCreate",message=>{
-
-if(message.author.bot) return;
-
-if(!message.content.startsWith("!score")) return;
-
-const score = message.content.split(" ")[1];
-
-if(!score){
-
-return message.reply("VD: `!score 5-0`");
-
-}
-
-message.channel.send(`📊 Kết quả trận đấu: **${score}**`);
-
-});
-
-/* ================= API ================= */
-
-app.get("/",(req,res)=>{
-res.send("Server running");
-});
-
-/* TOP API */
-
-app.get("/top",(req,res)=>{
-
-const result = {};
-
-for(let i=1;i<=20;i++){
-result[i] = top[i] || null;
-}
-
-res.json(result);
-
-});
-/* STAFF API */
-
-app.get("/staff",(req,res)=>{
-res.json(staff);
-});
-
-/* ROBLOX API */
-
-app.get("/roblox/:username",async(req,res)=>{
-
-try{
-
-const username = req.params.username;
-
-const userRes = await axios.post(
-"https://users.roblox.com/v1/usernames/users",
-{
-usernames:[username],
-excludeBannedUsers:true
-}
-);
-
-if(!userRes.data.data.length){
-
-return res.status(404).json({
-error:"Không tìm thấy User Roblox"
-});
-
-}
-
-const userId = userRes.data.data[0].id;
-
-const thumb = await axios.get(
-`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=150x150&format=Png&isCircular=true`
-);
-
-res.json({
-userId,
-username,
-displayName:userRes.data.data[0].displayName,
-avatarUrl:thumb.data.data[0].imageUrl
-});
-
-}catch{
-
-res.status(500).json({
-error:"Roblox API lỗi"
-});
-
-}
-
-});
-
-/* REGISTER API */
-
-app.post("/register",async(req,res)=>{
-
-try{
-
-const {discord,robloxId,stage,time} = req.body;
-
-const channel = await client.channels.fetch(process.env.CHANNEL_ID);
-
-register.push({discord,robloxId,stage,time});
-
-saveRegister();
-
-const embed = new EmbedBuilder()
-.setTitle("🏆 ĐĂNG KÝ THI ĐẤU")
-.setColor(0x00ff00)
-.addFields(
-{name:"👤 Discord",value:discord||"N/A",inline:true},
-{name:"🆔 Roblox",value:String(robloxId||"N/A"),inline:true},
-{name:"📊 Stage",value:stage||"N/A",inline:true},
-{name:"⏰ Time",value:time||"N/A"}
-)
-.setFooter({text:"SenselessFish Clan"})
-.setTimestamp();
-
-const dropdown = new StringSelectMenuBuilder()
-.setCustomId("match_select")
-.setPlaceholder("Chọn thông tin")
-.addOptions([
-{label:"Player "+discord,value:"player"},
-{label:"Roblox "+robloxId,value:"roblox"},
-{label:"Referee",value:"ref"}
-]);
-
-const btn = new ButtonBuilder()
-.setCustomId("score_match")
-.setLabel("Nhập Score")
-.setStyle(ButtonStyle.Primary);
-
-const row1 = new ActionRowBuilder().addComponents(dropdown);
-const row2 = new ActionRowBuilder().addComponents(btn);
-
-await channel.send({
-embeds:[embed],
-components:[row1,row2]
-});
-
-res.json({success:true});
-
-}catch{
-
-res.status(500).json({
-error:"Discord send error"
-});
-
-}
-
-});
-
-/* ================= SERVER ================= */
+app.get("/register", (req, res) => res.json(register));
 
 const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log("🌐 Server chạy trên port", PORT));
 
-app.listen(PORT,()=>{
-console.log("🌐 Server chạy port",PORT);
-});
-
-/* ================= LOGIN ================= */
-
-client.login(process.env.TOKEN).catch(()=>{
-console.log("❌ TOKEN Discord sai");
-});
+client.login(process.env.TOKEN).catch(() => console.log("❌ TOKEN Discord sai hoặc thiếu"));
