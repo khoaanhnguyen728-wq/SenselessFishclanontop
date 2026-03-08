@@ -144,57 +144,46 @@ top[rank] = {
     }
 
     // --- LỆNH THIDAU ---
-    else if (commandName === "thidau") {
-        const team1 = options.getString("team1");
-        const team2 = options.getString("team2");
-        const time = options.getString("time");
-        const ref = options.getString("ref");
+else if (commandName === "thidau") {
 
-        const embed = new EmbedBuilder()
-            .setTitle("🏆 THÔNG BÁO THI ĐẤU")
-            .setColor(0x00eaff)
-            .addFields(
-                { name: "⚔️ Trận đấu", value: `${team1} VS ${team2}`, inline: false },
-                { name: "⏰ Thời gian", value: time, inline: true },
-                { name: "🏁 Trọng tài", value: ref, inline: true }
-            )
-            .setTimestamp();
+    const team1 = options.getString("team1");
+    const team2 = options.getString("team2");
+    const time = options.getString("time");
+    const ref = options.getString("ref");
 
-        /* ===== DROPDOWN ===== */
+    const embed = new EmbedBuilder()
+        .setTitle("🏆 THÔNG BÁO THI ĐẤU")
+        .setColor(0x00eaff)
+        .addFields(
+            { name: "⚔️ Trận đấu", value: `${team1} VS ${team2}`, inline: false },
+            { name: "⏰ Thời gian", value: time, inline: true },
+            { name: "🏁 Trọng tài", value: ref, inline: true }
+        )
+        .setTimestamp();
 
-const dropdown = new StringSelectMenuBuilder()
-    .setCustomId("match_info")
-    .setPlaceholder("Xem thông tin / Liên hệ")
-    .addOptions([
-        {
-            label: `P1: ${team1}`,
-            value: "p1"
-        },
-        {
-            label: `P2: ${team2}`,
-            value: "p2"
-        },
-        {
-            label: `Referee: ${ref}`,
-            value: "ref"
-        }
-    ]);
+    const dropdown = new StringSelectMenuBuilder()
+        .setCustomId("match_info")
+        .setPlaceholder("Xem thông tin / Liên hệ")
+        .addOptions([
+            { label: `P1: ${team1}`, value: "p1" },
+            { label: `P2: ${team2}`, value: "p2" },
+            { label: `Referee: ${ref}`, value: "ref" }
+        ]);
 
-/* ===== SCORE BUTTON ===== */
+    const scoreBtn = new ButtonBuilder()
+        .setCustomId("score_match")
+        .setLabel("Nhập Score")
+        .setStyle(ButtonStyle.Primary);
 
-const scoreBtn = new ButtonBuilder()
-    .setCustomId("score_match")
-    .setLabel("Nhập Score")
-    .setStyle(ButtonStyle.Primary);
+    const row1 = new ActionRowBuilder().addComponents(dropdown);
+    const row2 = new ActionRowBuilder().addComponents(scoreBtn);
 
-const row1 = new ActionRowBuilder().addComponents(dropdown);
-const row2 = new ActionRowBuilder().addComponents(scoreBtn);
-
-await interaction.reply({
-    embeds: [embed],
-    components: [row1, row2]
-}):
+    await interaction.reply({
+        embeds: [embed],
+        components: [row1, row2]
+    });
 }
+
 });
 // ================= DROPDOWN =================
 
@@ -287,4 +276,5 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🌐 Web Server chạy tại port ${PORT}`));
 
 client.login(process.env.TOKEN).catch(() => console.log("❌ Lỗi: TOKEN Discord không hợp lệ."));
+
 
