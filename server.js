@@ -193,8 +193,8 @@ const row2 = new ActionRowBuilder().addComponents(scoreBtn);
 await interaction.reply({
     embeds: [embed],
     components: [row1, row2]
-});
-    }
+}):
+}
 });
 // ================= DROPDOWN =================
 
@@ -287,3 +287,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🌐 Web Server chạy tại port ${PORT}`));
 
 client.login(process.env.TOKEN).catch(() => console.log("❌ Lỗi: TOKEN Discord không hợp lệ."));
+
