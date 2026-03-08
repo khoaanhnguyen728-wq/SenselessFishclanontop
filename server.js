@@ -95,6 +95,17 @@ saveStaff();
 return interaction.reply(`✅ ${user.username} đã được thêm vào staff với role **${role}**`);
 }
 
+if(commandName === "demote"){
+
+const user = options.getUser("user");
+
+staff = staff.filter(s => s.id !== user.id);
+
+saveStaff();
+
+return interaction.reply(`❌ ${user.username} đã bị gỡ khỏi staff`);
+}
+
 /* ===== SLASH COMMAND ===== */
 
 if(interaction.isChatInputCommand()){
