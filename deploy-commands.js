@@ -61,6 +61,7 @@ new SlashCommandBuilder()
     o.setName("ref")
     .setDescription("Referee")
     .setRequired(true))
+),
 
 ].map(c=>c.toJSON())
 
@@ -72,4 +73,5 @@ Routes.applicationCommands(process.env.CLIENT_ID),
 ).then(()=>{
 console.log("✅ Commands deployed!")
 }).catch(console.error)
+
 
