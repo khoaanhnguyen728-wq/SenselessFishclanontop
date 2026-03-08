@@ -257,6 +257,22 @@ app.get("/register", (req, res) => {
   res.json(register);
 });
 
+if(interaction.commandName === "thidau"){
+
+const team1 = interaction.options.getString("team1");
+const team2 = interaction.options.getString("team2");
+const time = interaction.options.getString("time");
+const ref = interaction.options.getString("ref");
+
+const msg =
+`${team1} vs ${team2}
+time: ${time}
+ref: ${ref}`;
+
+await interaction.reply(msg);
+
+}
+
 // ===== START SERVER =====
 const PORT = process.env.PORT || 3000;
 
@@ -268,3 +284,4 @@ app.listen(PORT, () => {
 client.login(process.env.TOKEN).catch(() => {
   console.log("❌ TOKEN Discord sai hoặc thiếu");
 });
+
