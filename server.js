@@ -20,7 +20,6 @@ app.use(cors());
 
 /* ================= DATABASE SYSTEM ================= */
 
-// Khởi tạo các file nếu chưa tồn tại
 if (!fs.existsSync("top.json")) fs.writeFileSync("top.json", "{}");
 if (!fs.existsSync("register.json")) fs.writeFileSync("register.json", "[]");
 if (!fs.existsSync("staff.json")) fs.writeFileSync("staff.json", "[]");
@@ -29,11 +28,7 @@ let top = JSON.parse(fs.readFileSync("top.json", "utf8"));
 let register = JSON.parse(fs.readFileSync("register.json", "utf8"));
 let staff = JSON.parse(fs.readFileSync("staff.json", "utf8"));
 
-// Đảm bảo luôn có 20 vị trí trong bảng xếp hạng
-for (let i = 1; i <= 20; i++) {
-    if (top[i] === undefined) top[i] = null;
-}
-
+// Đảm bảo cấu trúc dữ liệu luôn sẵn sàng
 function saveTop() {
     fs.writeFileSync("top.json", JSON.stringify(top, null, 2));
 }
@@ -56,7 +51,8 @@ const client = new Client({
     ]
 });
 
-client.once("ready", () => {
+// Thay đổi "ready" thành "clientReady" để hết cảnh báo Deprecation
+client.once("clientReady", () => {
     console.log("🤖 Bot đã sẵn sàng:", client.user.tag);
 });
 
@@ -69,12 +65,14 @@ client.on("interactionCreate", async interaction => {
 
     // --- LỆNH SETTOP ---
     if (commandName === "settop") {
-        await interaction.deferReply(); // Chờ xử lý (fix lỗi Unknown Interaction)
         try {
+            await interaction.deferReply(); // Bắt đầu xử lý
+            
             const user = options.getUser("user");
             const rank = options.getInteger("top");
 
-            top[rank] = {
+            // Đồng bộ: Lưu key là String để API trả về ổn định
+            top[String(rank)] = {
                 id: user.id,
                 name: user.username,
                 avatar: user.displayAvatarURL({ extension: "png", size: 256 })
@@ -83,42 +81,44 @@ client.on("interactionCreate", async interaction => {
             saveTop();
             await interaction.editReply(`✅ Đã đưa **${user.username}** vào **TOP ${rank}**`);
         } catch (err) {
-            console.error(err);
-            await interaction.editReply("❌ Lỗi khi cập nhật bảng xếp hạng.");
+            console.error("Lỗi settop:", err);
+            if (interaction.deferred) await interaction.editReply("❌ Lỗi khi cập nhật bảng xếp hạng.");
         }
     }
 
     // --- LỆNH DETOP ---
     else if (commandName === "detop") {
-        await interaction.deferReply();
-        const user = options.getUser("user");
-        let found = false;
+        try {
+            await interaction.deferReply();
+            const user = options.getUser("user");
+            let found = false;
 
-        for (let key in top) {
-            if (top[key] && top[key].id === user.id) {
-                top[key] = null;
-                found = true;
+            for (let key in top) {
+                if (top[key] && top[key].id === user.id) {
+                    top[key] = null; // Reset vị trí thay vì delete để giữ cấu trúc mảng cho Web
+                    found = true;
+                }
             }
-        }
 
-        if (found) {
-            saveTop();
-            await interaction.editReply(`🗑️ Đã xóa **${user.username}** khỏi bảng xếp hạng.`);
-        } else {
-            await interaction.editReply("❌ Người dùng này không có trong TOP.");
+            if (found) {
+                saveTop();
+                await interaction.editReply(`🗑️ Đã xóa **${user.username}** khỏi bảng xếp hạng.`);
+            } else {
+                await interaction.editReply("❌ Người dùng này không có trong TOP.");
+            }
+        } catch (err) {
+            console.error("Lỗi detop:", err);
         }
     }
 
     // --- LỆNH PROMOTE ---
     else if (commandName === "promote") {
-        await interaction.deferReply();
         try {
+            await interaction.deferReply();
             const user = options.getUser("user");
             const role = options.getString("permission");
 
-            // Xóa cũ nếu đã có để tránh trùng
             staff = staff.filter(s => s.id !== user.id);
-
             staff.push({
                 id: user.id,
                 username: user.username,
@@ -129,18 +129,21 @@ client.on("interactionCreate", async interaction => {
             saveStaff();
             await interaction.editReply(`✅ **${user.username}** đã trở thành **${role}**`);
         } catch (err) {
-            console.error(err);
-            await interaction.editReply("❌ Lỗi khi thêm Staff.");
+            console.error("Lỗi promote:", err);
         }
     }
 
     // --- LỆNH DEMOTE ---
     else if (commandName === "demote") {
-        await interaction.deferReply();
-        const user = options.getUser("user");
-        staff = staff.filter(s => s.id !== user.id);
-        saveStaff();
-        await interaction.editReply(`❌ Đã gỡ quyền Staff của **${user.username}**`);
+        try {
+            await interaction.deferReply();
+            const user = options.getUser("user");
+            staff = staff.filter(s => s.id !== user.id);
+            saveStaff();
+            await interaction.editReply(`❌ Đã gỡ quyền Staff của **${user.username}**`);
+        } catch (err) {
+            console.error("Lỗi demote:", err);
+        }
     }
 
     // --- LỆNH THIDAU ---
@@ -168,17 +171,19 @@ client.on("interactionCreate", async interaction => {
 
 app.get("/", (req, res) => res.send("Senseless Fish Clan API is Running!"));
 
-// API lấy danh sách TOP
+// API TOP: Tự động điền đầy 20 vị trí để file HTML không bị lỗi
 app.get("/top", (req, res) => {
-    res.json(top);
+    let responseData = {};
+    for (let i = 1; i <= 20; i++) {
+        responseData[i] = top[String(i)] || null;
+    }
+    res.json(responseData);
 });
 
-// API lấy danh sách Staff
 app.get("/staff", (req, res) => {
     res.json(staff);
 });
 
-// API lấy thông tin Roblox Profile
 app.get("/roblox/:username", async (req, res) => {
     try {
         const username = req.params.username;
@@ -186,12 +191,9 @@ app.get("/roblox/:username", async (req, res) => {
             usernames: [username],
             excludeBannedUsers: true
         });
-
         if (!userRes.data.data.length) return res.status(404).json({ error: "Không tìm thấy" });
-
         const userId = userRes.data.data[0].id;
         const thumb = await axios.get(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=150x150&format=Png&isCircular=true`);
-
         res.json({
             userId,
             username,
@@ -203,15 +205,12 @@ app.get("/roblox/:username", async (req, res) => {
     }
 });
 
-// API Đăng ký thi đấu từ Web
 app.post("/register", async (req, res) => {
     try {
         const { discord, robloxId, stage, time } = req.body;
         const channel = await client.channels.fetch(process.env.CHANNEL_ID);
-
         register.push({ discord, robloxId, stage, time });
         saveRegister();
-
         const embed = new EmbedBuilder()
             .setTitle("📝 ĐƠN ĐĂNG KÝ THI ĐẤU")
             .setColor(0x00ff00)
@@ -223,18 +222,16 @@ app.post("/register", async (req, res) => {
             )
             .setFooter({ text: "Hệ thống tự động SenselessFish" })
             .setTimestamp();
-
         await channel.send({ embeds: [embed] });
         res.json({ success: true });
     } catch (e) {
-        console.error(e);
         res.status(500).json({ error: "Không thể gửi dữ liệu lên Discord" });
     }
 });
 
 /* ================= KHỞI CHẠY SERVER ================= */
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🌐 Web Server chạy tại port ${PORT}`));
 
 client.login(process.env.TOKEN).catch(() => console.log("❌ Lỗi: TOKEN Discord không hợp lệ."));
