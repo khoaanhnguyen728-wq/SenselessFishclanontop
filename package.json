@@ -1,5 +1,5 @@
 {
-  "name": "botweb",
+  "name": "senselessfish-bot",
   "version": "1.0.0",
   "main": "server.js",
   "type": "commonjs",
@@ -7,8 +7,10 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "discord.js": "^14.0.0",
-    "express": "^4.18.0",
-    "dotenv": "^16.0.0"
+    "axios": "^1.6.0",
+    "cors": "^2.8.5",
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2"
   }
 }
