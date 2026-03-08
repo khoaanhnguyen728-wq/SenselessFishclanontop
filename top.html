@@ -1681,13 +1681,13 @@ async function loadTop() {
       if (p) {
         // Nếu CÓ người ở vị trí này
         if (i === 1) {
-          document.getElementById("top1-name").innerText = p.name;
+          document.getElementById("top1-name").innerText = p.username;
           document.getElementById("top1-avatar").style.backgroundImage = `url(${p.avatar})`;
         } else if (i === 2) {
-          document.getElementById("top2-name").innerText = p.name;
+          document.getElementById("top2-name").innerText = p.username;
           document.getElementById("top2-avatar").style.backgroundImage = `url(${p.avatar})`;
         } else if (i === 3) {
-          document.getElementById("top3-name").innerText = p.name;
+          document.getElementById("top3-name").innerText = p.username;
           document.getElementById("top3-avatar").style.backgroundImage = `url(${p.avatar})`;
         } else {
           // Hiển thị cho Top 4-20
@@ -1732,3 +1732,4 @@ window.onload = () => {
 
 </body>
 </html>
+
