@@ -2,13 +2,9 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>Senseless Fish</title>
+<title>Staff Clan | SenselessFish</title>
 
 <style>
-*{
-    box-sizing:border-box;
-}
-
 body{
     margin:0;
     font-family:Arial, sans-serif;
@@ -18,79 +14,23 @@ body{
     color:white;
     text-align:center;
 }
-
 @keyframes bgMove{
     0%{background-position:0% 50%}
     50%{background-position:100% 50%}
     100%{background-position:0% 50%}
 }
 
-/* BRAND */
-#brand{
-    position:fixed;
-    top:16px;
-    right:22px;
-    font-size:38px;
-    font-weight:900;
-    background:linear-gradient(135deg,#00eaff,#1e90ff,#9d4edd);
-    -webkit-background-clip:text;
-    -webkit-text-fill-color:transparent;
-    text-shadow:0 0 20px rgba(0,234,255,.9);
-    animation:brandFloat 3s ease-in-out infinite;
-    pointer-events:none;
-    z-index:5;
-}
-
-@keyframes brandFloat{
-    0%{transform:translateY(0)}
-    50%{transform:translateY(-6px)}
-    100%{transform:translateY(0)}
-}
-
-/* STATS */
-#statsBox{
-    position:fixed;
-    top:15px;
-    left:15px;
-    background:rgba(0,0,0,.6);
-    padding:10px 15px;
-    border-radius:10px;
-    z-index:5;
-}
-
-/* LOGO */
-#logo{
-    width:160px;
-    height:160px;
-    margin:30px auto;
-    border-radius:50%;
-    background:url("images/Senselessfish.png") center/cover;
-    border:5px solid white;
-    box-shadow:0 0 20px white;
-    cursor:pointer;
-    transition:.2s;
-    position:relative;
-    z-index:10;
-}
-
-#logo:hover{
-    box-shadow:0 0 35px #00eaff;
-    transform:scale(1.05);
-}
-
 /* BUTTON */
 .btn{
     padding:14px 30px;
+    margin:10px;
     border:none;
     border-radius:8px;
     background:#1464A0;
     color:white;
     cursor:pointer;
     transition:.2s;
-    text-decoration:none;
-    display:inline-block;
 }
-
 .btn:hover{
     transform:scale(1.07);
     box-shadow:0 0 15px #00eaff;
@@ -101,190 +41,246 @@ body{
     display:flex;
     justify-content:center;
     gap:20px;
-    margin-bottom:20px;
+    margin:25px 0;
+}
+
+/* GRID */
+.staff-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+    gap:28px;
+    width:85%;
+    margin:30px auto;
+}
+
+/* CARD */
+.staff-card{
+    background:linear-gradient(180deg,#0c2236,#091a2b);
+    border-radius:22px;
+    padding:22px 20px 26px;
+    box-shadow:0 20px 40px rgba(0,0,0,.55);
+    transition:.3s;
     position:relative;
-    z-index:10;
+}
+.staff-card:hover{
+    transform:translateY(-12px) scale(1.04);
 }
 
-/* TOP */
-/* Animation bay bổng cho cả cột giống Discord */
-@keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-15px); }
+/* AVATAR */
+.avatar{
+    width:96px;
+    height:96px;
+    border-radius:50%;
+    margin:10px auto 12px;
+    background-size:cover;
+    background-position:center;
+    border:4px solid var(--c);
+    box-shadow:0 0 18px var(--c);
 }
 
-.top-wrapper {
-    display: flex;
-    justify-content: center;
-    align-items: flex-end;
-    gap: 35px;
-    margin-top: 60px; /* Giảm lề trên vì không còn vương miện */
-    padding: 20px;
+/* ROLE COLORS */
+.founder{--c:#ff2d55}
+.owner{--c:gold}
+.admin{--c:#ff5555}
+.manager{--c:#4dd0ff}
+.mod{--c:#55ff8f}
+
+/* ===== GLOW ROLE ĐỘNG ===== */
+.founder .avatar{
+    animation:glowFounder 2.5s infinite alternate;
+}
+.owner .avatar{
+    animation:glowOwner 2.5s infinite alternate;
+}
+.admin .avatar{
+    animation:glowAdmin 2.5s infinite alternate;
+}
+.manager .avatar{
+    animation:glowManager 2.5s infinite alternate;
+}
+.mod .avatar{
+    animation:glowMod 2.5s infinite alternate;
 }
 
-.top-card {
-    width: 220px;
-    border-radius: 25px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 30px 15px;
-    position: relative;
-    animation: float 4s ease-in-out infinite;
-    box-shadow: 0 15px 35px rgba(0,0,0,0.4);
-    overflow: hidden; /* Giữ hiệu ứng ánh sáng bên trong card */
+/* KEYFRAMES */
+@keyframes glowFounder{
+    from{box-shadow:0 0 12px var(--c);}
+    to{box-shadow:0 0 30px var(--c);}
+}
+@keyframes glowOwner{
+    from{box-shadow:0 0 12px var(--c);}
+    to{box-shadow:0 0 30px var(--c);}
+}
+@keyframes glowAdmin{
+    from{box-shadow:0 0 12px var(--c);}
+    to{box-shadow:0 0 30px var(--c);}
+}
+@keyframes glowManager{
+    from{box-shadow:0 0 12px var(--c);}
+    to{box-shadow:0 0 30px var(--c);}
+}
+@keyframes glowMod{
+    from{box-shadow:0 0 12px var(--c);}
+    to{box-shadow:0 0 30px var(--c);}
 }
 
-/* Chiều cao: Top 1 cao nhất, Top 2 và 3 bằng nhau */
-.top-1 { 
-    height: 380px; 
-    background: linear-gradient(180deg, #ff9d00, #d48400); 
-    z-index: 10; 
-    border: 3px solid gold; 
+/* ROLE TEXT */
+.role{
+    font-weight:bold;
+    color:var(--c);
+    margin-top:6px;
 }
-.top-2 { 
-    height: 310px; 
-    background: linear-gradient(180deg, #a8a8a8, #757575); 
-    animation-delay: 0.5s; 
-    border: 3px solid silver; 
-}
-.top-3 { 
-    height: 310px; /* Đã kéo cao bằng Top 2 */
-    background: linear-gradient(180deg, #964b00, #633200); 
-    animation-delay: 1s; 
-    border: 3px solid #cd7f32; 
+.name{
+    font-size:16px;
+    margin-top:4px;
 }
 
-/* Avatar fix kích thước */
-.avatar {
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    border: 5px solid white;
-    margin-bottom: 15px;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+/* VIEW DISCORD */
+.view-dis{
+    margin-top:14px;
+    display:inline-block;
+    padding:8px 20px;
+    background:white;
+    color:black;
+    border-radius:20px;
+    font-weight:bold;
+    text-decoration:none;
+    transition:.2s;
+}
+.view-dis:hover{
+    transform:scale(1.1);
+    box-shadow:0 0 18px white;
 }
 
-/* Nút Discord Profile đậm và rõ */
-.view-profile {
-    margin-top: auto;
-    width: 100%;
-    padding: 12px;
-    border-radius: 12px;
-    border: none;
-    background: #454FBF; 
-    color: white;
-    font-weight: 900;
-    text-transform: uppercase;
-    cursor: pointer;
-    box-shadow: 0 4px 0 #2f358a;
-    transition: 0.2s;
+@media (max-width: 768px){
+  .top-card::after{
+    animation:none; /* tắt shine nặng */
+  }
 }
-.view-profile:hover {
-    background: #5865F2;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 0 #2f358a;
+/* ===== MOBILE OPTIMIZATION ===== */
+@media (max-width: 768px){
+
+  body{
+    font-size:14px;
+  }
+
+  /* BRAND nhỏ lại */
+  #brand{
+    font-size:24px;
+    top:10px;
+    right:12px;
+  }
+
+  /* STATS gọn */
+  #statsBox{
+    font-size:12px;
+    padding:8px 10px;
+  }
+
+  /* LOGO nhỏ */
+  #logo{
+    width:120px;
+    height:120px;
+    margin:20px auto;
+  }
+
+  /* BUTTON BAR xuống dòng */
+  .top-btn-bar{
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  .btn{
+    padding:10px 18px;
+    font-size:13px;
+  }
+
+  /* ===== TOP 1–2–3 STACK ===== */
+  .top-wrapper{
+    flex-direction:column;
+    align-items:center;
+    gap:22px;
+  }
+
+  .top-card{
+    width:90%;
+    max-width:320px;
+  }
+
+  /* TOP 1 nổi bật */
+  .top-1{
+    transform:none;
+    order:-1;
+  }
+
+  .crown{
+    top:-45px;
+    font-size:32px;
+  }
+
+  /* AVATAR nhỏ lại */
+  .avatar{
+    width:90px;
+    height:90px;
+  }
+
+  /* VIEW PROFILE dễ bấm */
+  .view-profile{
+    width:100%;
+    margin-top:12px;
+    padding:10px;
+    font-size:14px;
+  }
+
+  /* ===== RANK LIST ===== */
+  .rank-row{
+    padding:14px;
+    font-size:13px;
+  }
+
+/* Hover (PC) */
+#discordJoin:hover{
+    transform:translateX(-50%) scale(1.12);
+    box-shadow:
+        0 12px 28px rgba(88,101,242,.9),
+        0 0 30px rgba(88,101,242,1);
 }
-
-.view-profile:active {
-    transform: translateY(2px);
-    box-shadow: 0 0 0 #3b44a3;
-}
-
-/* Tên thành viên */
-.name {
-    font-size: 20px;
-    font-weight: bold;
-    color: #fff;
-    text-shadow: 1px 1px 4px rgba(0,0,0,0.5);
-    margin-bottom: 10px;
-}
-
-/* GLOW */
-@keyframes glowPulse{
-    0%{box-shadow:0 0 12px var(--c),0 0 25px var(--c)}
-    50%{box-shadow:0 0 25px var(--c),0 0 50px var(--c)}
-    100%{box-shadow:0 0 12px var(--c),0 0 25px var(--c)}
-}
-
-.avatar.gold{--c:gold;border:5px solid gold;animation:glowPulse 2.5s infinite}
-.avatar.silver{--c:silver;border:5px solid silver;animation:glowPulse 2.8s infinite}
-.avatar.bronze{--c:#cd7f32;border:5px solid #cd7f32;animation:glowPulse 3s infinite}
-
-/* CROWN */
-.crown-wrap{
-    position:absolute;
-    top:-32px;
+/* ===== DISCORD FLOAT BUTTON ===== */
+#discordJoin{
+    position:fixed;
+    bottom:14px;
     left:50%;
     transform:translateX(-50%);
-    width:0;
-    height:0;
-    z-index:50;
-    pointer-events:none;
-}
-.top-1{
-    position: relative;
-    overflow: visible;
-}
+    width:52px;
+    height:52px;
 
-.crown{
-    position: absolute;
-    top: -55px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 38px;
-    z-index: 999;
-    pointer-events: none;
+    background:#5865F2;
+    border-radius:14px;
 
-    animation:
-        crownFloat 2.5s ease-in-out infinite,
-        crownGlow 1.8s ease-in-out infinite;
-}
-@keyframes crownFloat{
-    0%{transform:translateY(0)}
-    50%{transform:translateY(-5px)}
-    100%{transform:translateY(0)}
-}
-
-/* RANK */
-.rank{
-    width:36px;
-    height:36px;
-    border-radius:50%;
-    margin:8px auto 10px;
     display:flex;
     align-items:center;
     justify-content:center;
-    font-weight:bold;
-    color:black;
+
+    font-size:22px;
+    cursor:pointer;
+    z-index:20;
+
+    box-shadow:
+        0 8px 20px rgba(88,101,242,.6),
+        0 0 18px rgba(88,101,242,.8);
+
+    animation:
+        discordFloat 2.6s ease-in-out infinite,
+        discordGlow 1.8s ease-in-out infinite;
+
+    transition:.25s;
 }
 
-.gold{background:gold}
-.silver{background:silver}
-.bronze{background:#cd7f32}
-
-.name{font-size:18px;font-weight:bold}
-.stage{font-size:14px;color:#ffd966}
-
-/* LIST */
-.rank-list{
-    width:100%;
-    max-width:900px;
-    margin:40px auto;
-}
-
-.rank-row{
-    display:flex;
-    align-items:center;
-    width:100%;
-    gap:14px;
-    padding:12px 18px;
-    background:rgba(0,0,0,.45);
-    border-radius:12px;
-    margin-bottom:8px;
+/* Hover (PC) */
+#discordJoin:hover{
+    transform:translateX(-50%) scale(1.12);
+    box-shadow:
+        0 12px 28px rgba(88,101,242,.9),
+        0 0 30px rgba(88,101,242,1);
 }
 
 /* ===== DISCORD FLOAT BUTTON ===== */
@@ -350,310 +346,169 @@ body{
             0 6px 18px rgba(88,101,242,.6),
             0 0 12px rgba(88,101,242,.7);
     }
+}
+}
+/* ===== NAVBAR ===== */
+.navbar{
+  position:fixed;
+  top:0;
+  left:50%;
+  transform:translateX(-50%);
+  width:95%;
+  max-width:1200px;
+  height:64px;
+
+  background:rgba(0,0,0,.85);
+  backdrop-filter:blur(10px);
+
+  border-radius:18px;
+  padding:0 20px;
+
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+
+  z-index:9999;
+  box-shadow:0 10px 30px rgba(0,0,0,.6);
+}
+/* ===== TOOLS RIGHT ===== */
+.nav-tools{
+  position:relative;
+  margin-left:auto;   /* ĐẨY SANG CUỐI NAVBAR */
+}
+
+/* nút */
+.tools-btn{
+  color:#ddd;
+  font-weight:600;
+  padding:8px 14px;
+  border-radius:12px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  transition:.25s;
+}
+
+.tools-btn:hover{
+  background:rgb(26,82,204);
+  color:#00eaff;
+  box-shadow:0 0 12px rgba(0,234,255,.6);
+}
+
+/* dropdown */
+.tools-dropdown{
+  position:absolute;
+  top:120%;
+  right:0;
+
+  min-width:190px;
+  background:rgba(10,20,40,.97);
+  border-radius:14px;
+  padding:8px;
+
+  display:none;
+  flex-direction:column;
+  gap:4px;
+
+  box-shadow:
+    0 12px 30px rgba(0,0,0,.6),
+    0 0 20px rgba(0,234,255,.3);
+
+  z-index:99999;
+}
+
+/* item */
+.tools-dropdown a{
+  text-decoration:none;
+  color:#e5e7eb;
+  padding:10px 12px;
+  border-radius:10px;
+  font-size:14px;
+  transition:.2s;
+}
+
+.tools-dropdown a:hover{
+  background:#1e90ff;
+  color:white;
+  box-shadow:0 0 12px #00eaff;
+}
+
+/* hover mở */
+.nav-tools:hover .tools-dropdown{
+  display:flex;
+}
+/* ===== ARROW ===== */
+.tools-btn .arrow{
+  font-size:12px;
+  margin-left:4px;
+  transition:.25s;
+  opacity:.8;
+}
+
+/* khi hover (menu mở) → mũi tên xuống */
+.nav-tools:hover .tools-btn .arrow{
+  transform:rotate(180deg); /* ▲ → ▼ */
+}
+
+/* khoảng trống tránh che nội dung */
+.nav-space{
+  height:90px;
+}
+
+/* LOGO */
+.nav-logo{
+  height:42px;
+  cursor:pointer;
+  transition:.25s;
+}
+.nav-logo:hover{
+  transform:scale(1.08);
+  filter:drop-shadow(0 0 10px #00eaff);
+}
+
+/* MENU */
+.nav-center{
+  display:flex;
+  gap:22px;
+}
+
+.nav-item{
+  color:#ddd;
+  text-decoration:none;
+  font-size:15px;
+  font-weight:600;
+
+  display:flex;
+  align-items:center;
+  gap:6px;
+
+  padding:8px 14px;
+  border-radius:12px;
+  transition:.25s;
+}
+
+.nav-item:hover{
+  background:rgba(255,255,255,.1);
+  color:#00eaff;
+  box-shadow:0 0 12px rgba(0,234,255,.6);
+  transform:translateY(-2px);
+}
+
+/* ===== MOBILE ===== */
+@media (max-width:768px){
+  .navbar{
+    height:auto;
+    padding:12px;
   }
-.rank-list,
-.rank-row{
-    text-align:left;
-}
-/* ===== SHINY EFFECT ===== */
-/* ===== SHINE VERTICAL ===== */
-@keyframes shineDiagonal {
-    0% {
-        left: -120%;
-        top: -120%;
-        opacity: 0;
-    }
-    30% {
-        opacity: .4;
-    }
-    50% {
-        left: 120%;
-        top: 120%;
-        opacity: .25;
-    }
-    80% {
-        opacity: .4;
-    }
-    100% {
-        left: -120%;
-        top: -120%;
-        opacity: 0;
-    }
-}
-
-.top-card::after{
-    content:"";
-    position:absolute;
-    top:-120%;
-    left:-120%;
-    width:200%;
-    height:200%;
-
-    background:linear-gradient(
-        135deg,
-        transparent 40%,
-        rgba(255,255,255,.35) 50%,
-        transparent 60%
-    );
-
-    animation: shineDiagonal 4.5s ease-in-out infinite;
-    pointer-events:none;
-}
-.top-card{
-    position:relative;
-    overflow:hidden;      /* khóa ánh sáng */
-    border-radius:22px;
-}
-/* ===== TOP 1 STYLE ===== */
-.top-1{
-    background:linear-gradient(135deg,#3a2c00,#ffd700,#3a2c00);
-    box-shadow:
-        0 0 25px gold,
-        0 0 80px rgba(255,215,0,.7);
-    border:2px solid gold;
-}
-
-/* ===== TOP 2 STYLE ===== */
-.top-2{
-    background:linear-gradient(135deg,#1c1c1c,#cfd2d6,#1c1c1c);
-    box-shadow:
-        0 0 20px silver,
-        0 0 45px rgba(220,220,220,.6);
-    border:2px solid silver;
-}
-
-/* ===== TOP 3 STYLE ===== */
-.top-3{
-    background:linear-gradient(135deg,#2a1600,#cd7f32,#2a1600);
-    box-shadow:
-        0 0 18px #cd7f32,
-        0 0 40px rgba(205,127,50,.6);
-    border:2px solid #cd7f32;
-
-}
-@keyframes shineVertical{
-    0%{top:-120%;opacity:0}
-    20%{opacity:.4}
-    50%{top:120%;opacity:.25}
-    80%{opacity:.4}
-    100%{top:-120%;opacity:0}
-
-}
-@keyframes crown{
-    0%{transform:translateX(-50%) translateY(0)}
-    50%{transform:translateX(-50%) translateY(-4px)}
-    100%{transform:translateX(-50%) translateY(0)}
-}
-
-.top-1 .crown{
-    animation:crownFloat 2.5s ease-in-out infinite;;
-}
-.avatar-wrap{
-    position:relative;
-    width:110px;
-    margin:0 auto;
-}
-.top-slot{
-    position:relative;
-    width:260px;          /* đúng bằng card */
-    margin:0 auto;
-}
-#floating-crown{
-    position:fixed;              /* QUAN TRỌNG */
-    font-size:36px;
-    z-index:9999;
-    pointer-events:none;
-
-    animation:crownFloat 2.5s ease-in-out infinite;
-    filter:drop-shadow(0 4px 6px rgba(0,0,0,.6));
-    text-shadow:
-        0 0 12px gold,
-        0 0 28px rgba(255,215,0,.9);
-}
-
-@keyframes crown{
-    0%{transform:translate(-50%,0)}
-    50%{transform:translate(-50%,-6px)}
-    100%{transform:translate(-50%,0)}
-}
-@keyframes crownFloat {
-    0% {
-        transform: translateX(-50%) translateY(0);
-    }
-    50% {
-        transform: translateX(-50%) translateY(-8px);
-    }
-    100% {
-        transform: translateX(-50%) translateY(0);
-    }
-}
-
-.crown{
-    position: absolute;
-    top: -55px;
-    left: 50%;
-    font-size: 38px;
-    z-index: 999;
-    pointer-events: none;
-
-    animation: crownFloat 2.5s ease-in-out infinite;
-
-    text-shadow:
-        0 0 10px gold,
-        0 0 25px rgba(255,215,0,.9);
-}
-@keyframes crownGlow {
-    0% {
-        filter: drop-shadow(0 0 6px gold);
-    }
-    50% {
-        filter: drop-shadow(0 0 16px gold);
-    }
-    100% {
-        filter: drop-shadow(0 0 6px gold);
-    }
-}
-/* ===== MOBILE OPTIMIZATION ===== */
-@media (max-width: 768px){
-
-  body{
-    font-size:14px;
-  }
-
-  /* BRAND nhỏ lại */
-  #brand{
-    font-size:24px;
-    top:10px;
-    right:12px;
-  }
-
-  /* STATS gọn */
-  #statsBox{
-    font-size:12px;
-    padding:8px 10px;
-  }
-
-  /* LOGO nhỏ */
-  #logo{
-    width:120px;
-    height:120px;
-    margin:20px auto;
-  }
-
-  /* BUTTON BAR xuống dòng */
-  .top-btn-bar{
+  .nav-center{
     flex-wrap:wrap;
+    justify-content:center;
     gap:10px;
   }
-  .btn{
-    padding:10px 18px;
+  .nav-item{
     font-size:13px;
-  }
-
-  /* ===== TOP 1–2–3 STACK ===== */
-  .top-wrapper{
-    flex-direction:column;
-    align-items:center;
-    gap:22px;
-  }
-
-  .top-card{
-    width:210px;
-    min-width:210px; /* tránh bóp ngang */
-}
-
-  /* TOP 1 nổi bật */
-  .top-1{
-    transform:none;
-    order:-1;
-  }
-
-  .crown{
-    top:-45px;
-    font-size:32px;
-  }
-
-  /* AVATAR nhỏ lại */
-  .avatar{
-    width:115px;
-    height:115px;
-
-    border-radius:50%;
-
-    background-size:cover;
-    background-position:center;
-    background-repeat:no-repeat;
-
-    border:5px solid white;
-
-    margin-bottom:15px;
-
-    box-shadow:0 8px 20px rgba(0,0,0,0.3);
-
-    flex-shrink:0; /* chống bị kéo */
-}
-
-  /* VIEW PROFILE dễ bấm */
-  .view-profile{
-    width:100%;
-    margin-top:12px;
-    padding:10px;
-    font-size:14px;
-  }
-
-  /* ===== RANK LIST ===== */
-  .rank-row{
-    padding:14px;
-    font-size:13px;
-  }
-}
-@media (max-width: 768px){
-  .top-card::after{
-    animation:none; /* tắt shine nặng */
-  }
-}
-@media (max-width:768px){
-  #discordJoin{
-    width:56px;
-    height:56px;
-    font-size:24px;
-    bottom:18px;
-  }
-}
-.register-box {
-  width: 260px;
-  background: rgba(0,0,0,0.35);
-  padding: 15px;
-  border-radius: 15px;
-  color: white;
-}
-
-.register-box input {
-  width: 100%;
-  margin-bottom: 10px;
-  padding: 8px;
-  border-radius: 8px;
-  border: none;
-}
-
-.register-box button {
-  width: 100%;
-  padding: 10px;
-  border: none;
-  border-radius: 10px;
-  background: #5865F2;
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.register-box button:hover {
-  background: #404EED;
-}
-@media (max-width: 768px) {
-  .register-box {
-    position: static;
-    margin: 20px auto;
+    padding:6px 10px;
   }
 }
 /* ===== NAVBAR GRADIENT ===== */
@@ -869,102 +724,6 @@ body{
     50%{transform:translateY(-8px)}
     100%{transform:translateY(0)}
 }
-/* ===== REGISTER LEFT - RIGHT ===== */
-.register-wrapper{
-  position: fixed;
-  top: 120px;
-  right: 25px;
-  display: flex;
-  gap: 20px;
-  z-index: 9998;
-}
-
-.register-wrapper .register-box{
-  width: 260px;
-}
-
-/* MOBILE */
-@media (max-width:768px){
-  .register-wrapper{
-    position: static;
-    flex-direction: column;
-    margin: 20px auto;
-  }
-}
-/* ===== STAGE SELECT ===== */
-.stage-box{
-  margin: 10px 0;
-}
-
-.stage-box label{
-  display: block;
-  margin-bottom: 6px;
-  font-weight: bold;
-  color: #e5e7eb;
-}
-
-#accStage{
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 8px;
-  border: 2px solid #334155;
-  background: #020617;
-  color: #e5e7eb;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all .2s ease;
-}
-
-#accStage:hover{
-  border-color: #22c55e;
-}
-
-#accStage:focus{
-  outline: none;
-  border-color: #22c55e;
-  box-shadow: 0 0 0 2px rgba(34,197,94,.3);
-}
-
-#accStage option{
-  background: #020617;
-  color: #e5e7eb;
-}
-#music-player{
-  position:fixed;
-  bottom:18px;
-  left:18px;
-  display:flex;
-  align-items:center;
-  gap:10px;
-
-  background:rgba(0,0,0,.6);
-  padding:10px 14px;
-  border-radius:16px;
-  z-index:9999;
-}
-
-#soundToggle{
-  width:42px;
-  height:42px;
-  border-radius:50%;
-  background:#1e90ff;
-  color:#fff;
-  font-size:22px;
-
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  cursor:pointer;
-}
-
-#soundToggle.muted{
-  background:#ef4444;
-}
-
-#volumeSlider{
-  width:110px;
-  cursor:pointer;
-}
 /* ===== DOLPHINS ===== */
 #dolphin-layer{
   position:fixed;
@@ -987,176 +746,6 @@ body{
     transform: translateY(110vh);
   }
 }
-/* ===== TOOLS DROPDOWN ===== */
-.nav-tools{
-  position:relative;
-}
-
-.tools-btn{
-  color:#ddd;
-  font-weight:600;
-  padding:8px 14px;
-  border-radius:12px;
-  cursor:pointer;
-  display:flex;
-  align-items:center;
-  gap:6px;
-  transition:.25s;
-}
-
-.tools-btn:hover{
-  background:rgb(26,82,204);
-  color:#00eaff;
-  box-shadow:0 0 12px rgba(0,234,255,.6);
-}
-
-/* dropdown box */
-.tools-dropdown{
-  position:absolute;
-  top:110%;
-  right:0;
-  min-width:180px;
-
-  background:rgba(10,20,40,.95);
-  border-radius:14px;
-  padding:8px;
-
-  display:none;
-  flex-direction:column;
-  gap:4px;
-
-  box-shadow:
-    0 12px 30px rgba(0,0,0,.6),
-    0 0 20px rgba(0,234,255,.25);
-
-  z-index:9999;
-}
-
-/* item */
-.tools-dropdown a{
-  text-decoration:none;
-  color:#e5e7eb;
-  padding:10px 12px;
-  border-radius:10px;
-  font-size:14px;
-  transition:.2s;
-}
-
-.tools-dropdown a:hover{
-  background:#1e90ff;
-  color:white;
-  box-shadow:0 0 12px #00eaff;
-}
-
-/* hover mở */
-.nav-tools:hover .tools-dropdown{
-  display:flex;
-}
-/* ===== ARROW ===== */
-.tools-btn .arrow{
-  font-size:12px;
-  margin-left:4px;
-  transition:.25s;
-  opacity:.8;
-}
-
-/* khi hover (menu mở) → mũi tên xuống */
-.nav-tools:hover .tools-btn .arrow{
-  transform:rotate(180deg); /* ▲ → ▼ */
-}
-/* Trang trí lại Select Stage giống ảnh */
-#stage {
-    width: 100%;
-    padding: 12px;
-    border-radius: 8px;
-    border: 2px solid #22c55e; /* Màu viền xanh lá */
-    background: #020617;      /* Nền tối */
-    color: white;
-    font-size: 15px;
-    font-weight: bold;
-    cursor: pointer;
-    appearance: none;         /* Xóa icon mặc định của trình duyệt */
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 10px center;
-    background-size: 18px;
-    transition: 0.3s;
-}
-
-#stage:hover {
-    box-shadow: 0 0 15px rgba(34, 197, 94, 0.4);
-}
-
-#stage option {
-    background: #0f172a;
-    color: white;
-    padding: 10px;
-}
-/* Animation bay bổng */
-@keyframes float {
-    0% { transform: translateY(0px); }
-    50% { transform: translateY(-10px); }
-    100% { transform: translateY(0px); }
-}
-
-/* Animation vương miện nhịp tim */
-@keyframes crownPulse {
-    0% { transform: scale(1) rotate(-10deg); }
-    50% { transform: scale(1.2) rotate(10deg); }
-    100% { transform: scale(1) rotate(-10deg); }
-}
-
-.top-wrapper {
-    display: flex;
-    justify-content: center;
-    align-items: flex-end;
-    gap: 30px;
-    margin-top: 80px;
-}
-
-.top-card {
-    width: 200px;
-    border-radius: 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 25px 15px;
-    position: relative;
-    animation: float 4s ease-in-out infinite; /* Animation bay bổng */
-}
-
-/* Độ trễ animation cho từng cột */
-.top-2 { height: 370px; animation-delay: 0.5s; background: linear-gradient(180deg, #a8a8a8, #757575); }
-.top-1 { height: 420px; animation-delay: 0s; background: linear-gradient(180deg, #ff9d00, #d48400); z-index: 10; }
-.top-3 { height: 320px; animation-delay: 1s; background: linear-gradient(180deg, #964b00, #633200); }
-
-/* Vương miện Top 1 */
-.crown-top1 {
-    position: absolute;
-    top: -85px; /* đẩy cao hơn */
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 55px;
-
-    animation: crownPulse 2s ease-in-out infinite;
-    filter: drop-shadow(0 0 10px gold);
-
-    z-index: 20;
-}
-
-/* Chữ số TOP trang trí đẹp */
-.rank-number {
-    font-size: 32px;
-    font-weight: 900;
-    margin-top: 5px;
-    font-style: italic;
-    color: rgba(255, 255, 255, 0.8);
-    text-shadow: 2px 2px 0px rgba(0,0,0,0.2);
-}
-
-.gold-text { color: #ffe082; }
-.silver-text { color: #e0e0e0; }
-.bronze-text { color: #d7ccc8; }
 </style>
 </head>
 
@@ -1218,12 +807,11 @@ body{
     </a>
     <a href="about.html" class="nav-item">
       📘 <span>Giới thiệu</span>
-    </a>
     <a href="rules.html" class="nav-item">
   📜 <span>Luật</span>
 </a>
       <!-- ===== TOOLS MENU (RIGHT END) ===== -->
-
+    </a>
 <div class="nav-tools">
   <div class="tools-btn">
     🧰 <span>Công cụ</span>
@@ -1242,342 +830,11 @@ body{
 <!-- CHỪA KHOẢNG TRỐNG CHO NAV -->
 <div class="nav-space"></div>
 
-<div id="brand">SenselessFish</div>
+<h1>👑 Staff Clan</h1>
 
-<div id="statsBox">
-👥 Total: 0<br>
-🟢 Online: 0
+<div class="staff-grid" id="staffGrid">
+<!-- staff sẽ load từ API -->
 </div>
-
-<div id="logo" onclick="location.href='index.html'"></div>
-
-<h2>🏆 Top Clan</h2>
-<h2>🏆🏆🏆</h2>
-
-<div class="top-wrapper">
-    <div class="top-card top-2">
-        <div class="avatar" id="top2-avatar"></div>
-        <div class="name" id="top2-name">Trống</div>
-        <div class="rank-number silver-text">TOP 2</div>
-        <button class="view-profile" id="btn-top2">Discord Profile</button>
-    </div>
-
-    <div class="top-card top-1">
-        <div class="avatar" id="top1-avatar"></div>
-        <div class="name" id="top1-name">Trống</div>
-        <div class="rank-number gold-text">TOP 1</div>
-        <button class="view-profile" id="btn-top1">Discord Profile</button>
-    </div>
-
-    <div class="top-card top-3">
-        <div class="avatar" id="top3-avatar"></div>
-        <div class="name" id="top3-name">Trống</div>
-        <div class="rank-number bronze-text">TOP 3</div>
-        <button class="view-profile" id="btn-top3">Discord Profile</button>
-    </div>
-</div>
-
-</div>
-
-<!-- TOP 4–20 -->
-<div class="rank-list" id="rank-list"></div>
-
-<script>
-const members = [
-  {rank:4,userId:261,name:"Member 4",stage:"Stage 1"},
-  {rank:5,userId:262,name:"Member 5",stage:"Stage 1"},
-  {rank:6,userId:263,name:"Member 6",stage:"Stage 1"},
-  {rank:7,userId:264,name:"Member 7",stage:"Stage 1"},
-  {rank:8,userId:265,name:"Member 8",stage:"Stage 1"},
-  {rank:9,userId:266,name:"Member 9",stage:"Stage 1"},
-  {rank:10,userId:267,name:"Member 10",stage:"Stage 1"},
-  {rank:11,userId:268,name:"Member 11",stage:"Stage 1"},
-  {rank:12,userId:269,name:"Member 12",stage:"Stage 1"},
-  {rank:13,userId:270,name:"Member 13",stage:"Stage 1"},
-  {rank:14,userId:271,name:"Member 14",stage:"Stage 1"},
-  {rank:15,userId:272,name:"Member 15",stage:"Stage 1"},
-  {rank:16,userId:273,name:"Member 16",stage:"Stage 1"},
-  {rank:17,userId:274,name:"Member 17",stage:"Stage 1"},
-  {rank:18,userId:275,name:"Member 18",stage:"Stage 1"},
-  {rank:19,userId:276,name:"Member 19",stage:"Stage 1"},
-  {rank:20,userId:277,name:"Member 20",stage:"Stage 1"}
-];
-
-const box=document.getElementById("rankList");
-members.forEach(m=>{
-  box.innerHTML+=`
-    <div class="rank-row" onclick="window.open('https://www.roblox.com/users/${m.userId}/profile')">
-      <div class="rank-avatar"
-        style="background-image:url('https://www.roblox.com/headshot-thumbnail/image?userId=${m.userId}&width=150&height=150&format=png')"></div>
-      <div class="rank-pos">#${m.rank}</div>
-      <div class="rank-name">${m.name}</div>
-      <div>${m.stage}</div>
-    </div>`;
-});
-</script> 
-
-<div id="discordJoin" onclick="window.open('https://discord.gg/senselessfish')">
-    💬
-</div>
-<!-- ===== REGISTER WRAPPER ===== -->
-<div class="register-wrapper">
-    <div class="register-box">
-        <h3>🧍 Tài khoản</h3>
-        <div id="loginStatus">🔴 Chưa đăng nhập</div>
-        <div id="loginBox">
-            <button onclick="loginDiscord()" class="btn">Login Discord</button>
-        </div>
-        <div id="userBox" style="display:none; text-align:center; margin-top:10px;">
-            <img id="userAvatar" style="width:60px;border-radius:50%; border: 2px solid #5865F2;">
-            <p id="userName" style="margin:5px 0; font-weight:bold;"></p>
-            <button onclick="localStorage.removeItem('discord_token'); location.reload();" style="font-size:10px; background:none; border:none; color:gray; cursor:pointer;">Đăng xuất</button>
-        </div>
-    </div>
-<div class="register-box">
-<h3>🏆 Đăng ký thi đấu</h3>
-<div id="registerStatus">🔴 Chưa đăng nhập</div>
-
-<div style="text-align:left; margin:10px 0;">
-<label style="font-weight:bold;">🎮 Roblox ID</label>
-<input 
-    type="text"
-    id="robloxId"
-    placeholder="Nhập Roblox ID"
-    inputmode="numeric"
-    pattern="[0-9]*"
-    style="
-        width:100%;
-        padding:10px;
-        border-radius:8px;
-        border:none;
-        margin-top:6px;
-    ">
-</div>
-    
-    <div style="text-align: left; margin: 15px 0;">
-        <label style="display:block; margin-bottom:8px; font-weight:bold;">🎯 Chọn Stage</label>
-        <select id="stage">
-            <option value="">-- Chọn Stage --</option>
-            <option value="🔥 3 High">🔥 3 High</option>
-            <option value="❄️ 2 Low">❄️ 2 Low</option>
-            <option value="⚡ 2 Mid">⚡ 2 Mid</option>
-            <option value="💎 2 High">💎 2 High</option>
-        </select>
-    </div>
-
-    <button onclick="registerStage()" class="btn btn-register">
-    🚀 Đăng ký thi đấu
-    </button>
-</div>
-<div id="userBox" style="display:none; text-align:center; margin-top:10px;">
-    <img id="userAvatar" style="width:60px;border-radius:50%; border: 2px solid #5865F2;">
-    <p id="userName" style="margin:5px 0; font-weight:bold;"></p>
-    <button onclick="localStorage.removeItem('discord_token'); location.reload();" 
-            style="font-size:11px; background:#444; border:none; color:white; padding:4px 8px; border-radius:4px; cursor:pointer;">
-        Đăng xuất
-    </button>
-</div>
-<script>
-const CLIENT_ID = "1476208651835408506";
-const REDIRECT_URI = "https://khoaanhnguyen728-wq.github.io/SenselessFishclanontop/top.html";
-let discordUser = null;
-
-// HÀM QUAN TRỌNG: Kiểm tra và hiển thị thông tin người dùng
-async function checkLogin() {
-    // 1. Lấy token từ URL (sau khi Discord chuyển hướng về) hoặc từ bộ nhớ máy (LocalStorage)
-    const urlParams = new URLSearchParams(window.location.hash.substring(1));
-    let token = urlParams.get("access_token");
-
-    if (token) {
-        localStorage.setItem("discord_token", token);
-        // Xóa token trên URL để bảo mật và làm sạch link
-        window.history.replaceState({}, document.title, window.location.pathname);
-    } else {
-        token = localStorage.getItem("discord_token");
-    }
-
-    if (!token) return; // Nếu không có token thì thoát
-
-    try {
-        // 2. Gọi API Discord để lấy thông tin tài khoản
-        const response = await fetch("https://discord.com/api/users/@me", {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-
-        if (response.ok) {
-            const user = await response.json();
-            discordUser = user;
-
-            // 3. Cập nhật giao diện Web
-            document.getElementById("loginStatus").innerText = "🟢 Đã đăng nhập";
-            document.getElementById("registerStatus").innerText = "🟢 Sẵn sàng";
-            document.getElementById("loginBox").style.display = "none";
-            document.getElementById("userBox").style.display = "block";
-            document.getElementById("userName").innerText = user.username;
-            
-            // Hiển thị ảnh đại diện Discord
-            const avatarUrl = user.avatar 
-                ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
-                : "https://cdn.discordapp.com/embed/avatars/0.png";
-            document.getElementById("userAvatar").src = avatarUrl;
-        } else {
-            // Nếu token hết hạn hoặc lỗi
-            localStorage.removeItem("discord_token");
-        }
-    } catch (err) {
-        console.error("Lỗi Login Discord:", err);
-    }
-}
-
-function loginDiscord() {
-    // Chuyển hướng sang trang ủy quyền của Discord
-    window.location.href = `https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=identify`;
-}
-
-// Cập nhật lại window.onload để chạy hàm kiểm tra khi vừa mở trang
-window.onload = () => {
-    loadTop();   // Hàm tải bảng xếp hạng đã có của bạn
-    checkLogin(); // Kiểm tra đăng nhập
-};
-
-async function registerStage() {
-    // 1. Kiểm tra xem người dùng đã login Discord chưa
-    if (!discordUser) {
-        alert("Bạn phải Đăng nhập Discord trước khi đăng ký!");
-        return;
-    }
-
-    // 2. Lấy giá trị từ ô chọn Stage
-    const stageSelect = document.getElementById("stage");
-    const stageValue = stageSelect.value;
-
-    if (!stageValue) {
-        alert("Vui lòng chọn một Stage để thi đấu!");
-        return;
-    }
-
-    // 3. Hiển thị trạng thái đang gửi
-    const btn = document.querySelector(".btn-register");
-    const originalText = btn.innerText;
-    btn.innerText = "Đang gửi...";
-    btn.disabled = true;
-
-    try {
-        // 4. Gửi yêu cầu đến API Render của bạn
-        const response = await fetch("https://senselessfishclanontop-1.onrender.com/register", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                discord: `${discordUser.username}#${discordUser.discriminator || '0'}`,
-                robloxId: "N/A", // Bạn có thể thêm ô nhập Roblox ID nếu muốn
-                stage: stageValue,
-                time: new Date().toLocaleString("vi-VN")
-            })
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            alert("✅ Đã gửi đơn đăng ký thành công vào Discord!");
-        } else {
-            alert("❌ Lỗi từ server: " + (result.error || "Không rõ nguyên nhân"));
-        }
-    } catch (err) {
-        console.error("Lỗi kết nối:", err);
-        alert("❌ Không thể kết nối đến server. Hãy kiểm tra xem server Render có đang chạy không!");
-    } finally {
-        btn.innerText = originalText;
-        btn.disabled = false;
-    }
-}
-</script>
-
-</div>
-<!-- MUSIC PLAYER -->
-<div id="music-player">
-  <div id="soundToggle">🔊</div>
-  <input type="range" id="volumeSlider" min="0" max="100" value="100">
-</div>
-
-<!-- YOUTUBE PLAYER ẨN -->
-<div id="yt-player"></div>
-<script src="https://www.youtube.com/iframe_api"></script>
-<script>
-let player;
-let started = false;
-let isMuted = false;
-
-function onYouTubeIframeAPIReady(){
-  player = new YT.Player('yt-player',{
-    height:'0',
-    width:'0',
-    videoId:'G-9EEDWvg9E',
-    playerVars:{
-      autoplay:0,
-      loop:1,
-      playlist:'G-9EEDWvg9E',
-      controls:0
-    },
-    events:{
-      onReady:()=>{
-        player.setVolume(100);
-      }
-    }
-  });
-}
-
-/* click lần đầu để phát nhạc */
-document.addEventListener("click",()=>{
-  if(started || !player) return;
-  player.playVideo();
-  started = true;
-});
-
-/* icon loa */
-soundToggle.onclick = ()=>{
-  if(!player) return;
-
-  if(!started){
-    player.playVideo();
-    started = true;
-  }
-
-  isMuted = !isMuted;
-
-  if(isMuted){
-    player.mute();
-    volumeSlider.value = 0;
-    soundToggle.textContent = "🔇";
-    soundToggle.classList.add("muted");
-  }else{
-    player.unMute();
-    player.setVolume(100);
-    volumeSlider.value = 100;
-    soundToggle.textContent = "🔊";
-    soundToggle.classList.remove("muted");
-  }
-};
-
-/* slider âm lượng */
-volumeSlider.addEventListener("input",()=>{
-  if(!player) return;
-
-  const v = volumeSlider.value;
-  player.setVolume(v);
-
-  if(v == 0){
-    player.mute();
-    soundToggle.textContent = "🔇";
-    soundToggle.classList.add("muted");
-    isMuted = true;
-  }else{
-    player.unMute();
-    soundToggle.textContent = "🔊";
-    soundToggle.classList.remove("muted");
-    isMuted = false;
-  }
-});
-</script>
 <script>
 const dolphinLayer = document.getElementById("dolphin-layer");
 const dolphinIcon = "🐬";
@@ -1613,81 +870,62 @@ function spawnDolphin(){
 }
 
 /* rơi ít thôi */
-setInterval(spawnDolphin,500);
-<div class="nav-tools">
-  <div class="tools-btn">
-    🧰 <span>Công cụ</span>
-  </div>
-</div>
+setInterval(spawnDolphin, 500);
 </script>
+
+</div>
 <script>
-async function loadTop() {
-    const rankListUI = document.getElementById("rank-list");
-    if (!rankListUI) return;
+async function loadStaff(){
 
-    try {
-        // Thêm timestamp để tránh cache
-        const response = await fetch("https://senselessfishclanontop-1.onrender.com/top?t=" + Date.now());
-        const topData = await response.json();
+const grid = document.getElementById("staffGrid");
 
-        // Xóa trắng danh sách Top 4-20 trước khi nạp mới
-        rankListUI.innerHTML = "";
+try{
 
-        // Chạy vòng lặp từ 1 đến 20 dựa trên object trả về từ server.js
-        for (let i = 1; i <= 20; i++) {
-            const p = topData[i];
+const res = await fetch("https://senselessfishclanontop-1.onrender.com/staff?" + Date.now());
+const data = await res.json();
 
-            if (i <= 3) {
-                // Xử lý Top 1, 2, 3 (Hiển thị vào các Card)
-                const nameEl = document.getElementById(`top${i}-name`);
-                const avatarEl = document.getElementById(`top${i}-avatar`);
-                const btnEl = document.getElementById(`btn-top${i}`);
+grid.innerHTML="";
 
-                if (p && p.name) {
-                    nameEl.innerText = p.name;
-                    avatarEl.style.backgroundImage = `url('${p.avatar}')`;
-                    // Gắn link Discord Profile vào nút bấm
-                    if(btnEl) btnEl.onclick = () => window.open(p.profile || '#');
-                } else {
-                    nameEl.innerText = "Trống";
-                    avatarEl.style.backgroundImage = "url('images/logo.png')";
-                }
-            } else {
-                // Xử lý Top 4 đến 20 (Hiển thị dạng danh sách hàng ngang)
-                if (p && p.name) {
-                    rankListUI.innerHTML += `
-                        <div class="rank-row" onclick="window.open('${p.profile || '#'}')">
-                            <div class="rank-pos">#${i}</div>
-                            <div class="rank-avatar" style="background-image:url('${p.avatar}')"></div>
-                            <div class="rank-name" style="flex:1; margin-left:10px">${p.name}</div>
-                            <div style="color:#ffd966">Thành viên</div>
-                        </div>`;
-                } else {
-                    // Hiển thị hàng trống nếu chưa có người giữ hạng
-                    rankListUI.innerHTML += `
-                        <div class="rank-row" style="opacity: 0.5;">
-                            <div class="rank-pos">#${i}</div>
-                            <div class="rank-avatar" style="background-color: #222;"></div>
-                            <div class="rank-name" style="flex:1; margin-left:10px">Chưa có dữ liệu</div>
-                            <div style="color:#888">Trống</div>
-                        </div>`;
-                }
-            }
-        }
-    } catch (err) {
-        console.error("Lỗi khi tải bảng xếp hạng:", err);
-    }
+data.forEach(s=>{
+
+let roleClass="mod";
+
+if(s.role.includes("Founder")) roleClass="founder";
+else if(s.role.includes("Owner")) roleClass="owner";
+else if(s.role.includes("Administrator")) roleClass="admin";
+else if(s.role.includes("Manager")) roleClass="manager";
+
+const card = document.createElement("div");
+card.className = `staff-card ${roleClass}`;
+
+card.innerHTML = `
+<div class="avatar" style="background-image:url('${s.avatar}')"></div>
+
+<div class="role">${s.role}</div>
+
+<div class="name">@${s.username}</div>
+
+<a class="view-dis"
+href="https://discord.com/users/${s.id}"
+target="_blank">
+View Discord
+</a>
+`;
+
+grid.appendChild(card);
+
+});
+
+}catch(err){
+console.log("Staff load lỗi",err);
 }
 
-// Gọi hàm khi trang web tải xong
-window.addEventListener("DOMContentLoaded", () => {
-    loadTop();
-});
-</script>
-<script>
-  
-</script>
+}
 
+loadStaff();
+</script>
 
 </body>
+
+
 </html>
