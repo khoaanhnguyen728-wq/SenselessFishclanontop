@@ -53,6 +53,23 @@ client.once("ready", () => {
 });
 
 client.on("interactionCreate", async (interaction) => {
+  if(interaction.commandName === "thidau"){
+
+const team1 = interaction.options.getString("team1");
+const team2 = interaction.options.getString("team2");
+const time = interaction.options.getString("time");
+const ref = interaction.options.getString("ref");
+
+const msg =
+`${team1} vs ${team2}
+time: ${time}
+ref: ${ref}`;
+
+await interaction.reply(msg);
+
+}
+  
+
 
   // ===== DROPDOWN =====
   if (interaction.isStringSelectMenu()) {
@@ -256,22 +273,6 @@ await channel.send({
 app.get("/register", (req, res) => {
   res.json(register);
 });
-
-if(interaction.commandName === "thidau"){
-
-const team1 = interaction.options.getString("team1");
-const team2 = interaction.options.getString("team2");
-const time = interaction.options.getString("time");
-const ref = interaction.options.getString("ref");
-
-const msg =
-`${team1} vs ${team2}
-time: ${time}
-ref: ${ref}`;
-
-await interaction.reply(msg);
-
-}
 
 // ===== START SERVER =====
 const PORT = process.env.PORT || 3000;
