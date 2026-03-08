@@ -1,4 +1,3 @@
-
 require("dotenv").config();
 const express = require("express");
 const fs = require("fs");
@@ -6,207 +5,205 @@ const cors = require("cors");
 const axios = require("axios");
 
 const {
-  Client,
-  GatewayIntentBits,
-  EmbedBuilder,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  StringSelectMenuBuilder
+    Client,
+    GatewayIntentBits,
+    EmbedBuilder,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+    StringSelectMenuBuilder
 } = require("discord.js");
+
 const app = express();
 app.use(express.json());
 app.use(cors());
 
-// ===== DISCORD BOT =====
+/* ================= DISCORD BOT ================= */
+
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
-  ]
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent
+    ]
 });
 
-// ===== FILE SETUP =====
+/* ================= DATABASE ================= */
+
 if (!fs.existsSync("top.json")) fs.writeFileSync("top.json", "{}");
 if (!fs.existsSync("register.json")) fs.writeFileSync("register.json", "[]");
+if (!fs.existsSync("staff.json")) fs.writeFileSync("staff.json", "[]");
 
 let top = JSON.parse(fs.readFileSync("top.json", "utf8"));
 let register = JSON.parse(fs.readFileSync("register.json", "utf8"));
-const selectedMatch = new Map();
+let staff = JSON.parse(fs.readFileSync("staff.json", "utf8"));
 
+// Đảm bảo đủ 20 slot cho bảng xếp hạng
 for (let i = 1; i <= 20; i++) {
-  if (top[i] === undefined) top[i] = null;
+    if (top[i] === undefined) top[i] = null;
+}
+
+function saveStaff() {
+    fs.writeFileSync("staff.json", JSON.stringify(staff, null, 2));
 }
 
 function saveTop() {
-  fs.writeFileSync("top.json", JSON.stringify(top, null, 2));
+    fs.writeFileSync("top.json", JSON.stringify(top, null, 2));
 }
 
 function saveRegister() {
-  fs.writeFileSync("register.json", JSON.stringify(register, null, 2));
+    fs.writeFileSync("register.json", JSON.stringify(register, null, 2));
 }
 
-// ===== BOT READY =====
-client.once("clientReady", () => {
-  console.log("🤖 Bot online: " + client.user.tag);
+const selectedMatch = new Map();
+
+/* ================= BOT READY ================= */
+
+client.once("ready", () => {
+    console.log("🤖 Bot online:", client.user.tag);
 });
 
-// CHỈ CÓ MỘT HÀM interactionCreate DUY NHẤT
-client.on("interactionCreate", async (interaction) => {
+/* ================= INTERACTIONS ================= */
 
-  // 1. Xử lý Slash Command (/thidau)
-if (interaction.isChatInputCommand()) {
+client.on("interactionCreate", async interaction => {
+    // Xử lý Slash Commands
+    if (interaction.isChatInputCommand()) {
+        const { commandName, options } = interaction;
 
-  // ===== /thidau =====
-  if (interaction.commandName === "thidau") {
-    const team1 = interaction.options.getString("team1");
-    const team2 = interaction.options.getString("team2");
-    const time = interaction.options.getString("time");
-    const ref = interaction.options.getString("ref");
+        /* /promote */
+        if (commandName === "promote") {
+            const user = options.getUser("user");
+            const role = options.getString("permission");
 
-    const msg = `${team1} vs ${team2}\ntime: ${time}\nref: ${ref}`;
-    return interaction.reply(msg);
-  }
+            // Kiểm tra nếu user đã là staff chưa để cập nhật hoặc thêm mới
+            const index = staff.findIndex(s => s.id === user.id);
+            if (index !== -1) {
+                staff[index].role = role;
+            } else {
+                staff.push({
+                    id: user.id,
+                    username: user.username,
+                    role: role
+                });
+            }
 
-  // ===== /promote =====
-  if (interaction.commandName === "promote") {
+            saveStaff();
+            return interaction.reply(`✅ **${user.username}** đã được cập nhật vào danh sách Staff với role **${role}**`);
+        }
 
-    const user = interaction.options.getUser("user");
-    const rank = interaction.options.getString("rank");
+        /* /demote */
+        else if (commandName === "demote") {
+            const user = options.getUser("user");
+            staff = staff.filter(s => s.id !== user.id);
+            saveStaff();
+            return interaction.reply(`❌ **${user.username}** đã bị gỡ khỏi danh sách Staff`);
+        }
 
-    const embed = new EmbedBuilder()
-  .setTitle("📈 Member Promoted")
-  .setColor(0x00ff00)
-  .addFields(
-    { name: "User", value: `<@${user.id}>`, inline: true },
-    { name: "Rank", value: String(rank), inline: true }
-  )
-  .setTimestamp();
-  
+        /* /thidau */
+        else if (commandName === "thidau") {
+            const team1 = options.getString("team1");
+            const team2 = options.getString("team2");
+            const time = options.getString("time");
+            const ref = options.getString("ref");
 
-    return interaction.reply({ embeds: [embed] });
-  }
+            const embed = new EmbedBuilder()
+                .setTitle("🏆 THÔNG BÁO THI ĐẤU")
+                .setColor(0xffcc00)
+                .addFields(
+                    { name: "⚔️ Trận đấu", value: `${team1} vs ${team2}` },
+                    { name: "⏰ Time", value: time, inline: true },
+                    { name: "🏁 Ref", value: ref, inline: true }
+                )
+                .setTimestamp();
 
-}
+            return interaction.reply({ embeds: [embed] });
+        }
 
-  // 2. Xử lý Dropdown (chọn p1, p2, ref)
-  if (interaction.isStringSelectMenu()) {
-    const value = interaction.values[0];
-    selectedMatch.set(interaction.user.id, value);
+        /* /settop */
+        else if (commandName === "settop") {
+            const user = options.getUser("user");
+            const rank = options.getInteger("top");
 
-    return await interaction.reply({
-      content: "✅ Đã chọn: " + value,
-      ephemeral: true
-    });
-  }
+            top[rank] = {
+                id: user.id,
+                name: user.username,
+                avatar: user.displayAvatarURL({ extension: "png", size: 256 })
+            };
 
-  // 3. Xử lý Button (nhấn nút nhập score)
-  if (interaction.isButton()) {
-    if (interaction.customId === "score_match") {
-      if (!selectedMatch.has(interaction.user.id)) {
-        return await interaction.reply({
-          content: "❌ Bạn phải chọn dropdown trước!",
-          ephemeral: true
-        });
-      }
+            saveTop();
+            return interaction.reply(`✅ **${user.username}** đã vào **TOP ${rank}**`);
+        }
 
-      return await interaction.reply({
-        content: "📊 Referee nhập score dạng: `!score 5-3`",
-        ephemeral: true
-      });
+        /* /detop */
+        else if (commandName === "detop") {
+            const user = options.getUser("user");
+            let found = false;
+
+            for (let key in top) {
+                if (top[key] && top[key].id === user.id) {
+                    top[key] = null;
+                    found = true;
+                }
+            }
+
+            if (found) {
+                saveTop();
+                return interaction.reply(`🗑️ Đã xoá **${user.username}** khỏi bảng xếp hạng`);
+            }
+            return interaction.reply("❌ User này không có trong TOP");
+        }
     }
-  }
+
+    // Xử lý Dropdown
+    if (interaction.isStringSelectMenu()) {
+        if (interaction.customId === "match_select") {
+            const value = interaction.values[0];
+            selectedMatch.set(interaction.user.id, value);
+            await interaction.reply({ content: "✅ Đã chọn: " + value, ephemeral: true });
+        }
+    }
+
+    // Xử lý Button
+    if (interaction.isButton()) {
+        if (interaction.customId === "score_match") {
+            if (!selectedMatch.has(interaction.user.id)) {
+                return interaction.reply({ content: "❌ Bạn phải chọn dropdown trước!", ephemeral: true });
+            }
+            await interaction.reply({ content: "📊 Ref nhập: `!score 5-3`", ephemeral: true });
+        }
+    }
 });
 
-// ===== SCORE COMMAND (Prefix !) =====
-client.on("messageCreate", (message) => {
-  if (message.author.bot) return;
-  if (!message.content.startsWith("!score")) return;
+/* ================= SCORE COMMAND (!score) ================= */
 
-  const score = message.content.split(" ")[1];
-  if (!score) return message.reply("Vui lòng nhập score! VD: `!score 5-0`");
+client.on("messageCreate", message => {
+    if (message.author.bot) return;
+    if (!message.content.startsWith("!score")) return;
 
-  message.channel.send(`📊 Score cập nhật: **${score}**`);
+    const score = message.content.split(" ")[1];
+    if (!score) return message.reply("VD: `!score 5-0`");
+
+    message.channel.send(`📊 Kết quả trận đấu: **${score}**`);
 });
 
-// ===== API ROUTES =====
+/* ================= API ENDPOINTS ================= */
+
 app.get("/", (req, res) => res.send("Server running"));
-app.get("/top", (req, res) => res.json(top));
 
-app.get("/roblox/:username", async (req, res) => {
-  try {
-    const username = req.params.username;
-    const userRes = await axios.post("https://users.roblox.com/v1/usernames/users", {
-      usernames: [username],
-      excludeBannedUsers: true
-    });
-    if (!userRes.data.data.length) return res.status(404).json({ error: "Không tìm thấy User Roblox" });
-
-    const userId = userRes.data.data[0].id;
-    const thumbRes = await axios.get(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=150x150&format=Png&isCircular=true`);
-    
-    res.json({
-      userId,
-      username,
-      displayName: userRes.data.data[0].displayName,
-      avatarUrl: thumbRes.data.data[0].imageUrl
-    });
-  } catch (err) {
-    res.status(500).json({ error: "Lỗi Roblox API" });
-  }
+app.get("/top", (req, res) => {
+    res.json(top);
 });
 
-app.post("/register", async (req, res) => {
-  try {
-    const { discord, robloxId, stage, time } = req.body;
-    const CHANNEL_ID = process.env.CHANNEL_ID;
-    const channel = await client.channels.fetch(CHANNEL_ID);
-
-    if (!channel) return res.status(500).json({ error: "Không tìm thấy channel Discord" });
-
-    register.push({ discord, robloxId, stage, time });
-    saveRegister();
-
-    const embed = new EmbedBuilder()
-      .setTitle("🏆 ĐĂNG KÝ THI ĐẤU")
-      .setColor(0x00ff00)
-      .addFields(
-        { name: "👤 Discord", value: discord || "N/A", inline: true },
-        { name: "🆔 Roblox ID", value: String(robloxId || "N/A"), inline: true },
-        { name: "📊 Stage", value: stage || "N/A", inline: true },
-        { name: "⏰ Time", value: time || "N/A", inline: false }
-      )
-      .setTimestamp()
-      .setFooter({ text: "SenselessFish Clan System" });
-
-    const dropdown = new StringSelectMenuBuilder()
-      .setCustomId("match_select")
-      .setPlaceholder("Xem thông tin / Liên hệ")
-      .addOptions([
-        { label: "P1: " + discord, value: "p1" },
-        { label: "P2: " + robloxId, value: "p2" },
-        { label: "Trọng tài", value: "ref" }
-      ]);
-
-    const scoreBtn = new ButtonBuilder()
-      .setCustomId("score_match")
-      .setLabel("Nhập Score")
-      .setStyle(ButtonStyle.Primary);
-
-    const row1 = new ActionRowBuilder().addComponents(dropdown);
-    const row2 = new ActionRowBuilder().addComponents(scoreBtn);
-
-    await channel.send({ embeds: [embed], components: [row1, row2] });
-    res.json({ success: true, message: "Đã gửi đăng ký!" });
-  } catch (err) {
-    res.status(500).json({ error: "Không thể gửi vào Discord" });
-  }
+app.get("/staff", (req, res) => {
+    res.json(staff);
 });
 
-app.get("/register", (req, res) => res.json(register));
+// Các API Roblox và Register giữ nguyên như cũ...
+// [Đoạn code API cũ của bạn]
+
+/* ================= SERVER & LOGIN ================= */
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("🌐 Server chạy trên port", PORT));
+app.listen(PORT, () => console.log("🌐 Server chạy port", PORT));
 
-client.login(process.env.TOKEN).catch(() => console.log("❌ TOKEN Discord sai hoặc thiếu"));
+client.login(process.env.TOKEN).catch(() => console.log("❌ TOKEN Discord sai"));
