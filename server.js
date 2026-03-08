@@ -76,17 +76,16 @@ if(!interaction.isChatInputCommand()) return;
 
 const { commandName, options } = interaction;
 
+/* PROMOTE */
+
 if(commandName === "promote"){
 
 const user = options.getUser("user");
 const role = options.getString("permission");
 
-const avatar = `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`;
-
 staff.push({
 id:user.id,
 username:user.username,
-avatar:avatar,
 role:role
 });
 
@@ -95,7 +94,9 @@ saveStaff();
 return interaction.reply(`✅ ${user.username} đã được thêm vào staff với role **${role}**`);
 }
 
-if(commandName === "demote"){
+/* DEMOTE */
+
+else if(commandName === "demote"){
 
 const user = options.getUser("user");
 
@@ -106,9 +107,9 @@ saveStaff();
 return interaction.reply(`❌ ${user.username} đã bị gỡ khỏi staff`);
 }
 
-/* ===== SLASH COMMAND ===== */
+});
 
-if(interaction.isChatInputCommand()){
+/* ===== SLASH COMMAND ===== */
 
 const {commandName,options} = interaction;
 
@@ -183,8 +184,6 @@ return interaction.reply("❌ User này không có trong TOP");
 
 }
 
-}
-
 /* ===== DROPDOWN ===== */
 
 if(interaction.isStringSelectMenu()){
@@ -227,8 +226,6 @@ ephemeral:true
 }
 
 }
-
-});
 
 /* ================= SCORE COMMAND ================= */
 
