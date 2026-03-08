@@ -832,93 +832,8 @@ body{
 
 <h1>👑 Staff Clan</h1>
 
-<div class="staff-grid">
-
-<!-- FOUNDER -->
-<div class="staff-card founder">
-    <div class="avatar" style="background-image:url('https://cdn.discordapp.com/avatars/1178171653113524269/2bdaa711b0bafe5d877caff45bb3533e.png?size=4096')"></div>
-    <div class="role">Founder</div>
-    <div class="name">@☾á</div>
-    <a class="view-dis" href="https://discord.com/users/1178171653113524269" target="_blank">
-        View Discord
-    </a>
-</div>
-
-<!-- OWNER -->
-<div class="staff-card owner">
-    <div class="avatar" style="background-image:url('https://cdn.discordapp.com/avatars/1247371689311076458/11287ca426e0e4febebd730137491c36.png?size=4096')"></div>
-    <div class="role">Owner & Leader</div>
-    <div class="name">@茉宝</div>
-    <a class="view-dis" href="https://discord.com/users/1247371689311076458" target="_blank">
-        View Discord
-    </a>
-</div>
-
-<!-- EXPERIENCE ADMIN -->
-<div class="staff-card admin">
-    <div class="avatar" style="background-image:url('https://cdn.discordapp.com/guilds/1281275478036189284/users/1463134822863081576/avatars/fb6e19a41979dbd37f3f3ec4cd0bbd8c.png?size=1024')"></div>
-    <div class="role">Experience Administrator</div>
-    <div class="name">@토키</div>
-    <a class="view-dis" href="https://discord.com/users/1463134822863081576" target="_blank">
-        View Discord
-    </a>
-</div>
-
-<!-- ADMIN -->
-<div class="staff-card admin">
-    <div class="avatar" style="background-image:url('https://cdn.discordapp.com/avatars/1252251272338473042/98133b7af263758c09f826f4838444a4.png?size=4096')"></div>
-    <div class="role">Administrator</div>
-    <div class="name">@Miruibel</div>
-    <a class="view-dis" href="https://discord.com/users/1252251272338473042" target="_blank">
-        View Discord
-    </a>
-</div>
-
-<div class="staff-card admin">
-    <div class="avatar" style="background-image:url('https://cdn.discordapp.com/avatars/1296742619900280862/60a207321340181112f4735b181809e6.png?size=4096')"></div>
-    <div class="role">Administrator</div>
-    <div class="name">@Khánh Linhh</div>
-    <a class="view-dis" href="https://discord.com/users/1463134822863081576" target="_blank">
-        View Discord
-    </a>
-</div>
-
-<!-- MANAGER -->
-<div class="staff-card manager">
-    <div class="avatar" style="background-image:url('https://cdn.discordapp.com/avatars/1307305895360725098/f6b1a4e1dc262d67067c44072e0e054b.png?size=4096')"></div>
-    <div class="role">Manager</div>
-    <div class="name">@sún...</div>
-    <a class="view-dis" href="https://discord.com/users/1307305895360725098" target="_blank">
-        View Discord
-    </a>
-</div>
-
-<!-- MOD -->
-<div class="staff-card mod">
-    <div class="avatar" style="background-image:url('https://cdn.discordapp.com/avatars/1475357115181957304/101c001b88cf67712034eeed0c9b21d3.png?size=4096')"></div>
-    <div class="role">Mod</div>
-    <div class="name">@AstyGDM</div>
-    <a class="view-dis" href="https://discord.com/users/1475357115181957304" target="_blank">
-        View Discord
-    </a>
-</div>
-
-<div class="staff-card mod">
-    <div class="avatar" style="background-image:url('https://cdn.discordapp.com/avatars/755068410471383163/010a0a3e00c42f4659633c68ea248860.png?size=4096')"></div>
-    <div class="role">Mod</div>
-    <div class="name">@ua ali?</div>
-    <a class="view-dis" href="https://discord.com/users/755068410471383163" target="_blank">
-        View Discord
-    </a>
-</div>
-
-<div class="staff-card mod">
-    <div class="avatar" style="background-image:url('https://cdn.discordapp.com/avatars/1403713252281679892/c273b34323924deac3b62cf5199a8147.png?size=1024')"></div>
-    <div class="role">Mod</div>
-    <div class="name">@Xác chết trôi dạt </div>
-    <a class="view-dis" href="https://discord.com/users/1403713252281679892" target="_blank">
-        View Discord
-    </a>
+<div class="staff-grid" id="staffGrid">
+<!-- staff sẽ load từ API -->
 </div>
 <script>
 const dolphinLayer = document.getElementById("dolphin-layer");
@@ -959,9 +874,58 @@ setInterval(spawnDolphin, 500);
 </script>
 
 </div>
+<script>
+async function loadStaff(){
+
+const grid = document.getElementById("staffGrid");
+
+try{
+
+const res = await fetch("https://senselessfishclanontop-1.onrender.com/staff?" + Date.now());
+const data = await res.json();
+
+grid.innerHTML="";
+
+data.forEach(s=>{
+
+let roleClass="mod";
+
+if(s.role.includes("Founder")) roleClass="founder";
+else if(s.role.includes("Owner")) roleClass="owner";
+else if(s.role.includes("Administrator")) roleClass="admin";
+else if(s.role.includes("Manager")) roleClass="manager";
+
+const card = document.createElement("div");
+card.className = `staff-card ${roleClass}`;
+
+card.innerHTML = `
+<div class="avatar" style="background-image:url('${s.avatar}')"></div>
+
+<div class="role">${s.role}</div>
+
+<div class="name">@${s.username}</div>
+
+<a class="view-dis"
+href="https://discord.com/users/${s.id}"
+target="_blank">
+View Discord
+</a>
+`;
+
+grid.appendChild(card);
+
+});
+
+}catch(err){
+console.log("Staff load lỗi",err);
+}
+
+}
+
+loadStaff();
+</script>
 
 </body>
 
 
 </html>
-
