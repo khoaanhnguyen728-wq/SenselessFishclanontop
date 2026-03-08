@@ -1,3 +1,4 @@
+
 require("dotenv").config();
 const express = require("express");
 const fs = require("fs");
@@ -55,17 +56,38 @@ client.once("ready", () => {
 client.on("interactionCreate", async (interaction) => {
 
   // 1. Xử lý Slash Command (/thidau)
-  if (interaction.isChatInputCommand()) {
-    if (interaction.commandName === "thidau") {
-      const team1 = interaction.options.getString("team1");
-      const team2 = interaction.options.getString("team2");
-      const time = interaction.options.getString("time");
-      const ref = interaction.options.getString("ref");
+if (interaction.isChatInputCommand()) {
 
-      const msg = `${team1} vs ${team2}\ntime: ${time}\nref: ${ref}`;
-      return await interaction.reply(msg);
-    }
+  // ===== /thidau =====
+  if (interaction.commandName === "thidau") {
+    const team1 = interaction.options.getString("team1");
+    const team2 = interaction.options.getString("team2");
+    const time = interaction.options.getString("time");
+    const ref = interaction.options.getString("ref");
+
+    const msg = `${team1} vs ${team2}\ntime: ${time}\nref: ${ref}`;
+    return interaction.reply(msg);
   }
+
+  // ===== /promote =====
+  if (interaction.commandName === "promote") {
+
+    const user = interaction.options.getUser("user");
+    const rank = interaction.options.getString("rank");
+
+    const embed = new EmbedBuilder()
+      .setTitle("📈 Member Promoted")
+      .setColor(0x00ff00)
+      .addFields(
+        { name: "User", value: `<@${user.id}>`, inline: true },
+        { name: "New Rank", value: rank, inline: true }
+      )
+      .setTimestamp();
+
+    return interaction.reply({ embeds: [embed] });
+  }
+
+}
 
   // 2. Xử lý Dropdown (chọn p1, p2, ref)
   if (interaction.isStringSelectMenu()) {
