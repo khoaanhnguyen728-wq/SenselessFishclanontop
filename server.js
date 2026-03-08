@@ -73,12 +73,13 @@ client.on("interactionCreate", async interaction => {
         try {
             const user = options.getUser("user");
             const rank = options.getInteger("top");
-
-            top[rank] = {
-                id: user.id,
-                name: user.username,
-                avatar: user.displayAvatarURL({ extension: "png", size: 256 })
-            };
+            
+top[rank] = {
+    id: user.id,
+    name: user.username,
+    avatar: user.displayAvatarURL({ extension: "png", size: 256 }),
+    profile: `https://discord.com/users/${user.id}`
+};
 
             saveTop();
             await interaction.editReply(`✅ Đã đưa **${user.username}** vào **TOP ${rank}**`);
