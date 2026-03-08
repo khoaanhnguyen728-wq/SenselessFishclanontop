@@ -71,8 +71,11 @@ console.log("🤖 Bot online:",client.user.tag);
 /* ================= INTERACTIONS ================= */
 
 client.on("interactionCreate", async interaction => {
-const commandName = interaction.commandName;
-  
+
+if(!interaction.isChatInputCommand()) return;
+
+const { commandName, options } = interaction;
+
 if(commandName === "promote"){
 
 const user = options.getUser("user");
@@ -381,4 +384,3 @@ console.log("🌐 Server chạy port",PORT);
 client.login(process.env.TOKEN).catch(()=>{
 console.log("❌ TOKEN Discord sai");
 });
-
