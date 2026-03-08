@@ -42,6 +42,26 @@ o.setName("user")
 .setRequired(true)
 ),
 
+new SlashCommandBuilder()
+.setName("thidau")
+.setDescription("Tạo thông báo thi đấu")
+.addStringOption(o =>
+    o.setName("team1")
+    .setDescription("Team 1")
+    .setRequired(true))
+.addStringOption(o =>
+    o.setName("team2")
+    .setDescription("Team 2")
+    .setRequired(true))
+.addStringOption(o =>
+    o.setName("time")
+    .setDescription("Thời gian")
+    .setRequired(true))
+.addStringOption(o =>
+    o.setName("ref")
+    .setDescription("Referee")
+    .setRequired(true))
+
 ].map(c=>c.toJSON())
 
 const rest = new REST({version:"10"}).setToken(process.env.TOKEN)
@@ -52,3 +72,4 @@ Routes.applicationCommands(process.env.CLIENT_ID),
 ).then(()=>{
 console.log("✅ Commands deployed!")
 }).catch(console.error)
+
