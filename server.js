@@ -11,9 +11,11 @@ EmbedBuilder,
 ActionRowBuilder,
 ButtonBuilder,
 ButtonStyle,
-StringSelectMenuBuilder
+StringSelectMenuBuilder,
+ModalBuilder,
+TextInputBuilder,
+TextInputStyle
 } = require("discord.js");
-
 const app = express();
 app.use(express.json());
 app.use(cors());
@@ -63,6 +65,7 @@ console.log("🤖 Bot đã sẵn sàng:",client.user.tag);
 const selected = new Map();
 
 client.on("interactionCreate", async interaction=>{
+
 
 /* ---------- SLASH COMMAND ---------- */
 
@@ -203,41 +206,43 @@ components:[row1,row2]
 }
 
 /* ---------- DROPDOWN ---------- */
-
 if(interaction.isStringSelectMenu()){
 
-if(interaction.customId==="match_info"){
+/* STAGE DROPDOWN */
 
-const value=interaction.values[0];
+if(interaction.customId === "select_stage"){
 
-selected.set(interaction.user.id,value);
+const stage = interaction.values[0];
 
-return interaction.reply({
-content:`✅ Bạn đã chọn: **${value}**`,
-ephemeral:true
-});
+selected.set(interaction.user.id, stage);
 
-}
+const modal = new ModalBuilder()
+.setCustomId("submit_score")
+.setTitle("Nhập Score");
 
-}
+const scoreInput = new TextInputBuilder()
+.setCustomId("score")
+.setLabel("Score của bạn")
+.setStyle(TextInputStyle.Short)
+.setPlaceholder("Ví dụ: 12500")
+.setRequired(true);
 
-/* ---------- SCORE BUTTON ---------- */
+const row = new ActionRowBuilder().addComponents(scoreInput);
 
-if(interaction.isButton()){
+modal.addComponents(row);
 
-if(interaction.customId==="score_match"){
-
-if(!selected.has(interaction.user.id)){
-
-return interaction.reply({
-content:"❌ Bạn phải chọn dropdown trước!",
-ephemeral:true
-});
+return interaction.showModal(modal);
 
 }
 
+/* MATCH INFO */
+
+if(interaction.customId === "match_info"){
+
+const value = interaction.values[0];
+
 return interaction.reply({
-content:"📊 Ref nhập score dạng: `!score 5-3`",
+content:`📌 Thông tin: **${value}**`,
 ephemeral:true
 });
 
@@ -297,36 +302,79 @@ res.status(500).json({error:"Roblox API error"});
 
 /* REGISTER MATCH */
 
-app.post("/register",async(req,res)=>{
+app.post("/register", async (req, res) => {
 
 try{
 
-const {discord,robloxId,stage,time}=req.body;
+const {discord, robloxUsername} = req.body;
 
-const channel=await client.channels.fetch(process.env.CHANNEL_ID);
+const channel = await client.channels.fetch(process.env.CHANNEL_ID);
 
-register.push({discord,robloxId,stage,time});
-saveRegister();
+/* Lấy avatar Roblox */
 
-const embed=new EmbedBuilder()
+let robloxData = null;
+
+try{
+
+const userRes = await axios.post(
+"https://users.roblox.com/v1/usernames/users",
+{ usernames:[robloxUsername], excludeBannedUsers:true }
+);
+
+if(userRes.data.data.length){
+
+const id = userRes.data.data[0].id;
+
+const thumb = await axios.get(
+`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${id}&size=150x150&format=Png&isCircular=true`
+);
+
+robloxData = {
+id,
+avatar: thumb.data.data[0].imageUrl
+};
+
+}
+
+}catch{}
+
+/* EMBED */
+
+const embed = new EmbedBuilder()
 .setTitle("📝 ĐĂNG KÝ THI ĐẤU")
 .setColor(0x00ff00)
+.setThumbnail(robloxData?.avatar || null)
 .addFields(
-{name:"Discord",value:discord||"N/A"},
-{name:"Roblox ID",value:String(robloxId||"N/A")},
-{name:"Stage",value:stage||"N/A"},
-{name:"Time",value:time||"N/A"}
+{ name:"Discord", value:discord },
+{ name:"Roblox", value:robloxUsername || "N/A" }
 )
 .setTimestamp();
 
-await channel.send({embeds:[embed]});
+/* DROPDOWN STAGE */
+
+const stageMenu = new StringSelectMenuBuilder()
+.setCustomId("select_stage")
+.setPlaceholder("Chọn Stage")
+.addOptions([
+{label:"🔥 3 High",value:"3_high"},
+{label:"🔥 3 Low",value:"3_low"},
+{label:"🔥 4 High",value:"4_high"},
+{label:"🔥 4 Low",value:"4_low"}
+]);
+
+const row = new ActionRowBuilder().addComponents(stageMenu);
+
+await channel.send({
+embeds:[embed],
+components:[row]
+});
 
 res.json({success:true});
 
 }catch(e){
 
 console.error(e);
-res.status(500).json({error:"Discord send failed"});
+res.status(500).json({error:"Register error"});
 
 }
 
