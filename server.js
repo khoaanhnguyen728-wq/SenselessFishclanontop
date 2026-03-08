@@ -48,7 +48,7 @@ function saveRegister() {
 }
 
 // ===== BOT READY =====
-client.once("ready", () => {
+client.once("clientReady", () => {
   console.log("🤖 Bot online: " + client.user.tag);
 });
 
@@ -76,13 +76,14 @@ if (interaction.isChatInputCommand()) {
     const rank = interaction.options.getString("rank");
 
     const embed = new EmbedBuilder()
-      .setTitle("📈 Member Promoted")
-      .setColor(0x00ff00)
-      .addFields(
-        { name: "User", value: `<@${user.id}>`, inline: true },
-        { name: "New Rank", value: rank, inline: true }
-      )
-      .setTimestamp();
+  .setTitle("📈 Member Promoted")
+  .setColor(0x00ff00)
+  .addFields(
+    { name: "User", value: `<@${user.id}>`, inline: true },
+    { name: "Rank", value: String(rank), inline: true }
+  )
+  .setTimestamp();
+  
 
     return interaction.reply({ embeds: [embed] });
   }
