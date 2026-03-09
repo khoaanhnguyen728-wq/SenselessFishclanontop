@@ -58,13 +58,35 @@ GatewayIntentBits.MessageContent
 ]
 });
 
-client.once("ready",()=>{
-console.log("🤖 Bot đã sẵn sàng:",client.user.tag);
-});
-
 /* ================= INTERACTION SYSTEM ================= */
 
 const selected = new Map();
+
+let stats = {
+total:0,
+online:0
+};
+
+/* BOT READY */
+
+client.once("ready",()=>{
+console.log("🤖 Bot đã sẵn sàng:",client.user.tag);
+
+setInterval(()=>{
+
+const guild = client.guilds.cache.get(process.env.GUILD_ID);
+
+if(!guild) return;
+
+stats.total = guild.memberCount;
+
+stats.online = guild.members.cache.filter(m =>
+m.presence && ["online","idle","dnd"].includes(m.presence.status)
+).size;
+
+},10000);
+
+});
 
 client.on("interactionCreate", async interaction=>{
 try{
@@ -289,7 +311,9 @@ app.get("/staff",(req,res)=>{
 res.json(staff);
 });
 
-app.get("/stats", async (req,res)=>{
+app.get("/stats",(req,res)=>{
+res.json(stats);
+});
 
 try{
 
@@ -311,7 +335,6 @@ console.error(err);
 res.json({total:0,online:0});
 }
 
-});
 
 /* ROBLOX PROFILE */
 
