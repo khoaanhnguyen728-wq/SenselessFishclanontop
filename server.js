@@ -46,6 +46,14 @@ function saveRegister(){
 fs.writeFileSync("register.json",JSON.stringify(register,null,2));
 }
 
+if (!fs.existsSync("mainers.json")) fs.writeFileSync("mainers.json", "[]");
+
+let mainers = JSON.parse(fs.readFileSync("mainers.json"));
+
+function saveMainers(){
+fs.writeFileSync("mainers.json",JSON.stringify(mainers,null,2));
+}
+
 /* ================= DISCORD BOT ================= */
 
 const client = new Client({
@@ -95,6 +103,41 @@ try{
 if(interaction.isChatInputCommand()){
 
 const {commandName,options}=interaction;
+
+if(commandName==="mainer"){
+
+await interaction.deferReply();
+
+const user=options.getUser("user");
+
+mainers = mainers.filter(m=>m.id!==user.id);
+
+mainers.push({
+id:user.id,
+name:user.username,
+avatar:user.displayAvatarURL({extension:"png",size:256}),
+profile:`https://discord.com/users/${user.id}`
+});
+
+saveMainers();
+
+return interaction.editReply(`✅ **${user.username}** đã được thêm vào Mainers`);
+
+}
+
+if(commandName==="demainer"){
+
+await interaction.deferReply();
+
+const user=options.getUser("user");
+
+mainers = mainers.filter(m=>m.id!==user.id);
+
+saveMainers();
+
+return interaction.editReply(`❌ **${user.username}** đã bị xóa khỏi Mainers`);
+
+}
 
 /* SETTOP */
 
@@ -451,6 +494,10 @@ res.status(500).json({error:"Register error"});
 
 }
 
+});
+
+app.get("/mainers",(req,res)=>{
+res.json(mainers);
 });
 
 /* ================= SERVER ================= */
