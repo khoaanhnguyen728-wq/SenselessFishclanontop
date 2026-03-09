@@ -1685,9 +1685,18 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 </script>
 <script>
-  
+async function loadStats(){
+
+const res = await fetch("https://senselessfishclanontop-1.onrender.com/stats");
+const data = await res.json();
+
+document.getElementById("statsBox").innerHTML =
+`👥 Total: ${data.total}<br>🟢 Online: ${data.online}`;
+
+}
+
+loadStats();
+setInterval(loadStats,10000);
 </script>
-
-
 </body>
 </html>
