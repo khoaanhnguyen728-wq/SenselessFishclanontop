@@ -320,7 +320,7 @@ res.json(stats);
 try{
 
 const guild = client.guilds.cache.get(process.env.GUILD_ID);
-const members = await guild.members.fetch();
+const members = guild.members.cache;
 
 let online = members.filter(m =>
 m.presence &&
