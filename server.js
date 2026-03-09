@@ -287,6 +287,30 @@ app.get("/staff",(req,res)=>{
 res.json(staff);
 });
 
+app.get("/stats", async (req,res)=>{
+
+try{
+
+const guild = await client.guilds.fetch(process.env.GUILD_ID);
+const members = await guild.members.fetch();
+
+let online = members.filter(m =>
+m.presence &&
+["online","idle","dnd"].includes(m.presence.status)
+).size;
+
+res.json({
+total: members.size,
+online: online
+});
+
+}catch(err){
+console.error(err);
+res.json({total:0,online:0});
+}
+
+});
+
 /* ROBLOX PROFILE */
 
 app.get("/roblox/:username",async(req,res)=>{
