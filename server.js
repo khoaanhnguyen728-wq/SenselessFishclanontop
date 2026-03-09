@@ -69,22 +69,24 @@ online:0
 
 /* BOT READY */
 
-client.once("ready",()=>{
-console.log("🤖 Bot đã sẵn sàng:",client.user.tag);
+client.once("ready", () => {
 
-setInterval(()=>{
+console.log("🤖 Bot online:", client.user.tag);
+
+setInterval(() => {
 
 const guild = client.guilds.cache.get(process.env.GUILD_ID);
-
 if(!guild) return;
 
 stats.total = guild.memberCount;
 
-stats.online = guild.members.cache.filter(m =>
+const members = guild.members.cache;
+
+stats.online = members.filter(m =>
 m.presence && ["online","idle","dnd"].includes(m.presence.status)
 ).size;
 
-},10000);
+}, 10000);
 
 });
 
