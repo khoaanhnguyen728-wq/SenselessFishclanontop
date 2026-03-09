@@ -67,26 +67,23 @@ total:0,
 online:0
 };
 
-/* BOT READY */
-
 client.once("ready", () => {
 
-console.log("🤖 Bot online:", client.user.tag);
+console.log("Bot online:", client.user.tag);
 
-setInterval(() => {
+setInterval(()=>{
 
 const guild = client.guilds.cache.get(process.env.GUILD_ID);
+
 if(!guild) return;
 
 stats.total = guild.memberCount;
 
-const members = guild.members.cache;
-
-stats.online = members.filter(m =>
+stats.online = guild.members.cache.filter(m =>
 m.presence && ["online","idle","dnd"].includes(m.presence.status)
 ).size;
 
-}, 10000);
+},10000);
 
 });
 
@@ -314,13 +311,16 @@ res.json(staff);
 });
 
 app.get("/stats",(req,res)=>{
-res.json(stats);
+res.json({
+total: stats.total,
+online: stats.online
+});
 });
 
 try{
 
 const guild = client.guilds.cache.get(process.env.GUILD_ID);
-const members = guild.members.cache;
+const members = await guild.members.fetch();
 
 let online = members.filter(m =>
 m.presence &&
@@ -334,9 +334,10 @@ online: online
 
 }catch(err){
 console.error(err);
-res.json({total:0,online:0});
+app.get("/stats", (req, res) => {
+res.json({ total: stats.total, online: stats.online });
+});
 }
-
 
 /* ROBLOX PROFILE */
 
