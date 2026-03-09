@@ -1685,15 +1685,31 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 </script>
 <script>
-async function loadStats(){
+app.get("/stats", async (req,res)=>{
 
-const res = await fetch("https://senselessfishclanontop-1.onrender.com/stats");
-const data = await res.json();
+try{
 
-document.getElementById("statsBox").innerHTML =
-`👥 Total: ${data.total}<br>🟢 Online: ${data.online}`;
+const guild = client.guilds.cache.get(process.env.GUILD_ID);
 
+if(!guild) return res.json({total:0,online:0});
+
+const total = guild.memberCount;
+
+const online = guild.members.cache.filter(m =>
+m.presence && ["online","idle","dnd"].includes(m.presence.status)
+).size;
+
+res.json({
+total: total,
+online: online
+});
+
+}catch(err){
+console.error(err);
+res.json({total:0,online:0});
 }
+
+});
 
 loadStats();
 setInterval(loadStats,10000);
