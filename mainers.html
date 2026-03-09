@@ -612,70 +612,7 @@ body{
 
 <h1>🛠️ Mainers List</h1>
 
-<div class="staff-grid">
-
-<div class="staff-card mainer">
-    <div class="name">@Khánh linhhh</div>
-    <a class="view-dis" href="https://discord.com/users/1296742619900280862" target="_blank">
-        View Mainers
-    </a>
-</div>
-
-<div class="staff-card mainer">
-    <div class="name">@Hani</div>
-    <a class="view-dis" href="https://discord.com/users/1314578953008058477" target="_blank">
-        View Mainers
-    </a>
-</div>
-
-<div class="staff-card mainer">
-    <div class="name">@Rika 🐻</div>
-    <a class="view-dis" href="https://discord.com/users/1374334753242873908" target="_blank">
-        View Mainers
-    </a>
-</div>
-
-<div class="staff-card mainer">
-    <div class="name">@beo.neo</div>
-    <a class="view-dis" href="https://discord.com/users/1069498778266107964" target="_blank">
-        View Mainers
-    </a>
-</div>
-
-<div class="staff-card mainer">
-    <div class="name">@hshsjshshhhh</div>
-    <a class="view-dis" href="https://discord.com/users/1247371689311076458" target="_blank">
-        View Mainers
-    </a>
-</div>
-
-<div class="staff-card mainer">
-    <div class="name">@AstyGDM</div>
-    <a class="view-dis" href="https://discord.com/users/1475357115181957304" target="_blank">
-        View Mainers
-    </a>
-</div>
-
-<div class="staff-card mainer">
-    <div class="name">@Miruibel</div>
-    <a class="view-dis" href="https://discord.com/users/1252251272338473042" target="_blank">
-        View Mainers
-    </a>
-</div>
-
-<div class="staff-card mainer">
-    <div class="name">@Cá Chép Om Dưa</div>
-    <a class="view-dis" href="https://discord.com/users/1101852529538650122" target="_blank">
-        View Mainers
-    </a>
-</div>
-
-<div class="staff-card mainer">
-    <div class="name">@Toki</div>
-    <a class="view-dis" href="https://discord.com/users/1463134822863081576" target="_blank">
-        View Mainers
-    </a>
-</div>
+<div class="staff-grid" id="mainers"></div>
 
 <div id="discordJoin" onclick="window.open('https://discord.gg/yourlink')">
     💬
@@ -717,9 +654,38 @@ function spawnDolphin(){
 /* rơi ít thôi */
 setInterval(spawnDolphin, 500);
 </script>
+<script>
+
+async function loadMainers(){
+
+const res = await fetch("https://senselessfishclanontop-1.onrender.com/mainers");
+const data = await res.json();
+
+const container = document.getElementById("mainers");
+container.innerHTML="";
+
+data.forEach(m=>{
+
+container.innerHTML += `
+<div class="staff-card">
+<div class="name">@${m.name}</div>
+
+<a class="view-dis" href="${m.profile}" target="_blank">
+View Mainers
+</a>
+
+</div>
+`;
+
+});
+
+}
+
+loadMainers();
+
+</script>
 </div>
 
 </body>
 
 </html>
-
