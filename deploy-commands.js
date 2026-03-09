@@ -2,6 +2,25 @@ require("dotenv").config();
 const { REST, Routes, SlashCommandBuilder } = require("discord.js");
 
 const commands = [
+  
+  new SlashCommandBuilder()
+.setName("mainer")
+.setDescription("Add user to Mainers")
+.addUserOption(o=>
+o.setName("user")
+.setDescription("user")
+.setRequired(true)
+),
+
+new SlashCommandBuilder()
+.setName("demainer")
+.setDescription("Remove user from Mainers")
+.addUserOption(o=>
+o.setName("user")
+.setDescription("user")
+.setRequired(true)
+),
+  
   new SlashCommandBuilder()
 .setName("promote")
 .setDescription("Add staff")
