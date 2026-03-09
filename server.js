@@ -65,7 +65,7 @@ console.log("🤖 Bot đã sẵn sàng:",client.user.tag);
 const selected = new Map();
 
 client.on("interactionCreate", async interaction=>{
-
+try{
 
 /* ---------- SLASH COMMAND ---------- */
 
@@ -204,8 +204,6 @@ components:[row1,row2]
 }
 
 }
-
-/* ---------- DROPDOWN ---------- */
 /* ---------- DROPDOWN ---------- */
 
 if(interaction.isStringSelectMenu()){
@@ -257,36 +255,9 @@ content:`✅ Score đã gửi!\n\nStage: **${stage}**\nScore: **${score}**`
 
 }
 
-/* STAGE DROPDOWN */
-
-if(interaction.customId === "select_stage"){
-
-const stage = interaction.values[0];
-
-selected.set(interaction.user.id, stage);
-
-const modal = new ModalBuilder()
-.setCustomId("submit_score")
-.setTitle("Nhập Score");
-
-const scoreInput = new TextInputBuilder()
-.setCustomId("score")
-.setLabel("Score của bạn")
-.setStyle(TextInputStyle.Short)
-.setPlaceholder("Ví dụ: 12500")
-.setRequired(true);
-
-const row = new ActionRowBuilder().addComponents(scoreInput);
-
-modal.addComponents(row);
-
-return interaction.showModal(modal);
-
-}
-
 /* MATCH INFO */
 
-if(interaction.customId === "match_info"){
+if(interaction.isStringSelectMenu() && interaction.customId === "match_info"){
 
 const value = interaction.values[0];
 
@@ -297,6 +268,9 @@ ephemeral:true
 
 }
 
+}catch(err){
+console.error(err);
+}
 });
 
 /* ================= WEB API ================= */
@@ -436,4 +410,3 @@ console.log("🌐 Web chạy port",PORT);
 });
 
 client.login(process.env.TOKEN);
-
