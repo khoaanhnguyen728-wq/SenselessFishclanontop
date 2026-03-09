@@ -206,7 +206,56 @@ components:[row1,row2]
 }
 
 /* ---------- DROPDOWN ---------- */
+/* ---------- DROPDOWN ---------- */
+
 if(interaction.isStringSelectMenu()){
+
+if(interaction.customId === "select_stage"){
+
+const stage = interaction.values[0];
+
+selected.set(interaction.user.id, stage);
+
+const modal = new ModalBuilder()
+.setCustomId("submit_score")
+.setTitle("Nhập Score");
+
+const scoreInput = new TextInputBuilder()
+.setCustomId("score")
+.setLabel("Score của bạn")
+.setStyle(TextInputStyle.Short)
+.setPlaceholder("Ví dụ: 12500")
+.setRequired(true);
+
+const row = new ActionRowBuilder().addComponents(scoreInput);
+
+modal.addComponents(row);
+
+return interaction.showModal(modal);
+
+}
+
+}
+
+/* ---------- MODAL SUBMIT ---------- */
+
+if(interaction.isModalSubmit()){
+
+if(interaction.customId === "submit_score"){
+
+await interaction.deferReply({ ephemeral:true });
+
+const score = interaction.fields.getTextInputValue("score");
+
+const stage = selected.get(interaction.user.id) || "Unknown";
+
+await interaction.editReply({
+content:`✅ Score đã gửi!\n\nStage: **${stage}**\nScore: **${score}**`
+});
+
+}
+
+}
 
 /* STAGE DROPDOWN */
 
@@ -245,8 +294,6 @@ return interaction.reply({
 content:`📌 Thông tin: **${value}**`,
 ephemeral:true
 });
-
-}
 
 }
 
