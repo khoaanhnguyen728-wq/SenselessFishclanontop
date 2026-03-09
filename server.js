@@ -51,6 +51,8 @@ fs.writeFileSync("register.json",JSON.stringify(register,null,2));
 const client = new Client({
 intents:[
 GatewayIntentBits.Guilds,
+GatewayIntentBits.GuildMembers,
+GatewayIntentBits.GuildPresences,
 GatewayIntentBits.GuildMessages,
 GatewayIntentBits.MessageContent
 ]
@@ -434,4 +436,3 @@ console.log("🌐 Web chạy port",PORT);
 });
 
 client.login(process.env.TOKEN);
-
