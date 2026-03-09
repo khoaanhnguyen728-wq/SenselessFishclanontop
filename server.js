@@ -353,7 +353,7 @@ app.post("/register", async (req, res) => {
 
 try{
 
-const {discord, robloxUsername} = req.body;
+const {discord, robloxUsername, robloxId} = req.body;
 
 const channel = await client.channels.fetch(process.env.CHANNEL_ID);
 
@@ -436,3 +436,4 @@ console.log("🌐 Web chạy port",PORT);
 });
 
 client.login(process.env.TOKEN);
+
