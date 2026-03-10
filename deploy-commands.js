@@ -46,9 +46,8 @@ o.setName("permission")
 .setDescription("Role")
 .setRequired(true)
 .addChoices(
-{name:"Founder",value:"Founder"},
+{name:"Founder & Owner",value:"Founder & Owner"},
 {name:"Leader",value:"Leader"},
-{name:"Owner",value:"Owner"},
 {name:"Experience Administrator",value:"Experience Administrator"},
 {name:"Administrator",value:"Administrator"},
 {name:"Manager",value:"Manager"},
@@ -117,3 +116,4 @@ const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
     console.error("❌ Lỗi khi deploy:", error);
   }
 })();
+
