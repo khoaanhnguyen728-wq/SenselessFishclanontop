@@ -75,6 +75,28 @@ body{
     color:#b26bff;
     margin-bottom:16px;
 }
+/* AVATAR */
+.avatar{
+    width:80px;
+    height:80px;
+    border-radius:50%;
+    margin-bottom:14px;
+    border:3px solid #00eaff;
+
+    box-shadow:
+        0 0 15px rgba(0,234,255,.7),
+        0 0 25px rgba(0,234,255,.5);
+
+    object-fit:cover;
+    transition:.25s;
+}
+
+.staff-card:hover .avatar{
+    transform:scale(1.1);
+    box-shadow:
+        0 0 25px #00eaff,
+        0 0 40px rgba(0,234,255,.9);
+}
 
 /* VIEW DISCORD */
 .view-dis{
@@ -668,6 +690,9 @@ data.forEach(m=>{
 
 container.innerHTML += `
 <div class="staff-card">
+
+<img class="avatar" src="${m.avatar}" alt="${m.name}">
+
 <div class="name">@${m.name}</div>
 
 <a class="view-dis" href="${m.profile}" target="_blank">
