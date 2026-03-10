@@ -104,6 +104,70 @@ if(interaction.isChatInputCommand()){
 
 const {commandName,options}=interaction;
 
+if(commandName === "list"){
+
+await interaction.deferReply();
+
+const type = options.getString("type");
+
+let url = "";
+
+if(type === "top") url = "https://senselessfishclanontop-1.onrender.com/top";
+if(type === "staff") url = "https://senselessfishclanontop-1.onrender.com/staff";
+if(type === "mainers") url = "https://senselessfishclanontop-1.onrender.com/mainers";
+
+try{
+
+const res = await axios.get(url);
+const data = res.data;
+
+let text = "";
+
+if(type === "top"){
+
+for(let i in data){
+
+if(data[i]){
+text += `🏆 **TOP ${i}** • ${data[i].name}\n`;
+}
+
+}
+
+}
+
+if(type === "staff"){
+
+data.forEach(s=>{
+text += `👑 **${s.username}** • ${s.role}\n`;
+});
+
+}
+
+if(type === "mainers"){
+
+data.forEach(m=>{
+text += `🔥 **${m.name}**\n`;
+});
+
+}
+
+const embed = new EmbedBuilder()
+.setTitle(`📋 Danh sách ${type}`)
+.setDescription(text || "Không có dữ liệu")
+.setColor(0x00eaff);
+
+interaction.editReply({embeds:[embed]});
+
+}catch(err){
+
+console.error(err);
+
+interaction.editReply("❌ Không đọc được API");
+
+}
+
+}
+
 if(commandName==="mainer"){
 
 await interaction.deferReply();
