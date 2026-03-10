@@ -418,6 +418,7 @@ app.get("/staff",(req,res)=>{
 const roleOrder = [
 "Founder & Owner",
 "Leader",
+"Experience Administrator",
 "Administrator",
 "Manager",
 "Mod"
