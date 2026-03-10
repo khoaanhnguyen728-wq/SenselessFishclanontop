@@ -414,7 +414,22 @@ res.json(top);
 });
 
 app.get("/staff",(req,res)=>{
-res.json(staff);
+
+const rolePriority = {
+"Founder": 1,
+"Owner": 2,
+"Leader": 3,
+"Administrator": 4,
+"Manager": 5,
+"Mod": 6,
+};
+
+const sorted = [...staff].sort((a,b)=>{
+return (rolePriority[a.role] || 99) - (rolePriority[b.role] || 99);
+});
+
+res.json(sorted);
+
 });
 
 app.get("/stats",(req,res)=>{
