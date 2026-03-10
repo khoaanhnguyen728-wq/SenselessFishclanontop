@@ -46,12 +46,21 @@ o.setName("permission")
 .setDescription("Role")
 .setRequired(true)
 .addChoices(
-{name:"Founder & Owner",value:"Founder & Owner"},
+{name:"Founder",value:"Founder"},
 {name:"Leader",value:"Leader"},
-{name:"Experience Administrator",value:"Experience Administrator"},
+{name:"Senior Developer",value:"Senior Developer"},
+{name:"Senior Admin",value:"Senior Admin"},
+{name:"Developer",value:"Developer"},
 {name:"Administrator",value:"Administrator"},
-{name:"Manager",value:"Manager"},
-{name:"Mod",value:"Mod"}
+{name:"Junior Developer",value:"Junior Developer"},
+{name:"Junior Admin",value:"Junior Admin"},
+{name:"Moderator",value:"Moderator"},
+{name:"Rank Management",value:"Rank Management"},
+{name:"Experienced Referee",value:"Experienced Referee"},
+{name:"Referee",value:"Referee"},
+{name:"Junior Referee",value:"Junior Referee"},
+{name:"Tryout host",value:"Tryout host"},
+{name:"Training host",value:"Training host"},
 )),
 
   new SlashCommandBuilder()
@@ -116,4 +125,3 @@ const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
     console.error("❌ Lỗi khi deploy:", error);
   }
 })();
-
