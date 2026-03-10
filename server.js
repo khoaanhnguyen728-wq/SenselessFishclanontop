@@ -416,12 +416,22 @@ res.json(top);
 app.get("/staff",(req,res)=>{
 
 const roleOrder = [
-"Founder & Owner",
+"Founder",
 "Leader",
-"Experience Administrator",
-"Administrator",
-"Manager",
-"Mod"
+"Admin",
+"Senior Developer",
+"Developer",
+"Junior Admin",
+"Junior Developer",
+"Senior Mod",
+"Mod",
+"Junior Mod",
+"Rank Management",
+"Experienced Referee",
+"Referee",
+"Junior Referee",
+"Tryout host",
+"Training host"
 ];
 
 const sorted = [...staff].sort((a,b)=>{
