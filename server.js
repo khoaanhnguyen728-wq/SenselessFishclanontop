@@ -423,15 +423,13 @@ const roleOrder = [
 "Mod"
 ];
 
-const sorted = staff.sort((a,b)=>{
+const sorted = [...staff].sort((a,b)=>{
 return roleOrder.indexOf(a.role) - roleOrder.indexOf(b.role);
 });
 
 res.json(sorted);
 
 });
-
-res.json(sorted);
 
 app.get("/stats",(req,res)=>{
 res.json({
