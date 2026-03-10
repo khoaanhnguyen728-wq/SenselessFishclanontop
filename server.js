@@ -416,12 +416,11 @@ res.json(top);
 app.get("/staff",(req,res)=>{
 
 const rolePriority = {
-"Founder": 1,
-"Owner": 2,
-"Leader": 3,
-"Administrator": 4,
-"Manager": 5,
-"Mod": 6,
+"Founder & Owner": 1,
+"Leader": 2,
+"Administrator": 3,
+"Manager": 4,
+"Mod": 5,
 };
 
 const sorted = [...staff].sort((a,b)=>{
