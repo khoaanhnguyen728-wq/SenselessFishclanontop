@@ -158,7 +158,7 @@ const embed = new EmbedBuilder()
 const linkBtn = new ButtonBuilder()
 .setLabel("Xem chi tiết Leaderboard")
 .setStyle(ButtonStyle.Link)
-.setURL("https://senselessfishclanontop-1.onrender.com");
+.setURL("https://khoaanhnguyen728-wq.github.io/SenselessFishclanontop/top.html");
 
 const row = new ActionRowBuilder().addComponents(linkBtn);
 
@@ -673,3 +673,4 @@ console.log("🌐 Web chạy port",PORT);
 });
 
 client.login(process.env.TOKEN);
+
