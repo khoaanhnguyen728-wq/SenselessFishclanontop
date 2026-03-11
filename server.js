@@ -135,6 +135,51 @@ text += `🏆 **TOP ${i}** • ${data[i].name}\n`;
 
 }
 
+/* AOV TOP */
+
+if(commandName==="aovtop"){
+
+await interaction.deferReply();
+
+try{
+
+const res = await axios.get("https://senselessfishclanontop-1.onrender.com/top");
+const data = res.data;
+
+let text="";
+
+for(let i=1;i<=20;i++){
+
+if(data[i]){
+text+=`🏆 **TOP ${i}** • ${data[i].name}\n`;
+}else{
+text+=`🏆 **TOP ${i}** • Vacant\n`;
+}
+
+}
+
+const embed=new EmbedBuilder()
+.setTitle("🏆 AOV CLAN RANKING")
+.setDescription(text)
+.setColor(0x00eaff)
+.setImage("https://cdn.discordapp.com/attachments/1448705306786926664/1481164741882937395/cach-choi-dolia.png?ex=69b251a9&is=69b10029&hm=f9a539f801202c145b34bb0d01ba8144e461ed55432ac3f6a3a2c7d24e1d61ea&") // nền gif
+.setFooter({text:"Senseless Fish Clan"})
+.setTimestamp();
+
+interaction.editReply({
+embeds:[embed]
+});
+
+}catch(err){
+
+console.error(err);
+
+interaction.editReply("❌ Không đọc được dữ liệu TOP");
+
+}
+
+}
+
 if(type === "staff"){
 
 data.forEach(s=>{
