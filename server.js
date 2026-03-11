@@ -118,16 +118,16 @@ let text = "";
 
 /* TOP 1 */
 
-let top1 = data[1]?.name || "Vacant";
+let top1 = data[1]?.id ? `<@${data[1].id}>` : "Vacant";
 
 text += `━━━━━━━━ 👑 TOP 1 👑 ━━━━━━━━
 ⭐ **${top1}**
 ━━━━━━━━━━━━━━━━━━━━\n\n`;
 
-/* TOP 2-3 */
+/* TOP 2 - 3 */
 
-let top2 = data[2]?.name || "Vacant";
-let top3 = data[3]?.name || "Vacant";
+let top2 = data[2]?.id ? `<@${data[2].id}>` : "Vacant";
+let top3 = data[3]?.id ? `<@${data[3].id}>` : "Vacant";
 
 text += `🥈 **TOP 2** • ${top2}\n`;
 text += `🥉 **TOP 3** • ${top3}\n`;
@@ -137,13 +137,11 @@ text += `━━━━━━━━━━━━━━━━━━\n`;
 
 for (let i = 4; i <= 20; i++) {
 
-let name = data[i]?.name || "Vacant";
+let user = data[i]?.id ? `<@${data[i].id}>` : "Vacant";
 
-text += `🔥 **TOP ${i}** • ${name}\n`;
+text += `🔥 **TOP ${i}** • ${user}\n`;
 
 }
-
-/* EMBED */
 
 const embed = new EmbedBuilder()
 .setColor("#00eaff")
@@ -153,26 +151,21 @@ const embed = new EmbedBuilder()
 .setFooter({ text: "Senseless Fish Ranking System" })
 .setTimestamp();
 
-/* BUTTON LINK */
-
 const linkBtn = new ButtonBuilder()
 .setLabel("Xem chi tiết Leaderboard")
 .setStyle(ButtonStyle.Link)
-.setURL("https://khoaanhnguyen728-wq.github.io/SenselessFishclanontop/top.html");
+.setURL("https://senselessfishclanontop-1.onrender.com");
 
 const row = new ActionRowBuilder().addComponents(linkBtn);
 
-/* SEND */
-
 interaction.editReply({
-embeds: [embed],
-components: [row]
+embeds:[embed],
+components:[row]
 });
 
 } catch (err) {
 
 console.error(err);
-
 interaction.editReply("❌ Không lấy được dữ liệu leaderboard.");
 
 }
@@ -673,4 +666,3 @@ console.log("🌐 Web chạy port",PORT);
 });
 
 client.login(process.env.TOKEN);
-
