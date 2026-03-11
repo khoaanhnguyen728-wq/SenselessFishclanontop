@@ -139,7 +139,7 @@ text += `**TOP ${i}** • ${name}\n`;
 
 const embed = new EmbedBuilder()
 .setColor("#00eaff")
-.setThumbnail("https://i.ytimg.com/vi/SWUi544h85Q/hq720.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLDziXp_vfzA8hT36PhHLmkCdJ7MyQ")
+.setImage("https://i.ytimg.com/vi/SWUi544h85Q/hq720.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLDziXp_vfzA8hT36PhHLmkCdJ7MyQ")
 .setTitle("🏆 AOV CLAN RANKING")
 .setDescription(text)
 .setFooter({ text: "Senseless Fish Clan" })
@@ -649,3 +649,4 @@ console.log("🌐 Web chạy port",PORT);
 });
 
 client.login(process.env.TOKEN);
+
