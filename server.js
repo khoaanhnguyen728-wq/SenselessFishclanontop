@@ -116,7 +116,7 @@ const data = res.data || {};
 
 let text = "";
 
-/* TOP 1 riêng */
+/* TOP 1 */
 
 let top1 = data[1]?.name || "Vacant";
 
@@ -139,9 +139,11 @@ for (let i = 4; i <= 20; i++) {
 
 let name = data[i]?.name || "Vacant";
 
-text += `**TOP ${i}** • ${name}\n`;
+text += `🔥 **TOP ${i}** • ${name}\n`;
 
 }
+
+/* EMBED */
 
 const embed = new EmbedBuilder()
 .setColor("#00eaff")
@@ -151,11 +153,26 @@ const embed = new EmbedBuilder()
 .setFooter({ text: "Senseless Fish Ranking System" })
 .setTimestamp();
 
-interaction.editReply({ embeds: [embed] });
+/* BUTTON LINK */
+
+const linkBtn = new ButtonBuilder()
+.setLabel("Xem chi tiết Leaderboard")
+.setStyle(ButtonStyle.Link)
+.setURL("https://senselessfishclanontop-1.onrender.com");
+
+const row = new ActionRowBuilder().addComponents(linkBtn);
+
+/* SEND */
+
+interaction.editReply({
+embeds: [embed],
+components: [row]
+});
 
 } catch (err) {
 
 console.error(err);
+
 interaction.editReply("❌ Không lấy được dữ liệu leaderboard.");
 
 }
