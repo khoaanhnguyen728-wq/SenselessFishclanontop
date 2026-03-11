@@ -135,9 +135,11 @@ text += `🏆 **TOP ${i}** • ${data[i].name}\n`;
 
 }
 
-/* AOV TOP */
+if(commandName === "aov"){
 
-if(commandName==="aovtop"){
+const sub = options.getSubcommand();
+
+if(sub === "top"){
 
 await interaction.deferReply();
 
@@ -151,22 +153,23 @@ let text="";
 for(let i=1;i<=20;i++){
 
 if(data[i]){
-text+=`🏆 **TOP ${i}** • ${data[i].name}\n`;
+text += `🏆 **TOP ${i}** • ${data[i].name}\n`;
 }else{
-text+=`🏆 **TOP ${i}** • Vacant\n`;
+text += `🏆 **TOP ${i}** • Vacant\n`;
 }
 
 }
 
-const embed=new EmbedBuilder()
-.setTitle("🏆 AOV CLAN RANKING")
+const embed = new EmbedBuilder()
+.setTitle("🏆 SENSELESS FISH CLAN RANKING")
 .setDescription(text)
 .setColor(0x00eaff)
-.setImage("https://cdn.discordapp.com/attachments/1448705306786926664/1481164741882937395/cach-choi-dolia.png?ex=69b251a9&is=69b10029&hm=f9a539f801202c145b34bb0d01ba8144e461ed55432ac3f6a3a2c7d24e1d61ea&") // nền gif
+.setThumbnail("https://cdn.discordapp.com/attachments/1448705306786926664/1481164741882937395/cach-choi-dolia.png?ex=69b251a9&is=69b10029&hm=f9a539f801202c145b34bb0d01ba8144e461ed55432ac3f6a3a2c7d24e1d61ea&")
+.setImage("https://tenor.com/view/doria-plosoul-gif-442213687387665783") // GIF nền
 .setFooter({text:"Senseless Fish Clan"})
 .setTimestamp();
 
-interaction.editReply({
+return interaction.editReply({
 embeds:[embed]
 });
 
@@ -174,7 +177,9 @@ embeds:[embed]
 
 console.error(err);
 
-interaction.editReply("❌ Không đọc được dữ liệu TOP");
+return interaction.editReply("❌ Không đọc được TOP");
+
+}
 
 }
 
