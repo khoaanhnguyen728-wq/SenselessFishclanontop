@@ -19,6 +19,7 @@ TextInputStyle
 const app = express();
 app.use(express.json());
 app.use(cors());
+app.use("/image", express.static("images"));
 
 /* ================= DATABASE ================= */
 
@@ -648,4 +649,5 @@ console.log("🌐 Web chạy port",PORT);
 });
 
 client.login(process.env.TOKEN);
+
 
