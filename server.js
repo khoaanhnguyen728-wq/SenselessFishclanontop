@@ -104,6 +104,54 @@ if(interaction.isChatInputCommand()){
 
 const {commandName,options}=interaction;
 
+if(commandName === "aov"){
+
+const sub = options.getSubcommand();
+
+if(sub === "top"){
+
+await interaction.deferReply();
+
+try{
+
+const res = await axios.get("https://senselessfishclanontop-1.onrender.com/top");
+const data = res.data;
+
+let text = "";
+
+for(let i=1;i<=20;i++){
+
+if(data[i]){
+text += `🏆 **TOP ${i}** • ${data[i].name}\n`;
+}else{
+text += `🏆 **TOP ${i}** • Vacant\n`;
+}
+
+}
+
+const embed = new EmbedBuilder()
+.setTitle("🏆 SENSELESS FISH CLAN RANKING")
+.setColor(0x00eaff)
+.setDescription(text)
+.setImage("https://tenor.com/view/doria-plosoul-gif-442213687387665783")
+.setTimestamp();
+
+return interaction.editReply({
+embeds:[embed]
+});
+
+}catch(err){
+
+console.error(err);
+
+return interaction.editReply("❌ Không đọc được TOP từ website");
+
+}
+
+}
+
+}
+
 if(commandName === "list"){
 
 await interaction.deferReply();
@@ -129,56 +177,6 @@ for(let i in data){
 
 if(data[i]){
 text += `🏆 **TOP ${i}** • ${data[i].name}\n`;
-}
-
-}
-
-}
-
-if(commandName === "aov"){
-
-const sub = options.getSubcommand();
-
-if(sub === "top"){
-
-await interaction.deferReply();
-
-try{
-
-const res = await axios.get("https://senselessfishclanontop-1.onrender.com/top");
-const data = res.data;
-
-let text="";
-
-for(let i=1;i<=20;i++){
-
-if(data[i]){
-text += `🏆 **TOP ${i}** • ${data[i].name}\n`;
-}else{
-text += `🏆 **TOP ${i}** • Vacant\n`;
-}
-
-}
-
-const embed = new EmbedBuilder()
-.setTitle("🏆 SENSELESS FISH CLAN RANKING")
-.setDescription(text)
-.setColor(0x00eaff)
-.setThumbnail("https://cdn.discordapp.com/attachments/1448705306786926664/1481164741882937395/cach-choi-dolia.png?ex=69b251a9&is=69b10029&hm=f9a539f801202c145b34bb0d01ba8144e461ed55432ac3f6a3a2c7d24e1d61ea&")
-.setImage("https://tenor.com/view/doria-plosoul-gif-442213687387665783") // GIF nền
-.setFooter({text:"Senseless Fish Clan"})
-.setTimestamp();
-
-return interaction.editReply({
-embeds:[embed]
-});
-
-}catch(err){
-
-console.error(err);
-
-return interaction.editReply("❌ Không đọc được TOP");
-
 }
 
 }
