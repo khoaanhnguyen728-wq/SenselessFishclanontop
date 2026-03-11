@@ -109,8 +109,6 @@ if (interaction.commandName === "aov" && interaction.options.getSubcommand() ===
 
 await interaction.deferReply();
 
-const axios = require("axios");
-
 try {
 
 const res = await axios.get("https://senselessfishclanontop-1.onrender.com/top");
@@ -118,38 +116,47 @@ const data = res.data || {};
 
 let text = "";
 
-for (let i = 1; i <= 20; i++) {
+/* TOP 1 riêng */
 
-let name = data[`top${i}`] || "Vacant";
+let top1 = data[1]?.name || "Vacant";
 
-if (i === 1) {
-text += `🥇 **TOP 1** • ${name}\n`;
-}
-else if (i === 2) {
-text += `🥈 **TOP 2** • ${name}\n`;
-}
-else if (i === 3) {
-text += `🥉 **TOP 3** • ${name}\n`;
-}
-else {
+text += `━━━━━━━━ 👑 TOP 1 👑 ━━━━━━━━
+⭐ **${top1}**
+━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+/* TOP 2-3 */
+
+let top2 = data[2]?.name || "Vacant";
+let top3 = data[3]?.name || "Vacant";
+
+text += `🥈 **TOP 2** • ${top2}\n`;
+text += `🥉 **TOP 3** • ${top3}\n`;
+text += `━━━━━━━━━━━━━━━━━━\n`;
+
+/* TOP 4 - 20 */
+
+for (let i = 4; i <= 20; i++) {
+
+let name = data[i]?.name || "Vacant";
+
 text += `**TOP ${i}** • ${name}\n`;
-}
 
 }
 
 const embed = new EmbedBuilder()
 .setColor("#00eaff")
-.setImage("https://i.ytimg.com/vi/SWUi544h85Q/hq720.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLDziXp_vfzA8hT36PhHLmkCdJ7MyQ")
-.setTitle("🏆 AOV CLAN RANKING")
+.setTitle("🏆 SENSELESS FISH CLAN LEADERBOARD")
 .setDescription(text)
-.setFooter({ text: "Senseless Fish Clan" })
+.setImage("https://i.ytimg.com/vi/SWUi544h85Q/hq720.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLDziXp_vfzA8hT36PhHLmkCdJ7MyQ")
+.setFooter({ text: "Senseless Fish Ranking System" })
 .setTimestamp();
 
 interaction.editReply({ embeds: [embed] });
 
 } catch (err) {
 
-interaction.editReply("❌ Không lấy được dữ liệu top.");
+console.error(err);
+interaction.editReply("❌ Không lấy được dữ liệu leaderboard.");
 
 }
 
@@ -649,4 +656,3 @@ console.log("🌐 Web chạy port",PORT);
 });
 
 client.login(process.env.TOKEN);
-
