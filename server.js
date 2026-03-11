@@ -138,7 +138,7 @@ text += `**TOP ${i}** • ${name}\n`;
 
 const embed = new EmbedBuilder()
 .setColor("#00eaff")
-.setImage("https://khoaanhnguyen728-wq.onrender.com/image/dolia.png") 
+.setImage("https://khoaanhnguyen728-wq.onrender.com/images/dolia.png") 
 .setTitle("🏆 AOV CLAN RANKING")
 .setDescription(text)
 .setFooter({ text: "Senseless Fish Clan" })
@@ -648,3 +648,4 @@ console.log("🌐 Web chạy port",PORT);
 });
 
 client.login(process.env.TOKEN);
+
