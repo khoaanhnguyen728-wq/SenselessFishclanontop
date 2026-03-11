@@ -104,49 +104,51 @@ if(interaction.isChatInputCommand()){
 
 const {commandName,options}=interaction;
 
-if(commandName === "aov"){
-
-const sub = options.getSubcommand();
-
-if(sub === "top"){
+if (interaction.commandName === "aov" && interaction.options.getSubcommand() === "top") {
 
 await interaction.deferReply();
 
-try{
+const axios = require("axios");
+
+try {
 
 const res = await axios.get("https://senselessfishclanontop-1.onrender.com/top");
-const data = res.data;
+const data = res.data || {};
 
 let text = "";
 
-for(let i=1;i<=20;i++){
+for (let i = 1; i <= 20; i++) {
 
-if(data[i]){
-text += `🏆 **TOP ${i}** • ${data[i].name}\n`;
-}else{
-text += `🏆 **TOP ${i}** • Vacant\n`;
+let name = data[`top${i}`] || "Vacant";
+
+if (i === 1) {
+text += `🥇 **TOP 1** • ${name}\n`;
+}
+else if (i === 2) {
+text += `🥈 **TOP 2** • ${name}\n`;
+}
+else if (i === 3) {
+text += `🥉 **TOP 3** • ${name}\n`;
+}
+else {
+text += `**TOP ${i}** • ${name}\n`;
 }
 
 }
 
 const embed = new EmbedBuilder()
-.setTitle("🏆 SENSELESS FISH CLAN RANKING")
-.setColor(0x00eaff)
+.setColor("#00eaff")
+.setImage("https://khoaanhnguyen728-wq.onrender.com/image/dolia.png") 
+.setTitle("🏆 AOV CLAN RANKING")
 .setDescription(text)
-.setImage("https://media1.tenor.com/m/BiMPAXeOtXcAAAAd/doria-plosoul.gif")
+.setFooter({ text: "Senseless Fish Clan" })
 .setTimestamp();
 
-return interaction.editReply({
-embeds:[embed]
-});
+interaction.editReply({ embeds: [embed] });
 
-}catch(err){
+} catch (err) {
 
-console.error(err);
-
-return interaction.editReply("❌ Không đọc được TOP từ website");
-
-}
+interaction.editReply("❌ Không lấy được dữ liệu top.");
 
 }
 
