@@ -133,7 +133,7 @@ const embed = new EmbedBuilder()
 .setTitle("🏆 SENSELESS FISH CLAN RANKING")
 .setColor(0x00eaff)
 .setDescription(text)
-.setImage("https://tenor.com/view/doria-plosoul-gif-442213687387665783")
+.setImage("https://media1.tenor.com/m/BiMPAXeOtXcAAAAd/doria-plosoul.gif")
 .setTimestamp();
 
 return interaction.editReply({
