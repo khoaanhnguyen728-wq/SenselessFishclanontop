@@ -17,9 +17,9 @@ TextInputBuilder,
 TextInputStyle
 } = require("discord.js");
 const app = express();
+app.use("/image", express.static("images"));
 app.use(express.json());
 app.use(cors());
-app.use("/image", express.static("images"));
 
 /* ================= DATABASE ================= */
 
@@ -139,7 +139,7 @@ text += `**TOP ${i}** • ${name}\n`;
 
 const embed = new EmbedBuilder()
 .setColor("#00eaff")
-.setImage("https://khoaanhnguyen728-wq.onrender.com/images/dolia.png") 
+.setThumbnail("https://i.ytimg.com/vi/SWUi544h85Q/hq720.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLDziXp_vfzA8hT36PhHLmkCdJ7MyQ")
 .setTitle("🏆 AOV CLAN RANKING")
 .setDescription(text)
 .setFooter({ text: "Senseless Fish Clan" })
@@ -649,5 +649,3 @@ console.log("🌐 Web chạy port",PORT);
 });
 
 client.login(process.env.TOKEN);
-
-
