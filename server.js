@@ -154,7 +154,7 @@ const embed = new EmbedBuilder()
 const linkBtn = new ButtonBuilder()
 .setLabel("Xem chi tiết Leaderboard")
 .setStyle(ButtonStyle.Link)
-.setURL("https://senselessfishclan.pages.dev");
+.setURL("https://senselessfishclan.pages.dev/top");
 
 const row = new ActionRowBuilder().addComponents(linkBtn);
 
@@ -666,3 +666,4 @@ console.log("🌐 Web chạy port",PORT);
 });
 
 client.login(process.env.TOKEN);
+
