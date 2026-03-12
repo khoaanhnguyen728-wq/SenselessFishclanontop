@@ -139,7 +139,7 @@ for (let i = 4; i <= 20; i++) {
 
 let user = data[i]?.id ? `<@${data[i].id}>` : "Vacant";
 
-text += `🔥 **TOP ${i}** • ${user}\n`;
+text += `⊱・**TOP ${i}** • ${user}\n`;
 
 }
 
@@ -214,7 +214,7 @@ text += `👑 **${s.username}** • ${s.role}\n`;
 if(type === "mainers"){
 
 data.forEach(m=>{
-text += `🔥 **${m.name}**\n`;
+text += `⊱・**${m.name}**\n`;
 });
 
 }
@@ -666,4 +666,5 @@ console.log("🌐 Web chạy port",PORT);
 });
 
 client.login(process.env.TOKEN);
+
 
