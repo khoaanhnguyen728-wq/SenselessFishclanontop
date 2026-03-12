@@ -623,9 +623,12 @@ body{
 .register-box {
   width: 260px;
   background: rgba(0,0,0,0.35);
-  padding: 15px;
   border-radius: 15px;
   color: white;
+  overflow: hidden;
+
+  padding: 15px;
+  transition: padding .25s;
 }
 
 .register-box input {
@@ -1157,6 +1160,77 @@ body{
 .gold-text { color: #ffe082; }
 .silver-text { color: #e0e0e0; }
 .bronze-text { color: #d7ccc8; }
+/* ACCOUNT DROPDOWN */
+
+.account-header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+cursor:pointer;
+user-select:none;
+}
+
+#accountArrow{
+font-size:18px;
+transition:transform .3s;
+}
+
+.account-box.closed #accountArrow{
+transform:rotate(-90deg);
+}
+
+.account-box:not(.closed) #accountArrow{
+transform:rotate(0deg);
+}
+/* content */
+
+#accountContent{
+max-height:500px;
+overflow:hidden;
+transition:max-height .35s ease;
+}
+/* đóng */
+
+.account-box.closed #accountContent{
+max-height:0;
+}
+
+.account-box.closed #accountArrow{
+transform:rotate(-90deg);
+}
+.account-box.closed{
+  padding-bottom:0;
+}
+/* Đảm bảo khung có thể co giãn mượt mà */
+.register-box {
+    width: 260px;
+    background: rgba(0,0,0,0.35);
+    border-radius: 15px;
+    color: white;
+    padding: 15px;
+    transition: all 0.35s ease; /* Chỉnh lại để mượt hơn */
+    height: fit-content;
+    align-self: flex-start; /* Giúp hộp không bị kéo dài theo hộp bên cạnh */
+}
+
+/* Khi đóng: ẩn hoàn toàn nội dung và giảm padding */
+.account-box.closed {
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+#accountContent {
+    max-height: 500px; /* Chiều cao tối đa khi mở */
+    overflow: hidden;
+    transition: max-height 0.35s ease, opacity 0.3s ease;
+    opacity: 1;
+}
+
+.account-box.closed #accountContent {
+    max-height: 0;
+    opacity: 0;
+    pointer-events: none;
+}
 </style>
 </head>
 
@@ -1321,18 +1395,31 @@ members.forEach(m=>{
 </div>
 <!-- ===== REGISTER WRAPPER ===== -->
 <div class="register-wrapper">
-    <div class="register-box">
-        <h3>🧍 Tài khoản</h3>
-        <div id="loginStatus">🔴 Chưa đăng nhập</div>
-        <div id="loginBox">
-            <button onclick="loginDiscord()" class="btn">Login Discord</button>
-        </div>
-        <div id="userBox" style="display:none; text-align:center; margin-top:10px;">
-            <img id="userAvatar" style="width:60px;border-radius:50%; border: 2px solid #5865F2;">
-            <p id="userName" style="margin:5px 0; font-weight:bold;"></p>
-            <button onclick="localStorage.removeItem('discord_token'); location.reload();" style="font-size:10px; background:none; border:none; color:gray; cursor:pointer;">Đăng xuất</button>
-        </div>
+<div class="register-box account-box closed">
+
+<div class="account-header" onclick="toggleAccount()">
+<h3>🧍 Tài khoản</h3>
+<span id="accountArrow">▼</span>
+</div>
+
+<div id="accountContent">
+    <div id="loginStatus" style="margin-bottom: 10px;">🔴 Chưa đăng nhập</div>
+
+    <div id="loginBox">
+        <button onclick="loginDiscord()" class="btn" style="width:100%">Login Discord</button>
     </div>
+
+    <div id="userBox" style="display:none; text-align:center; margin-top:10px;">
+        <img id="userAvatar" style="width:60px; border-radius:50%; border:2px solid #5865F2;">
+        <p id="userName" style="margin:5px 0; font-weight:bold;"></p>
+        <button onclick="localStorage.removeItem('discord_token'); location.reload();"
+                style="font-size:11px; background:#ef4444; border:none; color:white; padding:5px 10px; border-radius:6px; cursor:pointer;">
+            Đăng xuất
+        </button>
+    </div>
+</div>
+
+</div>
 <div class="register-box">
 <h3>🏆 Đăng ký thi đấu</h3>
 <div id="registerStatus">🔴 Chưa đăng nhập</div>
@@ -1727,6 +1814,14 @@ document.getElementById("statsBox").innerHTML =
 
 loadStats();
 setInterval(loadStats,10000);
+</script>
+<script>function toggleAccount(){
+
+const box = document.querySelector(".account-box");
+
+box.classList.toggle("closed");
+
+}
 </script>
 </body>
 </html>
