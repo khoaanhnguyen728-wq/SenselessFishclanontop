@@ -104,13 +104,19 @@ PermissionsBitField.Flags.SendMessages
 
 // thêm nhiều staff role
 STAFF_ROLES.forEach(role => {
+
+const r = interaction.guild.roles.cache.get(role.trim());
+
+if (!r) return;
+
 perms.push({
-id: role,
+id: r.id,
 allow: [
 PermissionsBitField.Flags.ViewChannel,
 PermissionsBitField.Flags.SendMessages
 ]
 });
+
 });
 
 const channel = await interaction.guild.channels.create({
