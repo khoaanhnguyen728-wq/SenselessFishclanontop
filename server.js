@@ -154,7 +154,7 @@ const embed = new EmbedBuilder()
 const linkBtn = new ButtonBuilder()
 .setLabel("Xem chi tiết Leaderboard")
 .setStyle(ButtonStyle.Link)
-.setURL("https://senselessfishclanontop-1.onrender.com");
+.setURL("https://senselessfishclan.pages.dev");
 
 const row = new ActionRowBuilder().addComponents(linkBtn);
 
