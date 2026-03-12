@@ -1,5 +1,19 @@
 require("dotenv").config();
 
+const express = require("express");
+const app = express();
+
+// route để Render kiểm tra
+app.get("/", (req, res) => {
+  res.send("Bot is running");
+});
+
+// mở port cho Web Service
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log("Web server running on port " + PORT);
+});
+
 const {
 Client,
 GatewayIntentBits,
