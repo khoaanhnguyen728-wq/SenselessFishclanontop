@@ -165,7 +165,13 @@ if(interaction.isChatInputCommand()){
 
 const {commandName,options}=interaction;
 
-if (interaction.commandName === "aov" && interaction.options.getSubcommand() === "top") {
+if (interaction.commandName === "bxh") {
+
+const sub = interaction.options.getSubcommand();
+
+/* ================= BXH TOP ================= */
+
+if(sub === "top"){
 
 await interaction.deferReply();
 
@@ -199,7 +205,7 @@ for (let i = 4; i <= 20; i++) {
 
 let user = data[i]?.id ? `<@${data[i].id}>` : "Vacant";
 
-text += `⁠⊱ **TOP ${i}** • ${user}\n`;
+text += `⊱ **TOP ${i}** • ${user}\n`;
 
 }
 
@@ -207,7 +213,7 @@ const embed = new EmbedBuilder()
 .setColor("#00eaff")
 .setTitle("🏆 SENSELESS FISH CLAN LEADERBOARD")
 .setDescription(text)
-.setImage("https://i.ytimg.com/vi/SWUi544h85Q/hq720.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLDziXp_vfzA8hT36PhHLmkCdJ7MyQ")
+.setImage("https://i.ytimg.com/vi/SWUi544h85Q/hq720.jpg")
 .setFooter({ text: "Senseless Fish Ranking System" })
 .setTimestamp();
 
@@ -218,16 +224,36 @@ const linkBtn = new ButtonBuilder()
 
 const row = new ActionRowBuilder().addComponents(linkBtn);
 
-interaction.editReply({
+return interaction.editReply({
 embeds:[embed],
 components:[row]
 });
 
-} catch (err) {
+}catch(err){
 
 console.error(err);
-interaction.editReply("❌ Không lấy được dữ liệu leaderboard.");
+return interaction.editReply(" Không lấy được dữ liệu leaderboard.");
 
+}
+
+}
+
+/* ================= BXH KILL (LÀM SAU) ================= */
+
+if(sub === "kill"){
+return interaction.reply({
+content:" BXH Kill đang được phát triển.",
+ephemeral:true
+});
+}
+
+/* ================= BXH CHAT (LÀM SAU) ================= */
+
+if(sub === "chat"){
+return interaction.reply({
+content:" BXH Chat đang được phát triển.",
+ephemeral:true
+});
 }
 
 }
