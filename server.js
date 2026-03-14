@@ -67,6 +67,11 @@ GatewayIntentBits.MessageContent
 ]
 });
 
+const TOP_CHANNEL = process.env.TOP_CHANNEL;
+const TOP_MESSAGE = process.env.TOP_MESSAGE;
+
+let lastTopData = "";
+
 /* ================= INTERACTION SYSTEM ================= */
 
 const selected = new Map();
@@ -79,6 +84,8 @@ online:0
 client.once("ready", () => {
 
 console.log("Bot online:", client.user.tag);
+
+setInterval(updateLeaderboard,10000);
 
 setInterval(()=>{
 
@@ -95,6 +102,59 @@ m.presence && ["online","idle","dnd"].includes(m.presence.status)
 },10000);
 
 });
+
+async function updateLeaderboard(){
+
+try{
+
+const res = await axios.get("https://senselessfishclanontop-1.onrender.com/top");
+const data = res.data || {};
+
+const current = JSON.stringify(data);
+
+if(current === lastTopData) return;
+
+lastTopData = current;
+
+let text = "";
+
+let top1 = data[1]?.id ? `<@${data[1].id}>` : "Vacant";
+
+text += `━━━━━━━━ 👑 TOP 1 👑 ━━━━━━━━
+⭐ **${top1}**
+━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+let top2 = data[2]?.id ? `<@${data[2].id}>` : "Vacant";
+let top3 = data[3]?.id ? `<@${data[3].id}>` : "Vacant";
+
+text += `🥈 **TOP 2** • ${top2}\n`;
+text += `🥉 **TOP 3** • ${top3}\n`;
+text += `━━━━━━━━━━━━━━━━━━\n`;
+
+for (let i = 4; i <= 20; i++) {
+
+let user = data[i]?.id ? `<@${data[i].id}>` : "Vacant";
+
+text += `🔥 **TOP ${i}** • ${user}\n`;
+
+}
+
+const embed = new EmbedBuilder()
+.setColor("#00eaff")
+.setTitle("🏆 SENSELESS FISH CLAN LEADERBOARD")
+.setDescription(text)
+.setTimestamp();
+
+const channel = await client.channels.fetch(TOP_CHANNEL);
+const message = await channel.messages.fetch(TOP_MESSAGE);
+
+await message.edit({embeds:[embed]});
+
+}catch(err){
+console.log(err);
+}
+
+}
 
 client.on("interactionCreate", async interaction=>{
 try{
@@ -139,7 +199,7 @@ for (let i = 4; i <= 20; i++) {
 
 let user = data[i]?.id ? `<@${data[i].id}>` : "Vacant";
 
-text += `⊱・**TOP ${i}** • ${user}\n`;
+text += `🔥 **TOP ${i}** • ${user}\n`;
 
 }
 
@@ -154,7 +214,7 @@ const embed = new EmbedBuilder()
 const linkBtn = new ButtonBuilder()
 .setLabel("Xem chi tiết Leaderboard")
 .setStyle(ButtonStyle.Link)
-.setURL("https://senselessfishclan.pages.dev/top");
+.setURL("https://senselessfishclan.pages.dev");
 
 const row = new ActionRowBuilder().addComponents(linkBtn);
 
@@ -214,7 +274,7 @@ text += `👑 **${s.username}** • ${s.role}\n`;
 if(type === "mainers"){
 
 data.forEach(m=>{
-text += `⊱・**${m.name}**\n`;
+text += `🔥 **${m.name}**\n`;
 });
 
 }
@@ -288,6 +348,7 @@ profile:`https://discord.com/users/${user.id}`
 };
 
 saveTop();
+updateLeaderboard();
 
 return interaction.editReply(`✅ Đã đưa **${user.username}** vào **TOP ${rank}**`);
 
@@ -311,6 +372,8 @@ found=true;
 
 if(found){
 saveTop();
+updateLeaderboard();
+
 return interaction.editReply(`🗑️ Đã xóa **${user.username}** khỏi TOP`);
 }
 
@@ -666,5 +729,3 @@ console.log("🌐 Web chạy port",PORT);
 });
 
 client.login(process.env.TOKEN);
-
-
