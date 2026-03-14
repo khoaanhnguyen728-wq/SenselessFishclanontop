@@ -171,7 +171,7 @@ const sub = interaction.options.getSubcommand();
 
 /* ================= BXH TOP ================= */
 
-if(sub === "top"){
+if(sub === "aov"){
 
 await interaction.deferReply();
 
