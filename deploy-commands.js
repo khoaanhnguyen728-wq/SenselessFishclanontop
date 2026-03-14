@@ -23,15 +23,6 @@ sub
 ),
 
 new SlashCommandBuilder()
-.setName("aov")
-.setDescription("Lệnh AOV")
-.addSubcommand(sub =>
-sub
-.setName("top")
-.setDescription("Xem bảng xếp hạng AOV Clan")
-),
-
-new SlashCommandBuilder()
 .setName("list")
 .setDescription("Xem danh sách")
 .addStringOption(o=>
