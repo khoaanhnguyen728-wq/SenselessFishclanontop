@@ -129,13 +129,13 @@ let top3 = data[3]?.id ? `<@${data[3].id}>` : "Vacant";
 
 text += `🥈 **TOP 2** • ${top2}\n`;
 text += `🥉 **TOP 3** • ${top3}\n`;
-text += `━━━━━━━━━━━━━━━━━━\n`;
+text += `━━━━━━━━━━━━━━━━━━━━\n`;
 
 for (let i = 4; i <= 20; i++) {
 
 let user = data[i]?.id ? `<@${data[i].id}>` : "Vacant";
 
-text += `🔥 **TOP ${i}** • ${user}\n`;
+text += `⁠⊱ **TOP ${i}** • ${user}\n`;
 
 }
 
