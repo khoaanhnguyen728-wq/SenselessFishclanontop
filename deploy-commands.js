@@ -8,8 +8,8 @@ new SlashCommandBuilder()
 .setDescription("Bảng xếp hạng Clan")
 .addSubcommand(sub =>
 sub
-.setName("top")
-.setDescription("Xem bảng xếp hạng Clan")
+.setName("aov")
+.setDescription("Xem bảng xếp hạng aov")
 )
 .addSubcommand(sub =>
 sub
