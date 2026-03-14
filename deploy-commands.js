@@ -4,6 +4,25 @@ const { REST, Routes, SlashCommandBuilder } = require("discord.js");
 const commands = [
 
 new SlashCommandBuilder()
+.setName("bxh")
+.setDescription("Bảng xếp hạng Clan")
+.addSubcommand(sub =>
+sub
+.setName("top")
+.setDescription("Xem bảng xếp hạng Clan")
+)
+.addSubcommand(sub =>
+sub
+.setName("kill")
+.setDescription("BXH Kill (đang phát triển)")
+)
+.addSubcommand(sub =>
+sub
+.setName("chat")
+.setDescription("BXH Chat (đang phát triển)")
+),
+
+new SlashCommandBuilder()
 .setName("aov")
 .setDescription("Lệnh AOV")
 .addSubcommand(sub =>
