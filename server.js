@@ -132,15 +132,17 @@ client.on("interactionCreate", async interaction => {
                     let text = " \n"; // Tạo khoảng trống đầu tiên
 
                     // TOP 1 - Làm cực to và nổi bật
+                    const e1 = client.emojis.cache.get("1485571100900458499");
+                    const e2 = client.emojis.cache.get("1485571314420027403");
                     let t1 = top[1]?.id ? `<@${top[1].id}>` : "None";
-                    text += `<:gaunau:> **ＴＯＰ  １**\n ╚═⭐ ${t1}\n\n`;
+                    text += `${e1 || "⭐"} **ＴＯＰ  １**\n ╚═⭐ ${t1}\n\n`;
 
                     // TOP 2 & 3
                     let t2 = top[2]?.id ? `<@${top[2].id}>` : "None";
                     let t3 = top[3]?.id ? `<@${top[3].id}>` : "None";
                     
-                    text += `<:capoolick:> **ＴＯＰ  ２**\n ╚═ ${t2}\n\n`;
-                    text += `<:capoolick:> **ＴＯＰ  ３**\n ╚═ ${t3}\n\n`;
+                    text += `${e2 || "⭐"} **ＴＯＰ  ２**\n ╚═ ${t2}\n\n`;
+                    text += `${e2 || "⭐"} **ＴＯＰ  ３**\n ╚═ ${t3}\n\n`;
 
                     text += `──────────────────\n\n`;
 
