@@ -165,6 +165,107 @@ client.on("interactionCreate", async interaction => {
                 return interaction.reply(`✅ **${user.username}** đã trở thành **${role}**`);
             }
         }
+        /* ===== DETOP ===== */
+if (commandName === "detop") {
+    const user = options.getUser("user");
+
+    let found = false;
+
+    for (let i in top) {
+        if (top[i] && top[i].id === user.id) {
+            top[i] = null;
+            found = true;
+        }
+    }
+
+    if (found) {
+        saveTop();
+        updateLeaderboard();
+        return interaction.reply(`🗑️ Đã xóa **${user.username}** khỏi TOP`);
+    }
+
+    return interaction.reply("❌ User không có trong TOP");
+}
+
+/* ===== DEMOTE ===== */
+if (commandName === "demote") {
+    const user = options.getUser("user");
+
+    staff = staff.filter(s => s.id !== user.id);
+    saveStaff();
+
+    return interaction.reply(`❌ Đã gỡ quyền của **${user.username}**`);
+}
+
+/* ===== MAINER ===== */
+if (commandName === "mainer") {
+    const user = options.getUser("user");
+
+    mainers = mainers.filter(m => m.id !== user.id);
+
+    mainers.push({
+        id: user.id,
+        name: user.username,
+        avatar: user.displayAvatarURL({ extension: "png" }),
+        profile: `https://discord.com/users/${user.id}`
+    });
+
+    saveMainers();
+
+    return interaction.reply(`✅ ${user.username} đã vào Mainers`);
+}
+
+/* ===== DEMAINER ===== */
+if (commandName === "demainer") {
+    const user = options.getUser("user");
+
+    mainers = mainers.filter(m => m.id !== user.id);
+    saveMainers();
+
+    return interaction.reply(`❌ ${user.username} đã bị xóa khỏi Mainers`);
+}
+
+/* ===== THIDAU ===== */
+if (commandName === "thidau") {
+
+    const team1 = options.getString("team1");
+    const team2 = options.getString("team2");
+    const time = options.getString("time");
+    const ref = options.getString("ref");
+
+    const embed = new EmbedBuilder()
+        .setTitle("🏆 THÔNG BÁO THI ĐẤU")
+        .setColor(0x00eaff)
+        .addFields(
+            { name: "⚔️ Trận đấu", value: `${team1} VS ${team2}` },
+            { name: "⏰ Thời gian", value: time, inline: true },
+            { name: "🏁 Referee", value: ref, inline: true }
+        );
+
+    const dropdown = new StringSelectMenuBuilder()
+        .setCustomId("match_info")
+        .setPlaceholder("Xem thông tin")
+        .addOptions([
+            { label: team1, value: team1 },
+            { label: team2, value: team2 },
+            { label: ref, value: ref }
+        ]);
+
+    const row = new ActionRowBuilder().addComponents(dropdown);
+
+    return interaction.reply({
+        embeds: [embed],
+        components: [row]
+    });
+}
+if (interaction.isStringSelectMenu()) {
+    if (interaction.customId === "match_info") {
+        return interaction.reply({
+            content: `📌 Thông tin: ${interaction.values[0]}`,
+            ephemeral: true
+        });
+    }
+}
 
         // Xử lý Select Menu & Modal
         if (interaction.isStringSelectMenu()) {
@@ -187,6 +288,47 @@ client.on("interactionCreate", async interaction => {
 });
 
 /* ================= WEB API ================= */
+app.get("/mainers", (req, res) => {
+    res.json(mainers);
+});
+app.post("/register", async (req, res) => {
+    try {
+        const { discord, robloxUsername } = req.body;
+
+        const channel = await client.channels.fetch(process.env.CHANNEL_ID);
+
+        const embed = new EmbedBuilder()
+            .setTitle("📝 ĐĂNG KÝ THI ĐẤU")
+            .setColor(0x00ff00)
+            .addFields(
+                { name: "Discord", value: discord },
+                { name: "Roblox", value: robloxUsername || "N/A" }
+            );
+
+        const menu = new StringSelectMenuBuilder()
+            .setCustomId("select_stage")
+            .setPlaceholder("Chọn Stage")
+            .addOptions([
+                { label: "3 High", value: "3_high" },
+                { label: "3 Low", value: "3_low" },
+                { label: "4 High", value: "4_high" },
+                { label: "4 Low", value: "4_low" }
+            ]);
+
+        const row = new ActionRowBuilder().addComponents(menu);
+
+        await channel.send({
+            embeds: [embed],
+            components: [row]
+        });
+
+        res.json({ success: true });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Register error" });
+    }
+});
 app.get("/", (req, res) => res.send("API Running"));
 app.get("/top", (req, res) => res.json(top));
 app.get("/blacklist", (req, res) => res.json(blacklist));
