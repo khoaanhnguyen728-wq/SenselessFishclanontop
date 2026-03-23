@@ -22,6 +22,13 @@ app.use(express.json());
 app.use(cors());
 
 /* ================= DATABASE ================= */
+if (!fs.existsSync("blacklist.json")) fs.writeFileSync("blacklist.json", "[]");
+
+let blacklist = JSON.parse(fs.readFileSync("blacklist.json"));
+
+function saveBlacklist(){
+  fs.writeFileSync("blacklist.json", JSON.stringify(blacklist, null, 2));
+}
 
 if (!fs.existsSync("top.json")) fs.writeFileSync("top.json", "{}");
 if (!fs.existsSync("register.json")) fs.writeFileSync("register.json", "[]");
@@ -160,6 +167,53 @@ client.on("interactionCreate", async interaction=>{
 try{
 
 /* ---------- SLASH COMMAND ---------- */
+if(commandName === "unblacklist"){
+
+  await interaction.deferReply();
+
+  const user = options.getUser("user");
+
+  blacklist = blacklist.filter(b => b.id !== user.id);
+
+  saveBlacklist();
+
+  return interaction.editReply(`✅ Đã gỡ blacklist **${user.username}**`);
+}
+
+if(commandName === "blacklist"){
+
+  await interaction.deferReply();
+
+  const user = options.getUser("user");
+  const reason = options.getString("reason");
+
+  // thời gian tự lấy
+  const time = new Date().toLocaleString("vi-VN");
+
+  // xóa nếu đã có
+  blacklist = blacklist.filter(b => b.id !== user.id);
+
+  blacklist.push({
+    id: user.id,
+    name: user.username,
+    reason: reason,
+    time: time
+  });
+
+  saveBlacklist();
+
+  const embed = new EmbedBuilder()
+    .setTitle("🚫 BLACKLIST")
+    .setColor("#ff0000")
+    .addFields(
+      { name: "User", value: `<@${user.id}>` },
+      { name: "Lý do", value: reason },
+      { name: "Thời gian", value: time }
+    )
+    .setTimestamp();
+
+  return interaction.editReply({ embeds: [embed] });
+}
 
 if(interaction.isChatInputCommand()){
 
@@ -561,6 +615,9 @@ console.error(err);
 });
 
 /* ================= WEB API ================= */
+app.get("/blacklist", (req, res) => {
+  res.json(blacklist);
+});
 
 app.get("/",(req,res)=>{
 res.send("Senseless Fish Clan API Running");
