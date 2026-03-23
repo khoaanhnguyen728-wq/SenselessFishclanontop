@@ -1319,6 +1319,10 @@ transform:rotate(-90deg);
   background:#404EED;
   box-shadow:0 0 12px #00eaff;
 }
+#logoutBtn:hover{
+    background:#ff0000;
+    box-shadow:0 0 15px red;
+}
 </style>
 </head>
 
@@ -1407,8 +1411,16 @@ transform:rotate(-90deg);
   <!-- STATUS -->
   <div id="loginStatus">🔴 Chưa đăng nhập</div>
 
-  <!-- BUTTON -->
-  <button onclick="loginDiscord()" class="btn" id="loginBtn">Login</button>
+  <!-- LOGIN -->
+  <button onclick="loginDiscord()" class="btn" id="loginBtn">
+    Login
+  </button>
+
+  <!-- LOGOUT -->
+  <button onclick="logout()" class="btn" id="logoutBtn"
+          style="display:none;background:#ff3b3b;">
+    Đăng xuất
+  </button>
 
 </div>
     </div>
@@ -1524,7 +1536,7 @@ members.forEach(m=>{
 </div>
 <script>
 const CLIENT_ID = "1476208651835408506";
-const REDIRECT_URI = "https://senselessfishclan.pages.dev/top";
+const REDIRECT_URI = "https://senselessfishclan.pages.dev/about";
 let discordUser = null;
 
 // HÀM QUAN TRỌNG: Kiểm tra và hiển thị thông tin người dùng
@@ -1552,6 +1564,7 @@ async function checkLogin() {
             // UPDATE UI
             document.getElementById("loginStatus").innerText = "🟢 Đã đăng nhập";
             document.getElementById("loginBtn").style.display = "none";
+            document.getElementById("logoutBtn").style.display = "block";
 
             document.getElementById("userInfo").style.display = "block";
             document.getElementById("userName").innerText = user.username;
@@ -1578,9 +1591,12 @@ function loginDiscord() {
 
 // Cập nhật lại window.onload để chạy hàm kiểm tra khi vừa mở trang
 window.onload = () => {
-    loadTop();   // Hàm tải bảng xếp hạng đã có của bạn
+    checkLogin();
 };
-
+function logout(){
+    localStorage.removeItem("discord_token");
+    location.reload();
+}
 </script>
 
 </div>
