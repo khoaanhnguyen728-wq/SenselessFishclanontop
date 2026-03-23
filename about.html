@@ -642,6 +642,173 @@ body{
     transform: translateY(110vh);
   }
 }
+/* NAVBAR */
+.navbar{
+  position:fixed;
+  top:10px;
+  left:50%;
+  transform:translateX(-50%);
+  width:95%;
+  max-width:1200px;
+  height:64px;
+
+  background:linear-gradient(
+    135deg,
+    rgba(10,20,40,.95),
+    rgba(30,60,120,.9),
+    rgba(10,20,40,.95)
+  );
+
+  backdrop-filter:blur(10px);
+  border-radius:20px;
+  padding:0 20px;
+
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+
+  z-index:9999;
+
+  box-shadow:
+    0 10px 30px rgba(0,0,0,.6),
+    0 0 25px rgba(0,200,255,.4);
+}
+
+/* SPACE */
+.nav-space{
+  height:100px;
+}
+
+/* LOGO */
+.nav-logo{
+  height:40px;
+  cursor:pointer;
+}
+
+/* MENU */
+.nav-center{
+  display:flex;
+  gap:18px;
+}
+
+.nav-item{
+  color:#ddd;
+  text-decoration:none;
+  font-size:14px;
+  padding:6px 12px;
+  border-radius:10px;
+  transition:.2s;
+}
+
+.nav-item:hover{
+  background:#1e90ff;
+  color:white;
+}
+
+/* TOOLS */
+.nav-tools{
+  position:relative;
+}
+
+.tools-btn{
+  cursor:pointer;
+  padding:6px 12px;
+  border-radius:10px;
+  color:#ddd;
+}
+
+.tools-btn:hover{
+  background:#1e90ff;
+  color:white;
+}
+
+/* DROPDOWN */
+.tools-dropdown{
+  position:absolute;
+  top:110%;
+  right:0;
+
+  background:rgba(10,20,40,.95);
+  border-radius:10px;
+  padding:8px;
+
+  display:none;
+  flex-direction:column;
+  min-width:150px;
+}
+
+.tools-dropdown a{
+  text-decoration:none;
+  color:white;
+  padding:8px;
+  border-radius:8px;
+}
+
+.tools-dropdown a:hover{
+  background:#1e90ff;
+}
+
+/* ACTIVE */
+.nav-tools.active .tools-dropdown{
+  display:flex;
+}
+
+/* ACCOUNT */
+.nav-right{
+  display:flex;
+  align-items:center;
+}
+
+.account-box{
+  position:relative;
+}
+
+.account-header{
+  cursor:pointer;
+  padding:6px 12px;
+  border-radius:10px;
+}
+
+.account-header:hover{
+  background:#1e90ff;
+}
+
+/* DROPDOWN ACCOUNT */
+#accountContent{
+  position:absolute;
+  top:110%;
+  right:0;
+
+  width:200px;
+  background:rgba(10,20,40,.95);
+  border-radius:10px;
+  padding:10px;
+
+  max-height:500px;
+  overflow:hidden;
+
+  transition:max-height .3s ease, opacity .3s;
+  opacity:1;
+}
+
+/* CLOSED */
+.account-box.closed #accountContent{
+  max-height:0;
+  opacity:0;
+  pointer-events:none;
+}
+
+/* BUTTON */
+.btn{
+  width:100%;
+  margin-top:8px;
+  padding:8px;
+  border:none;
+  border-radius:8px;
+  background:#5865F2;
+  color:white;
+  cursor:pointer;
+}
 </style>
 </head>
 
@@ -687,46 +854,45 @@ body{
 <!-- ===== NAVBAR ===== -->
 <div class="navbar">
   <div class="nav-left">
-    <!-- LOGO -->
-    <img src="images/logo.png" class="nav-logo" alt="TSBVH Logo">
+    <img src="images/logo.png" class="nav-logo">
   </div>
 
   <div class="nav-center">
-    <a href="index.html" class="nav-item">
-      🏠 <span>Trang chủ</span>
-    </a>
-    <a href="top.html" class="nav-item">
-      📊 <span>Bảng xếp hạng</span>
-    </a>
-    <a href="staff.html" class="nav-item">
-      👥 <span>Staff Clan</span>
-    </a>
-    <a href="about.html" class="nav-item">
-      📘 <span>Giới thiệu</span>
-     <a href="rules.html" class="nav-item">
-  📜 <span>Luật</span>
-</a>
-      <!-- ===== TOOLS MENU (RIGHT END) ===== -->
-    </a>
-<div class="nav-tools">
-  <div class="tools-btn">
-    🧰 <span>Công cụ</span>
-    <span class="arrow">▲</span>
+    <a href="index.html" class="nav-item">Trang chủ</a>
+    <a href="top.html" class="nav-item">Bảng xếp hạng</a>
+    <a href="staff.html" class="nav-item">Staff</a>
+    <a href="about.html" class="nav-item">Giới thiệu</a>
+    <a href="rules.html" class="nav-item">Luật</a>
+
+    <!-- TOOLS -->
+    <div class="nav-tools" id="toolsMenu">
+      <div class="tools-btn" onclick="toggleTools()">
+        Công cụ <span class="arrow" id="toolsArrow">▲</span>
+      </div>
+
+      <div class="tools-dropdown">
+        <a href="mainers.html">Mainers</a>
+        <a href="allies.html">Allies</a>
+        <a href="blacklist.html">Blacklist</a>
+      </div>
+    </div>
   </div>
 
-  <div class="tools-dropdown">
-    <a href="mainers.html">🛠️ Mainers List</a>
-    <a href="allies.html">🤝 Allies Clan</a>
+  <!-- ACCOUNT -->
+  <div class="nav-right">
+    <div class="account-box">
+      <div class="account-header" onclick="toggleAccount()">
+         Tài khoản <span id="accountArrow">▼</span>
+      </div>
+
+      <div id="accountContent">
+        <div id="loginStatus">🔴 Chưa đăng nhập</div>
+        <button onclick="loginDiscord()" class="btn">Login</button>
+      </div>
+    </div>
   </div>
 </div>
-    </a>
-  </div>
-</div>
 
-<!-- CHỪA KHOẢNG TRỐNG CHO NAV -->
-<div class="nav-space"></div>
-
-<!-- CHỪA KHOẢNG TRỐNG CHO NAV -->
 <div class="nav-space"></div>
 
 <h1>📘 Giới thiệu Clan</h1>
@@ -786,6 +952,43 @@ function spawnDolphin(){
 
 /* rơi ít thôi */
 setInterval(spawnDolphin, 500);
+</script>
+<script>
+/* TOOLS MENU */
+function toggleTools(){
+  const menu = document.getElementById("toolsMenu");
+  const arrow = document.getElementById("toolsArrow");
+
+  menu.classList.toggle("active");
+
+  arrow.style.transform = menu.classList.contains("active")
+    ? "rotate(180deg)"
+    : "rotate(0deg)";
+}
+
+/* CLICK OUTSIDE -> CLOSE TOOLS */
+document.addEventListener("click", function(e){
+  const menu = document.getElementById("toolsMenu");
+
+  if(!menu.contains(e.target)){
+    menu.classList.remove("active");
+    document.getElementById("toolsArrow").style.transform = "rotate(0deg)";
+  }
+});
+
+/* ACCOUNT */
+function toggleAccount(){
+  const box = document.querySelector(".account-box");
+  box.classList.toggle("closed");
+}
+
+/* AUTO CLOSE ON LOAD */
+window.addEventListener("DOMContentLoaded", () => {
+  const box = document.querySelector(".account-box");
+  if(box){
+    box.classList.add("closed");
+  }
+});
 </script>
 
 </body>
