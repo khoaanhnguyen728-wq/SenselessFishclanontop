@@ -706,6 +706,70 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 });
 </script>
+<script>
+const CLIENT_ID = "1476208651835408506";
+const REDIRECT_URI = "https://senselessfishclan.pages.dev/top";
+let discordUser = null;
+
+// HÀM QUAN TRỌNG: Kiểm tra và hiển thị thông tin người dùng
+async function checkLogin() {
+    // 1. Lấy token từ URL (sau khi Discord chuyển hướng về) hoặc từ bộ nhớ máy (LocalStorage)
+    const urlParams = new URLSearchParams(window.location.hash.substring(1));
+    let token = urlParams.get("access_token");
+
+    if (token) {
+        localStorage.setItem("discord_token", token);
+        // Xóa token trên URL để bảo mật và làm sạch link
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else {
+        token = localStorage.getItem("discord_token");
+    }
+
+    if (!token) return; // Nếu không có token thì thoát
+
+    try {
+        // 2. Gọi API Discord để lấy thông tin tài khoản
+        const response = await fetch("https://discord.com/api/users/@me", {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+            const user = await response.json();
+            discordUser = user;
+
+            // 3. Cập nhật giao diện Web
+            document.getElementById("loginStatus").innerText = "🟢 Đã đăng nhập";
+            document.getElementById("registerStatus").innerText = "🟢 Sẵn sàng";
+            document.getElementById("loginBox").style.display = "none";
+            document.getElementById("userBox").style.display = "block";
+            document.getElementById("userName").innerText = user.username;
+            
+            // Hiển thị ảnh đại diện Discord
+            const avatarUrl = user.avatar 
+                ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
+                : "https://cdn.discordapp.com/embed/avatars/0.png";
+            document.getElementById("userAvatar").src = avatarUrl;
+        } else {
+            // Nếu token hết hạn hoặc lỗi
+            localStorage.removeItem("discord_token");
+        }
+    } catch (err) {
+        console.error("Lỗi Login Discord:", err);
+    }
+}
+
+function loginDiscord() {
+    // Chuyển hướng sang trang ủy quyền của Discord
+    window.location.href = `https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=identify`;
+}
+
+// Cập nhật lại window.onload để chạy hàm kiểm tra khi vừa mở trang
+window.onload = () => {
+    loadTop();   // Hàm tải bảng xếp hạng đã có của bạn
+    checkLogin(); // Kiểm tra đăng nhập
+};
+
+</script>
 
 </body>
 </html>
