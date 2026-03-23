@@ -126,43 +126,43 @@ client.on("interactionCreate", async interaction => {
 
             if (commandName === "bxh") {
                 const sub = options.getSubcommand();
-                if (sub === "aov") {
-                    await interaction.deferReply();
-                    
-                    let text = " \n"; // Tạo khoảng trống đầu tiên
+if (sub === "aov") {
+    await interaction.deferReply();
+    
+    let text = "\n"; 
 
-                    // TOP 1 - Làm cực to và nổi bật
-                    const e1 = client.emojis.cache.get("1485571100900458499");
-                    const e2 = client.emojis.cache.get("1485571314420027403");
-                    let t1 = top[1]?.id ? `<@${top[1].id}>` : "None";
-                    text += `${e1 || "⭐"} **ＴＯＰ  １**\n ╚═⭐ ${t1}\n\n`;
+    // Hàm hỗ trợ lấy emoji an toàn
+    const getEmoji = (id, fallback) => client.emojis.cache.get(id) || fallback;
 
-                    // TOP 2 & 3
-                    let t2 = top[2]?.id ? `<@${top[2].id}>` : "None";
-                    let t3 = top[3]?.id ? `<@${top[3].id}>` : "None";
-                    
-                    text += `${e2 || "⭐"} **ＴＯＰ  ２**\n ╚═ ${t2}\n\n`;
-                    text += `${e2 || "⭐"} **ＴＯＰ  ３**\n ╚═ ${t3}\n\n`;
+    // TOP 1
+    let t1 = top[1]?.id ? `<@${top[1].id}>` : "*Trống*";
+    text += `${getEmoji("1485571100900458499", "👑")} **ＴＯＰ  １**\n╚═⭐ ${t1}\n\n`;
 
-                    text += `──────────────────\n\n`;
+    // TOP 2 & 3
+    let t2 = top[2]?.id ? `<@${top[2].id}>` : "*Trống*";
+    let t3 = top[3]?.id ? `<@${top[3].id}>` : "*Trống*";
+    
+    text += `${getEmoji("1485571314420027403", "🥈")} **ＴＯＰ  ２**\n╚═ ${t2}\n\n`;
+    text += `${getEmoji("1485571314420027403", "🥉")} **ＴＯＰ  ３**\n╚═ ${t3}\n\n`;
 
-                    // Các TOP còn lại từ 4-20
-                    for (let i = 4; i <= 20; i++) {
-                        let user = top[i]?.id ? `<@${top[i].id}>` : "Vacant";
-                        // Sử dụng font chữ rộng cho chữ TOP
-                        text += `➠  **ＴＯＰ  ${i}** •  ${user}\n\n`; 
-                    }
+    text += `──────────────────\n\n`;
 
-                    const embed = new EmbedBuilder()
-                        .setTitle("🏆 SENSELESS FISH CLAN LEADERBOARD")
-                        .setDescription(text)
-                        .setColor("#00eaff")
-                        .setThumbnail(interaction.guild.iconURL({ dynamic: true })) // Thêm icon Discord vào góc
-                        .setTimestamp()
-                        .setFooter({ text: "Updated regularly", iconURL: client.user.displayAvatarURL() });
+    // Các TOP còn lại
+    for (let i = 4; i <= 20; i++) {
+        let user = top[i]?.id ? `<@${top[i].id}>` : "*Vacant*";
+        text += `➠ **ＴＯＰ  ${i}** • ${user}\n\n`; 
+    }
 
-                    return interaction.editReply({ embeds: [embed] });
-                }
+    const embed = new EmbedBuilder()
+        .setTitle("🏆 SENSELESS FISH CLAN LEADERBOARD")
+        .setDescription(text)
+        .setColor("#00eaff")
+        .setThumbnail(interaction.guild.iconURL({ dynamic: true }))
+        .setTimestamp()
+        .setFooter({ text: "Dữ liệu cập nhật tự động", iconURL: client.user.displayAvatarURL() });
+
+    return interaction.editReply({ embeds: [embed] });
+}
                 
                 if (sub === "kill" || sub === "chat") return interaction.reply({ content: "Tính năng đang phát triển.", ephemeral: true });
             }
@@ -194,9 +194,7 @@ client.on("interactionCreate", async interaction => {
                 saveStaff();
                 return interaction.reply(`✅ **${user.username}** đã trở thành **${role}**`);
             }
-        }
-        /* ===== DETOP ===== */
-if (commandName === "detop") {
+            if (commandName === "detop") {
     const user = options.getUser("user");
 
     let found = false;
@@ -288,24 +286,36 @@ if (commandName === "thidau") {
         components: [row]
     });
 }
+        }
+
 if (interaction.isStringSelectMenu()) {
+    // Select menu xem thông tin trận đấu
     if (interaction.customId === "match_info") {
         return interaction.reply({
             content: `📌 Thông tin: ${interaction.values[0]}`,
             ephemeral: true
         });
     }
-}
 
-        // Xử lý Select Menu & Modal
-        if (interaction.isStringSelectMenu()) {
-            if (interaction.customId === "select_stage") {
-                selected.set(interaction.user.id, interaction.values[0]);
-                const modal = new ModalBuilder().setCustomId("submit_score").setTitle("Nhập Score");
-                modal.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("score").setLabel("Score").setStyle(TextInputStyle.Short).setRequired(true)));
-                return interaction.showModal(modal);
-            }
-        }
+    // Select menu đăng ký stage → mở modal nhập score
+    if (interaction.customId === "select_stage") {
+        selected.set(interaction.user.id, interaction.values[0]);
+        const modal = new ModalBuilder()
+            .setCustomId("submit_score")
+            .setTitle("Nhập Score")
+            .addComponents(
+                new ActionRowBuilder().addComponents(
+                    new TextInputBuilder()
+                        .setCustomId("score")
+                        .setLabel("Score")
+                        .setStyle(TextInputStyle.Short)
+                        .setRequired(true)
+                )
+            );
+
+        return interaction.showModal(modal);
+    }
+}
 
         if (interaction.isModalSubmit()) {
             if (interaction.customId === "submit_score") {
