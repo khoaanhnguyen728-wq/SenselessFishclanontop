@@ -133,14 +133,14 @@ client.on("interactionCreate", async interaction => {
 
                     // TOP 1 - Làm cực to và nổi bật
                     let t1 = top[1]?.id ? `<@${top[1].id}>` : "None";
-                    text += `:ys_mtmuiten: **ＴＯＰ  １**\n ╚═⭐ ${t1}\n\n`;
+                    text += `<:aMOnGUs:1485504190275915940> **ＴＯＰ  １**\n ╚═⭐ ${t1}\n\n`;
 
                     // TOP 2 & 3
                     let t2 = top[2]?.id ? `<@${top[2].id}>` : "None";
                     let t3 = top[3]?.id ? `<@${top[3].id}>` : "None";
                     
-                    text += `:ys_mtmuiten: **ＴＯＰ  ２**\n ╚═ ${t2}\n\n`;
-                    text += `:ys_mtmuiten: **ＴＯＰ  ３**\n ╚═ ${t3}\n\n`;
+                    text += `<:aMOnGUs:1485504190275915940> **ＴＯＰ  ２**\n ╚═ ${t2}\n\n`;
+                    text += `<:aMOnGUs:1485504190275915940> **ＴＯＰ  ３**\n ╚═ ${t3}\n\n`;
 
                     text += `──────────────────\n\n`;
 
