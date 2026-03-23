@@ -1323,6 +1323,47 @@ transform:rotate(-90deg);
     background:#ff0000;
     box-shadow:0 0 15px red;
 }
+/* FIX LOGIN + LOGOUT BUTTON */
+#accountContent{
+  display:flex;
+  flex-direction:column;
+  align-items:center; /* căn giữa */
+  gap:10px;
+}
+
+/* nút full đẹp */
+#loginBtn,
+#logoutBtn{
+  width:100%;
+  max-width:180px;
+  padding:10px 0;
+  font-size:14px;
+  text-align:center;
+}
+
+/* fix lệch */
+#loginBtn{
+  margin-top:8px;
+}
+
+/* logout nổi bật hơn */
+#logoutBtn{
+  background:#ff3b3b;
+}
+#userInfo{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+#loginBtn:hover{
+  background:#00c3ff;
+  box-shadow:0 0 12px #00eaff;
+}
+
+#logoutBtn:hover{
+  background:#ff0000;
+  box-shadow:0 0 15px red;
+}
 </style>
 </head>
 
