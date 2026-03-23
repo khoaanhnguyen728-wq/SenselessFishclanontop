@@ -620,16 +620,6 @@ body{
     bottom:18px;
   }
 }
-.register-box {
-  width: 260px;
-  background: rgba(0,0,0,0.35);
-  border-radius: 15px;
-  color: white;
-  overflow: hidden;
-
-  padding: 15px;
-  transition: padding .25s;
-}
 
 .register-box input {
   width: 100%;
@@ -666,9 +656,8 @@ body{
 
   /* xích sang trái nhẹ */
   left: 50%;
-  transform: translateX(calc(-50% - 60px));
-
-  width: 95%;
+  transform: translateX(-50%); /* chỉ -50% thôi */
+  width: 100%;
   max-width: 1200px;
   height: 64px;
 
@@ -873,14 +862,6 @@ body{
     100%{transform:translateY(0)}
 }
 /* ===== REGISTER LEFT - RIGHT ===== */
-.register-wrapper{
-  position: fixed;
-  top: 120px;
-  right: 25px;
-  display: flex;
-  gap: 20px;
-  z-index: 9998;
-}
 
 .register-wrapper .register-box{
   width: 260px;
@@ -995,6 +976,32 @@ body{
   position:relative;
 }
 
+/* dropdown */
+.tools-dropdown{
+  position:absolute;
+  top:100%;
+  right:0;
+  margin-top:10px;
+
+  display:none;
+  flex-direction:column;
+}
+
+/* mở bằng click */
+.nav-tools.active .tools-dropdown{
+  display:flex;
+}
+
+/* vùng đệm chống tụt */
+.nav-tools::after{
+  content:"";
+  position:absolute;
+  top:100%;
+  right:0;
+  width:100%;
+  height:20px;
+}
+
 .tools-btn{
   color:#ddd;
   font-weight:600;
@@ -1051,10 +1058,6 @@ body{
   box-shadow:0 0 12px #00eaff;
 }
 
-/* hover mở */
-.nav-tools:hover .tools-dropdown{
-  display:flex;
-}
 /* ===== ARROW ===== */
 .tools-btn .arrow{
   font-size:12px;
@@ -1183,6 +1186,25 @@ transform:rotate(-90deg);
 transform:rotate(0deg);
 }
 /* content */
+.account-box{
+  position: relative;
+}
+
+/* nội dung dropdown */
+#accountContent{
+  position: absolute;
+  top: 110%;        /* QUAN TRỌNG: luôn rơi xuống */
+  right: 0;
+
+  width: 200px;
+  background: rgba(10,20,40,.95);
+  border-radius: 12px;
+  padding: 10px;
+
+  box-shadow: 0 10px 25px rgba(0,0,0,.6);
+
+  z-index: 9999;
+}
 
 #accountContent{
 max-height:500px;
@@ -1231,6 +1253,72 @@ transform:rotate(-90deg);
     opacity: 0;
     pointer-events: none;
 }
+.nav-right{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.nav-right .btn{
+  padding:8px 14px;
+  font-size:13px;
+}
+/* REGISTER BOX */
+.register-box{
+  width:260px;
+  background:rgba(0,0,0,.35);
+  border-radius:15px;
+  padding:15px;
+  color:white;
+}
+
+/* INPUT GROUP */
+.input-group{
+  margin:10px 0;
+  text-align:left;
+}
+
+.input-group label{
+  font-weight:bold;
+  display:block;
+  margin-bottom:5px;
+}
+
+/* INPUT */
+.register-box input,
+.register-box select{
+  width:100%;
+  padding:10px;
+  border-radius:8px;
+  border:none;
+}
+
+/* SELECT STYLE */
+#stage{
+  border:2px solid #22c55e;
+  background:#020617;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+/* BUTTON */
+.btn-register{
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:10px;
+  background:#5865F2;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+  margin-top:10px;
+  transition:.2s;
+}
+
+.btn-register:hover{
+  background:#404EED;
+  box-shadow:0 0 12px #00eaff;
+}
 </style>
 </head>
 
@@ -1276,47 +1364,73 @@ transform:rotate(-90deg);
 <!-- ===== NAVBAR ===== -->
 <div class="navbar">
   <div class="nav-left">
-    <!-- LOGO -->
-    <img src="images/logo.png" class="nav-logo" alt="TSBVH Logo">
+    <img src="images/logo.png" class="nav-logo">
   </div>
 
   <div class="nav-center">
-    <a href="index.html" class="nav-item">
-      🏠 <span>Trang chủ</span>
-    </a>
-    <a href="top.html" class="nav-item">
-      📊 <span>Bảng xếp hạng</span>
-    </a>
-    <a href="staff.html" class="nav-item">
-      👥 <span>Staff Clan</span>
-    </a>
-    <a href="about.html" class="nav-item">
-      📘 <span>Giới thiệu</span>
-    </a>
-    <a href="rules.html" class="nav-item">
-  📜 <span>Luật</span>
-</a>
-      <!-- ===== TOOLS MENU (RIGHT END) ===== -->
+    <a href="index.html" class="nav-item"> Trang chủ</a>
+    <a href="top.html" class="nav-item"> Bảng xếp hạng</a>
+    <a href="staff.html" class="nav-item"> Staff</a>
+    <a href="about.html" class="nav-item"> Giới thiệu</a>
+    <a href="rules.html" class="nav-item"> Luật</a>
 
-<div class="nav-tools">
-  <div class="tools-btn">
-    🧰 <span>Công cụ</span>
-    <span class="arrow">▲</span>
+    <!-- TOOLS -->
+<div class="nav-tools" id="toolsMenu">
+  <div class="tools-btn" onclick="toggleTools()">
+     Công cụ <span class="arrow" id="toolsArrow">▲</span>
   </div>
 
-  <div class="tools-dropdown">
-    <a href="mainers.html">🛠️ Mainers List</a>
-    <a href="allies.html">🤝 Allies Clan</a>
+      <div class="tools-dropdown">
+        <a href="mainers.html"> Mainers</a>
+        <a href="allies.html"> Allies</a>
+        <a href="blacklist.html"> Blacklist</a>
+      </div>
+    </div>
   </div>
-</div>
-    </a>
+
+  <!-- RIGHT SIDE -->
+  <div class="nav-right">
+    <div class="account-box">
+      <div class="account-header" onclick="toggleAccount()">
+         Tài khoản <span id="accountArrow">▼</span>
+      </div>
+
+      <div id="accountContent">
+        <div id="loginStatus">🔴 Chưa đăng nhập</div>
+        <button onclick="loginDiscord()" class="btn">Login</button>
+      </div>
+    </div>
   </div>
 </div>
 
 <!-- CHỪA KHOẢNG TRỐNG CHO NAV -->
 <div class="nav-space"></div>
 
-<div id="brand">SenselessFish</div>
+<div class="register-box">
+  <h3>🏆 Đăng ký thi đấu</h3>
+
+  <div id="registerStatus">🔴 Chưa đăng nhập</div>
+
+  <div class="input-group">
+    <label>Roblox ID</label>
+    <input type="text" id="robloxId" placeholder="Nhập Roblox ID">
+  </div>
+
+  <div class="input-group">
+    <label>Chọn Stage</label>
+    <select id="stage">
+      <option value="">-- Chọn Stage --</option>
+      <option value="3 High">3 High</option>
+      <option value="2 Low">2 Low</option>
+      <option value="2 Mid">2 Mid</option>
+      <option value="2 High">2 High</option>
+    </select>
+  </div>
+
+  <button onclick="registerStage()" class="btn-register">
+    Đăng ký thi đấu
+  </button>
+</div>
 
 <div id="statsBox">
 👥 Total: 0<br>
@@ -1394,75 +1508,7 @@ members.forEach(m=>{
     💬
 </div>
 <!-- ===== REGISTER WRAPPER ===== -->
-<div class="register-wrapper">
-<div class="register-box account-box closed">
 
-<div class="account-header" onclick="toggleAccount()">
-<h3> Tài khoản</h3>
-<span id="accountArrow">▼</span>
-</div>
-
-<div id="accountContent">
-    <div id="loginStatus" style="margin-bottom: 10px;">🔴 Chưa đăng nhập</div>
-
-    <div id="loginBox">
-        <button onclick="loginDiscord()" class="btn" style="width:100%">Login Discord</button>
-    </div>
-
-    <div id="userBox" style="display:none; text-align:center; margin-top:10px;">
-        <img id="userAvatar" style="width:60px; border-radius:50%; border:2px solid #5865F2;">
-        <p id="userName" style="margin:5px 0; font-weight:bold;"></p>
-        <button onclick="localStorage.removeItem('discord_token'); location.reload();"
-                style="font-size:11px; background:#ef4444; border:none; color:white; padding:5px 10px; border-radius:6px; cursor:pointer;">
-            Đăng xuất
-        </button>
-    </div>
-</div>
-
-</div>
-<div class="register-box">
-<h3> Đăng ký thi đấu</h3>
-<div id="registerStatus">🔴 Chưa đăng nhập</div>
-
-<div style="text-align:left; margin:10px 0;">
-<label style="font-weight:bold;"> Roblox ID</label>
-<input 
-    type="text"
-    id="robloxId"
-    placeholder="Nhập Roblox ID"
-    inputmode="numeric"
-    pattern="[0-9]*"
-    style="
-        width:100%;
-        padding:10px;
-        border-radius:8px;
-        border:none;
-        margin-top:6px;
-    ">
-</div>
-    
-    <div style="text-align: left; margin: 15px 0;">
-        <label style="display:block; margin-bottom:8px; font-weight:bold;"> Chọn Stage</label>
-        <select id="stage">
-            <option value="">-- Chọn Stage --</option>
-            <option value=" 3 High"> 3 High</option>
-            <option value=" 2 Low"> 2 Low</option>
-            <option value=" 2 Mid"> 2 Mid</option>
-            <option value=" 2 High"> 2 High</option>
-        </select>
-    </div>
-
-    <button onclick="registerStage()" class="btn btn-register">
-     Đăng ký thi đấu
-    </button>
-</div>
-<div id="userBox" style="display:none; text-align:center; margin-top:10px;">
-    <img id="userAvatar" style="width:60px;border-radius:50%; border: 2px solid #5865F2;">
-    <p id="userName" style="margin:5px 0; font-weight:bold;"></p>
-    <button onclick="localStorage.removeItem('discord_token'); location.reload();" 
-            style="font-size:11px; background:#444; border:none; color:white; padding:4px 8px; border-radius:4px; cursor:pointer;">
-        Đăng xuất
-    </button>
 </div>
 <script>
 const CLIENT_ID = "1476208651835408506";
@@ -1527,56 +1573,6 @@ window.onload = () => {
     checkLogin(); // Kiểm tra đăng nhập
 };
 
-async function registerStage() {
-    // 1. Kiểm tra xem người dùng đã login Discord chưa
-    if (!discordUser) {
-        alert("Bạn phải Đăng nhập Discord trước khi đăng ký!");
-        return;
-    }
-
-    // 2. Lấy giá trị từ ô chọn Stage
-    const stageSelect = document.getElementById("stage");
-    const stageValue = stageSelect.value;
-
-    if (!stageValue) {
-        alert("Vui lòng chọn một Stage để thi đấu!");
-        return;
-    }
-
-    // 3. Hiển thị trạng thái đang gửi
-    const btn = document.querySelector(".btn-register");
-    const originalText = btn.innerText;
-    btn.innerText = "Đang gửi...";
-    btn.disabled = true;
-
-    try {
-        // 4. Gửi yêu cầu đến API Render của bạn
-        const response = await fetch("https://senselessfishclanontop-1.onrender.com/register", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                discord: `${discordUser.username}#${discordUser.discriminator || '0'}`,
-                robloxId: "N/A", // Bạn có thể thêm ô nhập Roblox ID nếu muốn
-                stage: stageValue,
-                time: new Date().toLocaleString("vi-VN")
-            })
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            alert("✅ Đã gửi đơn đăng ký thành công vào Discord!");
-        } else {
-            alert("❌ Lỗi từ server: " + (result.error || "Không rõ nguyên nhân"));
-        }
-    } catch (err) {
-        console.error("Lỗi kết nối:", err);
-        alert("❌ Không thể kết nối đến server. Hãy kiểm tra xem server Render có đang chạy không!");
-    } finally {
-        btn.innerText = originalText;
-        btn.disabled = false;
-    }
-}
 </script>
 
 </div>
@@ -1822,6 +1818,39 @@ const box = document.querySelector(".account-box");
 box.classList.toggle("closed");
 
 }
+</script>
+<script>
+window.addEventListener("DOMContentLoaded", () => {
+  const box = document.querySelector(".account-box");
+  if(box){
+    box.classList.add("closed");
+  }
+});
+</script>
+<script>
+function toggleTools(){
+  const menu = document.getElementById("toolsMenu");
+  const arrow = document.getElementById("toolsArrow");
+
+  menu.classList.toggle("active");
+
+  // xoay mũi tên
+  if(menu.classList.contains("active")){
+    arrow.style.transform = "rotate(180deg)";
+  }else{
+    arrow.style.transform = "rotate(0deg)";
+  }
+}
+
+/* click ra ngoài thì đóng */
+document.addEventListener("click", function(e){
+  const menu = document.getElementById("toolsMenu");
+
+  if(!menu.contains(e.target)){
+    menu.classList.remove("active");
+    document.getElementById("toolsArrow").style.transform = "rotate(0deg)";
+  }
+});
 </script>
 </body>
 </html>
