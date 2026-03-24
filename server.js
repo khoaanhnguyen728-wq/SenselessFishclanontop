@@ -140,15 +140,16 @@ if (commandName === "blacklist") {
 
     const user = options.getUser("user");
     const reason = options.getString("reason") || "Không có";
-
     const member = interaction.member;
-    if (!hasPermission(member)) {
-        return interaction.editReply("❌ Bạn không có quyền");
+
+    // ❗ Check quyền
+    if (!canBlacklist(member)) {
+        return interaction.editReply("❌ Bạn không có quyền blacklist");
     }
 
     const guild = interaction.guild;
 
-    // ❌ Nếu đã blacklist rồi thì bỏ qua
+    // ❌ Nếu đã bị blacklist
     if (blacklist.some(b => b.id === user.id)) {
         return interaction.editReply("⚠️ User đã bị blacklist trước đó");
     }
@@ -163,13 +164,14 @@ if (commandName === "blacklist") {
     saveBlacklist();
 
     try {
-        // 🔨 BAN USER
+        // 🔨 Ban (kể cả không trong server vẫn ban được)
         await guild.members.ban(user.id, { reason: `Blacklist: ${reason}` });
     } catch (err) {
         console.log("Ban lỗi:", err.message);
-        return interaction.editReply("❌ Không thể ban user (có thể role cao hơn bot)");
+        return interaction.editReply("❌ Không thể ban user (role cao hơn bot hoặc thiếu quyền)");
     }
 
+    // 📦 Embed chính
     const embed = new EmbedBuilder()
         .setTitle("🚫 BLACKLIST + BAN")
         .setColor("#ff0000")
@@ -179,6 +181,25 @@ if (commandName === "blacklist") {
         )
         .setTimestamp();
 
+    // 📜 LOG
+    const logChannel = interaction.guild.channels.cache.get(process.env.BLACKLIST_LOG_CHANNEL);
+
+    if (logChannel) {
+        const logEmbed = new EmbedBuilder()
+            .setTitle("🚫 BLACKLIST LOG")
+            .setColor("#ff0000")
+            .setThumbnail(user.displayAvatarURL({ dynamic: true }))
+            .addFields(
+                { name: "User", value: `<@${user.id}>`, inline: true },
+                { name: "Lý do", value: reason, inline: true },
+                { name: "By", value: `<@${interaction.user.id}>`, inline: true }
+            )
+            .setFooter({ text: `ID: ${user.id}` })
+            .setTimestamp();
+
+        logChannel.send({ embeds: [logEmbed] });
+    }
+
     return interaction.editReply({ embeds: [embed] });
 }
 
@@ -186,32 +207,56 @@ if (commandName === "unblacklist") {
     await interaction.deferReply();
 
     const user = options.getUser("user");
-
     const member = interaction.member;
-    if (!hasPermission(member)) {
-        return interaction.editReply("❌ Bạn không có quyền");
+
+    // ❗ Check quyền
+    if (!canBlacklist(member)) {
+        return interaction.editReply("❌ Bạn không có quyền unblacklist");
     }
 
     const guild = interaction.guild;
 
-    // ❌ Nếu không có trong blacklist
+    // ❌ Không có trong blacklist
     if (!blacklist.some(b => b.id === user.id)) {
         return interaction.editReply("⚠️ User không nằm trong blacklist");
     }
 
-    // 🧹 Xóa khỏi JSON
+    // 🧹 Xóa JSON
     blacklist = blacklist.filter(b => b.id !== user.id);
     saveBlacklist();
 
     try {
-        // 🔓 UNBAN
         await guild.members.unban(user.id);
     } catch (err) {
         console.log("Unban lỗi:", err.message);
-        return interaction.editReply("❌ Không thể unban (có thể chưa bị ban)");
     }
 
-    return interaction.editReply(`✅ Đã gỡ blacklist & unban **${user.username}**`);
+    // 📦 Embed
+    const embed = new EmbedBuilder()
+        .setTitle("✅ UNBLACKLIST")
+        .setColor("#00ffcc")
+        .addFields({ name: "User", value: `<@${user.id}>` })
+        .setTimestamp();
+
+    // 📜 LOG
+    const logChannel = interaction.guild.channels.cache.get(process.env.BLACKLIST_LOG_CHANNEL);
+
+    if (logChannel) {
+        const logEmbed = new EmbedBuilder()
+            .setTitle("✅ UNBLACKLIST LOG")
+            .setColor("#00ffcc")
+            .setThumbnail(user.displayAvatarURL({ dynamic: true }))
+            .addFields(
+                { name: "User", value: `<@${user.id}>`, inline: true },
+                { name: "By", value: `<@${interaction.user.id}>`, inline: true }
+            )
+            .setFooter({ text: `ID: ${user.id}` })
+            .setTimestamp();
+
+        logChannel.send({ embeds: [logEmbed] });
+    }
+
+    return interaction.editReply({ embeds: [embed] });
 }
 
             if (commandName === "bxh") {
@@ -569,6 +614,16 @@ app.post("/register", async (req, res) => {
     } catch (err) {
         console.error("REGISTER ERROR:", err);
         return res.status(500).json({ success:false, message: err.message });
+    }
+});
+client.on("guildMemberAdd", async (member) => {
+    if (blacklist.some(b => b.id === member.id)) {
+        try {
+            await member.ban({ reason: "Blacklist auto-ban" });
+            console.log("Auto-ban:", member.user.tag);
+        } catch (err) {
+            console.log("Auto-ban lỗi:", err.message);
+        }
     }
 });
 app.get("/", (req, res) => res.send("API Running"));
