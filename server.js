@@ -136,64 +136,54 @@ client.on("interactionCreate", async interaction => {
             await interaction.deferReply({ ephemeral: true });
             const { commandName, options } = interaction;
 
-if (commandName === "blacklist") {
+if(commandName === "blacklist") {
     const user = options.getUser("user");
     const reason = options.getString("reason") || "Không có";
-    const member = interaction.member;
 
-    // Kiểm tra quyền
-    if (!canBlacklist(member)) {
-        return interaction.reply({ content: "❌ Bạn không có quyền blacklist", ephemeral: true });
-    }
+    if(!canBlacklist(interaction.member)) 
+        return interaction.reply({ content: "❌ Không có quyền", ephemeral:true });
 
-    // Kiểm tra đã blacklist chưa
-    if (blacklist.some(b => b.id === user.id)) {
-        return interaction.reply({ content: "⚠️ User đã bị blacklist trước đó", ephemeral: true });
-    }
+    if(blacklist.some(b=>b.id===user.id))
+        return interaction.reply({ content: "⚠️ Đã blacklist trước đó", ephemeral:true });
 
-    // Lưu vào JSON
-    blacklist.push({
-        id: user.id,
-        name: user.username,
-        reason,
-        time: new Date().toLocaleString("vi-VN")
-    });
-    saveBlacklist();
+    // Thêm vào cache
+    blacklist.push({ id:user.id, name:user.username, reason, time:new Date().toLocaleString("vi-VN") });
 
-    // Embed trả interaction ngay
+    // Save async
+    fs.writeFile("blacklist.json", JSON.stringify(blacklist,null,2), err=>{ if(err) console.log(err) });
+
+    // Embed trả ngay
     const embed = new EmbedBuilder()
         .setTitle("🚫 BLACKLIST + BAN")
         .setColor("#ff0000")
         .addFields(
-            { name: "User", value: `<@${user.id}>` },
-            { name: "Lý do", value: reason }
+            { name:"User", value:`<@${user.id}>` },
+            { name:"Lý do", value:reason }
         )
         .setTimestamp();
 
-    // 🔥 Trả interaction NGAY
-    interaction.reply({ embeds: [embed] });
+    interaction.reply({ embeds:[embed] }); // 🔹 trả ngay
 
-    // ➤ Ban async, không await
-    interaction.guild.members.ban(user.id, { reason: `Blacklist: ${reason}` })
-        .then(() => console.log(`Đã ban ${user.tag}`))
-        .catch(err => console.log("Ban lỗi:", err.message));
+    // Ban async
+    interaction.guild.members.ban(user.id, { reason:`Blacklist: ${reason}` })
+        .then(()=>console.log(`Đã ban ${user.tag}`))
+        .catch(err=>console.log("Ban lỗi:", err.message));
 
-    // ➤ Gửi log async
+    // Log async
     const logChannel = interaction.guild.channels.cache.get(process.env.BLACKLIST_LOG_CHANNEL);
-    if (logChannel && logChannel.permissionsFor(logChannel.guild.members.me).has("SendMessages")) {
+    if(logChannel?.permissionsFor(logChannel.guild.members.me).has("SendMessages")) {
         const logEmbed = new EmbedBuilder()
             .setTitle("🚫 BLACKLIST LOG")
             .setColor("#ff0000")
-            .setThumbnail(user.displayAvatarURL({ dynamic: true }))
+            .setThumbnail(user.displayAvatarURL({ dynamic:true }))
             .addFields(
-                { name: "User", value: `<@${user.id}>`, inline: true },
-                { name: "Lý do", value: reason, inline: true },
-                { name: "By", value: `<@${interaction.user.id}>`, inline: true }
+                { name:"User", value:`<@${user.id}>`, inline:true },
+                { name:"Lý do", value:reason, inline:true },
+                { name:"By", value:`<@${interaction.user.id}>`, inline:true }
             )
-            .setFooter({ text: `ID: ${user.id}` })
+            .setFooter({ text:`ID: ${user.id}` })
             .setTimestamp();
-
-        logChannel.send({ embeds: [logEmbed] }).catch(console.log);
+        logChannel.send({ embeds:[logEmbed] }).catch(console.log);
     }
 }
 
