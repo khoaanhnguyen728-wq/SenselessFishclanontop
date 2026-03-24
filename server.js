@@ -123,17 +123,19 @@ for (let i = 1; i <= 20; i++) {
     // Nếu không có member thì hiển thị Vacant
     let displayName = member?.id ? `<@${member.id}>` : "Vacant";
 
-    // In đậm TOP 1, TOP 2, TOP 3
-    if (i === 1) displayName = `***${displayName}***`;
+    // In đậm + in nghiêng + chữ TOP viết to
+    let topText = `***➤TOP ${i}***`;
+
+    // TOP 1–3 in đậm + nghiêng + caps
+    if (i === 1) displayName = `***${displayName}***`;      // TOP 1 nổi bật nhất
     else if (i === 2 || i === 3) displayName = `**${displayName}**`;
 
-    // Thêm vào text
-    text += `${medal} TOP ${i} • ${displayName}\n\n`;
+    // Thêm vào text, xuống dòng dài hơn
+    text += `${medal} ${topText} • ${displayName}\n\n\n`;
 }
 
         const embed = new EmbedBuilder()
             .setColor("#00eaff")
-            .setImage("https://tenor.com/view/blue-white-gradient-carrd-gif-23556830") // GIF chạy được
             .setTitle("🏆 SENSELESS FISH CLAN LEADERBOARD")
             .setDescription(text)
             .setTimestamp();
