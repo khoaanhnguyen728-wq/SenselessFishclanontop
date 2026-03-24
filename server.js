@@ -43,6 +43,35 @@ const saveStaff = () => fs.writeFileSync("staff.json", JSON.stringify(staff, nul
 const saveRegister = () => fs.writeFileSync("register.json", JSON.stringify(register, null, 2));
 const saveMainers = () => fs.writeFileSync("mainers.json", JSON.stringify(mainers, null, 2));
 
+const ROLE_MAP = {
+    "Founder": process.env.ROLE_FOUNDER,
+    "Leader": process.env.ROLE_LEADER,
+    "Senior Developer": process.env.ROLE_SENIOR_DEV,
+    "Senior Admin": process.env.ROLE_SENIOR_ADMIN,
+    "Developer": process.env.ROLE_DEV,
+    "Admin": process.env.ROLE_ADMIN,
+    "Junior Developer": process.env.ROLE_JUNIOR_DEV,
+    "Junior Admin": process.env.ROLE_JUNIOR_ADMIN,
+    "Mod": process.env.ROLE_MOD,
+    "Rank Management": process.env.ROLE_RANK,
+    "Experienced Referee": process.env.ROLE_EXP_REF,
+    "Referee": process.env.ROLE_REF,
+    "Junior Referee": process.env.ROLE_JUNIOR_REF,
+    "Tryout host": process.env.ROLE_TRYOUT,
+    "Training host": process.env.ROLE_TRAIN
+};
+
+const LOG_CHANNEL = process.env.LOG_CHANNEL;
+
+// ✅ FIX CHUẨN
+function hasPermission(member) {
+    if (!process.env.ADMIN_ROLE) return false;
+
+    const roles = process.env.ADMIN_ROLE.split(",").map(r => r.trim());
+
+    return roles.some(roleId => member.roles.cache.has(roleId));
+}
+
 /* ================= DISCORD BOT ================= */
 const client = new Client({
     intents: [
@@ -186,14 +215,52 @@ if (sub === "aov") {
                 return interaction.reply(`✅ Đã đưa **${user.username}** vào **TOP ${rank}**`);
             }
 
-            if (commandName === "promote") {
-                const user = options.getUser("user");
-                const role = options.getString("permission");
-                staff = staff.filter(s => s.id !== user.id);
-                staff.push({ id: user.id, username: user.username, role, avatar: user.displayAvatarURL({ extension: "png" }) });
-                saveStaff();
-                return interaction.reply(`✅ **${user.username}** đã trở thành **${role}**`);
-            }
+if (commandName === "promote") {
+    const user = options.getUser("user");
+    const roleName = options.getString("permission");
+
+    const member = await interaction.guild.members.fetch(interaction.user.id);
+    if (!hasPermission(member)) {
+        return interaction.reply({ content: "❌ Bạn không có quyền dùng lệnh này", ephemeral: true });
+    }
+
+    const target = await interaction.guild.members.fetch(user.id);
+
+    const roleId = ROLE_MAP[roleName];
+    if (!roleId) return interaction.reply("❌ Role không tồn tại");
+
+    const newRole = interaction.guild.roles.cache.get(roleId);
+    if (!newRole) return interaction.reply("❌ Không tìm thấy role");
+
+    // ❗ Xóa toàn bộ role staff cũ
+    for (let r of Object.values(ROLE_MAP)) {
+        let role = interaction.guild.roles.cache.get(r);
+        if (role && target.roles.cache.has(role.id)) {
+            await target.roles.remove(role);
+        }
+    }
+
+    // ➕ Add role mới
+    await target.roles.add(newRole);
+
+    // 💾 Lưu JSON
+    staff = staff.filter(s => s.id !== user.id);
+    staff.push({
+        id: user.id,
+        username: user.username,
+        role: roleName,
+        avatar: user.displayAvatarURL({ extension: "png" })
+    });
+    saveStaff();
+
+    // 📜 LOG
+    const logChannel = interaction.guild.channels.cache.get(LOG_CHANNEL);
+    if (logChannel) {
+        logChannel.send(`📢 ${interaction.user.username} đã promote ${user.username} → **${roleName}**`);
+    }
+
+    return interaction.reply(`✅ ${user.username} đã được set role **${roleName}**`);
+}
             if (commandName === "detop") {
     const user = options.getUser("user");
 
@@ -219,10 +286,32 @@ if (sub === "aov") {
 if (commandName === "demote") {
     const user = options.getUser("user");
 
+    const member = await interaction.guild.members.fetch(interaction.user.id);
+    if (!hasPermission(member)) {
+        return interaction.reply({ content: "❌ Bạn không có quyền dùng lệnh này", ephemeral: true });
+    }
+
+    const target = await interaction.guild.members.fetch(user.id);
+
+    // ❗ Xóa role staff
+    for (let r of Object.values(ROLE_MAP)) {
+        let role = interaction.guild.roles.cache.get(r);
+        if (role && target.roles.cache.has(role.id)) {
+            await target.roles.remove(role);
+        }
+    }
+
+    // 💾 Xóa JSON
     staff = staff.filter(s => s.id !== user.id);
     saveStaff();
 
-    return interaction.reply(`❌ Đã gỡ quyền của **${user.username}**`);
+    // 📜 LOG
+    const logChannel = interaction.guild.channels.cache.get(LOG_CHANNEL);
+    if (logChannel) {
+        logChannel.send(`📢 ${interaction.user.username} đã demote ${user.username}`);
+    }
+
+    return interaction.reply(`❌ Đã gỡ toàn bộ role của ${user.username}`);
 }
 
 /* ===== MAINER ===== */
