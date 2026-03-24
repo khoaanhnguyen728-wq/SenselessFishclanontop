@@ -133,11 +133,11 @@ async function updateLeaderboard() {
 client.on("interactionCreate", async interaction => {
     try {
         if (interaction.isChatInputCommand()) {
+            await interaction.deferReply({ ephemeral: true });
             const { commandName, options } = interaction;
 
 if (commandName === "blacklist") {
-    await interaction.deferReply();
-
+    
     const user = options.getUser("user");
     const reason = options.getString("reason") || "Không có";
     const member = interaction.member;
