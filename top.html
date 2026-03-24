@@ -1492,12 +1492,12 @@ transform:rotate(-90deg);
     </select>
   </div>
 
-  <button onclick="registerStage()" class="btn-register">
+  <button class="btn-register" onclick="registerStage()">
     Đăng ký thi đấu
   </button>
 </div>
 
-<div id="statsBox">
+<div id="statsBox" data-total="0">
 👥 Total: 0<br>
 🟢 Online: 0
 </div>
@@ -1556,7 +1556,7 @@ const members = [
   {rank:20,userId:277,name:"Member 20",stage:"Stage 1"}
 ];
 
-const box=document.getElementById("rankList");
+const box = document.getElementById("rank-list");
 members.forEach(m=>{
   box.innerHTML+=`
     <div class="rank-row" onclick="window.open('https://www.roblox.com/users/${m.userId}/profile')">
@@ -1574,7 +1574,6 @@ members.forEach(m=>{
 </div>
 <!-- ===== REGISTER WRAPPER ===== -->
 
-</div>
 <script>
 const CLIENT_ID = "1476208651835408506";
 const REDIRECT_URI = "https://senselessfishclan.pages.dev/top";
@@ -1585,6 +1584,7 @@ async function checkLogin() {
     const urlParams = new URLSearchParams(window.location.hash.substring(1));
     let token = urlParams.get("access_token");
 
+    // Lưu token nếu vừa login xong
     if (token) {
         localStorage.setItem("discord_token", token);
         window.history.replaceState({}, document.title, window.location.pathname);
@@ -1592,37 +1592,53 @@ async function checkLogin() {
         token = localStorage.getItem("discord_token");
     }
 
-    if (!token) return;
+    if (!token) {
+        updateLoggedOutUI();
+        return;
+    }
 
     try {
         const response = await fetch("https://discord.com/api/users/@me", {
             headers: { Authorization: `Bearer ${token}` }
         });
 
-        if (response.ok) {
-            const user = await response.json();
+        if (!response.ok) throw new Error("Token lỗi");
 
-            // UPDATE UI
-            document.getElementById("loginStatus").innerText = "🟢 Đã đăng nhập";
-            document.getElementById("loginBtn").style.display = "none";
-            document.getElementById("logoutBtn").style.display = "block";
+        const user = await response.json();
 
-            document.getElementById("userInfo").style.display = "block";
-            document.getElementById("userName").innerText = user.username;
+        // Lưu user global
+        discordUser = user;
 
-            const avatarUrl = user.avatar
-                ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
-                : "https://cdn.discordapp.com/embed/avatars/0.png";
+        // ===== UPDATE UI =====
+        document.getElementById("loginStatus").innerText = "🟢 Đã đăng nhập";
+        document.getElementById("registerStatus").innerText = "🟢 Đã đăng nhập";
 
-            document.getElementById("userAvatar").src = avatarUrl;
+        document.getElementById("loginBtn").style.display = "none";
+        document.getElementById("logoutBtn").style.display = "block";
 
-        } else {
-            localStorage.removeItem("discord_token");
-        }
+        document.getElementById("userInfo").style.display = "block";
+        document.getElementById("userName").innerText = user.username;
+
+        const avatarUrl = user.avatar
+            ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
+            : "https://cdn.discordapp.com/embed/avatars/0.png";
+
+        document.getElementById("userAvatar").src = avatarUrl;
 
     } catch (err) {
         console.log("Login lỗi:", err);
+        localStorage.removeItem("discord_token");
+        updateLoggedOutUI();
     }
+}
+function updateLoggedOutUI(){
+    document.getElementById("loginStatus").innerText = "🔴 Chưa đăng nhập";
+    document.getElementById("registerStatus").innerText = "🔴 Chưa đăng nhập";
+
+    document.getElementById("loginBtn").style.display = "block";
+    document.getElementById("logoutBtn").style.display = "none";
+
+    document.getElementById("userInfo").style.display = "none";
 }
 
 function loginDiscord() {
@@ -1636,7 +1652,8 @@ window.onload = () => {
 };
 function logout(){
     localStorage.removeItem("discord_token");
-    location.reload();
+    discordUser = null;
+    updateLoggedOutUI();
 }
 </script>
 
@@ -1762,11 +1779,6 @@ function spawnDolphin(){
 
 /* rơi ít thôi */
 setInterval(spawnDolphin,500);
-<div class="nav-tools">
-  <div class="tools-btn">
-    🧰 <span>Công cụ</span>
-  </div>
-</div>
 </script>
 <script>
 async function loadTop() {
@@ -1828,60 +1840,65 @@ async function loadTop() {
 }
 
 // Gọi hàm khi trang web tải xong
-window.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", () => {
+    checkLogin();
     loadTop();
+    loadStats();
+
+    setInterval(loadStats, 10000);
+    setInterval(loadTop, 15000);
+
+    const box = document.querySelector(".account-box");
+    if(box) box.classList.add("closed");
 });
-</script>
-<script>
-app.get("/stats", async (req,res)=>{
-
-try{
-
-const guild = client.guilds.cache.get(process.env.GUILD_ID);
-
-if(!guild) return res.json({total:0,online:0});
-
-const total = guild.memberCount;
-
-const online = guild.members.cache.filter(m =>
-m.presence && ["online","idle","dnd"].includes(m.presence.status)
-).size;
-
-res.json({
-total: total,
-online: online
-});
-
-}catch(err){
-console.error(err);
-res.json({total:0,online:0});
-}
-
-});
-
-loadStats();
-setInterval(loadStats,10000);
 </script>
 <script>
 async function loadStats(){
+    try{
+        const res = await fetch("https://senselessfishclanontop-1.onrender.com/stats");
+        const data = await res.json();
 
-const res = await fetch("https://senselessfishclanontop-1.onrender.com/stats");
-const data = await res.json();
+const box = document.getElementById("statsBox");
 
-document.getElementById("statsBox").innerHTML =
-`👥 Total: ${data.total}<br>🟢 Online: ${data.online}`;
+const current = parseInt(box.dataset.total) || 0;
 
+animateValue(box, current, data.total || 0, data.online || 0, 500);
+// lưu lại giá trị cũ
+box.dataset.total = data.total || 0;
+
+    }catch(err){
+        console.error("Lỗi load stats:", err);
+    }
+}
+function animateValue(element, start, end, online, duration) {
+    let startTime = null;
+
+    function animation(currentTime) {
+        if (!startTime) startTime = currentTime;
+        const progress = currentTime - startTime;
+        const value = Math.floor(start + (end - start) * (progress / duration));
+
+        element.innerHTML = `👥 Total: ${value}<br>🟢 Online: ${online}`;
+
+        if (progress < duration) {
+            requestAnimationFrame(animation);
+        }
+    }
+
+    requestAnimationFrame(animation);
 }
 
+// load lần đầu
 loadStats();
-setInterval(loadStats,10000);
-</script>
-<script>function toggleAccount(){
 
-const box = document.querySelector(".account-box");
+// auto update mỗi 10s
+setInterval(loadStats, 10000);
 
-box.classList.toggle("closed");
 
+// ===== TOGGLE ACCOUNT =====
+function toggleAccount(){
+    const box = document.querySelector(".account-box");
+    box.classList.toggle("closed");
 }
 </script>
 <script>
@@ -1916,6 +1933,69 @@ document.addEventListener("click", function(e){
     document.getElementById("toolsArrow").style.transform = "rotate(0deg)";
   }
 });
+</script>
+<script>
+async function registerStage(){
+const btn = document.querySelector(".btn-register");
+
+btn.disabled = true;
+btn.innerText = "Đang gửi...";
+    const token = localStorage.getItem("discord_token");
+
+    if(!token || !discordUser){
+        alert("Bạn cần đăng nhập Discord trước!");
+        btn.disabled = false;
+        btn.innerText = "Đăng ký thi đấu";
+        return;
+    }
+
+    const robloxId = document.getElementById("robloxId").value.trim();
+    const stage = document.getElementById("stage").value;
+
+    if(!robloxId || !stage){
+        alert("Vui lòng nhập đầy đủ thông tin!");
+        btn.disabled = false;
+        btn.innerText = "Đăng ký thi đấu";
+        return;
+    }
+
+    try{
+const res = await fetch("https://senselessfishclanontop-1.onrender.com/register", {
+    method:"POST",
+    headers:{
+        "Content-Type":"application/json"
+    },
+    body: JSON.stringify({
+        discordId: discordUser.id,
+        discordName: discordUser.username,
+        robloxId,
+        stage
+    })
+});
+        const data = await res.json();
+
+if(data.success){
+    alert("Đăng ký thành công!");
+
+    document.getElementById("robloxId").value = "";
+    document.getElementById("stage").value = "";
+
+    loadStats(); // 🔥
+    loadTop();   // 🔥
+
+}else{
+            alert(data.message || "Lỗi!");
+        }
+
+    }catch(err){
+        console.error(err);
+        alert("Lỗi server!");
+    }finally{
+    // ✅ THÊM Ở ĐÂY
+    btn.disabled = false;
+    btn.innerText = "Đăng ký thi đấu";
+    }
+}
 </script>
 </body>
 </html>
