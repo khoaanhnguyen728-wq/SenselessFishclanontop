@@ -1557,16 +1557,6 @@ const members = [
 ];
 
 const box = document.getElementById("rank-list");
-members.forEach(m=>{
-  box.innerHTML+=`
-    <div class="rank-row" onclick="window.open('https://www.roblox.com/users/${m.userId}/profile')">
-      <div class="rank-avatar"
-        style="background-image:url('https://www.roblox.com/headshot-thumbnail/image?userId=${m.userId}&width=150&height=150&format=png')"></div>
-      <div class="rank-pos">#${m.rank}</div>
-      <div class="rank-name">${m.name}</div>
-      <div>${m.stage}</div>
-    </div>`;
-});
 </script> 
 
 <div id="discordJoin" onclick="window.open('https://discord.gg/senselessfish')">
@@ -1927,10 +1917,11 @@ document.addEventListener("click", function(e){
 </script>
 <script>
 async function registerStage(){
-const btn = document.querySelector(".btn-register");
+    const btn = document.querySelector(".btn-register");
 
-btn.disabled = true;
-btn.innerText = "Đang gửi...";
+    btn.disabled = true;
+    btn.innerText = "Đang gửi...";
+
     const token = localStorage.getItem("discord_token");
 
     if(!token || !discordUser){
@@ -1951,30 +1942,54 @@ btn.innerText = "Đang gửi...";
     }
 
     try{
-const res = await fetch("https://senselessfishclanontop-1.onrender.com/register", {
-    method:"POST",
-    headers:{
-        "Content-Type":"application/json"
-    },
-    body: JSON.stringify({
-        discordId: discordUser.id,
-        discordName: discordUser.username,
-        robloxId,
-        stage
-    })
-});
+        const res = await fetch("https://senselessfishclanontop-1.onrender.com/register", {
+            method:"POST",
+            headers:{
+                "Content-Type":"application/json"
+            },
+            body: JSON.stringify({
+                discord: discordUser.username,
+                robloxUsername: robloxId
+            })
+        });
+
         const data = await res.json();
+        console.log("REGISTER RESPONSE:", data);
 
-if(data.success){
-    alert("Đăng ký thành công!");
+        if(data.success){
+            alert("Đăng ký thành công!");
 
-    document.getElementById("robloxId").value = "";
-    document.getElementById("stage").value = "";
+            // 🔥 HIỆU ỨNG TOP 1
+            const top1 = document.querySelector(".top-1");
+            if(top1){
+                top1.style.boxShadow = "0 0 50px gold";
 
-    loadStats(); // 🔥
-    loadTop();   // 🔥
+                setTimeout(()=>{
+                    top1.style.boxShadow = "";
+                },1500);
+            }
 
-}else{
+            // 🔥 POPUP +1
+            const popup = document.createElement("div");
+            popup.innerText = "+1";
+            popup.style.position = "fixed";
+            popup.style.top = "20px";
+            popup.style.left = "20px";
+            popup.style.color = "#00ffcc";
+            popup.style.fontSize = "20px";
+            popup.style.animation = "float 1s ease";
+
+            document.body.appendChild(popup);
+            setTimeout(()=>popup.remove(),1000);
+
+            // reset
+            document.getElementById("robloxId").value = "";
+            document.getElementById("stage").value = "";
+
+            loadStats();
+            loadTop();
+
+        }else{
             alert(data.message || "Lỗi!");
         }
 
@@ -1982,28 +1997,10 @@ if(data.success){
         console.error(err);
         alert("Lỗi server!");
     }finally{
-    // ✅ THÊM Ở ĐÂY
-    btn.disabled = false;
-    btn.innerText = "Đăng ký thi đấu";
+        btn.disabled = false;
+        btn.innerText = "Đăng ký thi đấu";
     }
 }
-document.querySelector(".top-1").style.boxShadow = "0 0 50px gold";
-
-setTimeout(()=>{
-  document.querySelector(".top-1").style.boxShadow = "";
-},1500);
-const popup = document.createElement("div");
-popup.innerText = "+1";
-popup.style.position = "fixed";
-popup.style.top = "20px";
-popup.style.left = "20px";
-popup.style.color = "#00ffcc";
-popup.style.fontSize = "20px";
-popup.style.animation = "float 1s ease";
-
-document.body.appendChild(popup);
-
-setTimeout(()=>popup.remove(),1000);
 </script>
 </body>
 </html>
