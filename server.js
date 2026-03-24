@@ -557,6 +557,38 @@ if (interaction.isStringSelectMenu()) {
 });
 
 /* ================= WEB API ================= */
+/* ================= STAFF + ROLE COLOR ================= */
+app.get("/staff-realtime", async (req, res) => {
+    try {
+        const guild = await client.guilds.fetch(process.env.GUILD_ID);
+        await guild.members.fetch(); // fetch tất cả member
+
+        const roleIds = Object.values(ROLE_MAP);
+
+        const staffMembers = guild.members.cache
+            .filter(member => member.roles.cache.some(role => roleIds.includes(role.id)))
+            .map(member => {
+                const memberRole = Object.keys(ROLE_MAP).find(r => member.roles.cache.has(ROLE_MAP[r]));
+                const roleObj = guild.roles.cache.get(ROLE_MAP[memberRole]); // lấy role Discord object
+                const color = roleObj ? "#" + roleObj.color.toString(16).padStart(6,"0") : "#55ff8f"; // fallback màu
+
+                return {
+                    id: member.user.id,
+                    username: member.user.username,
+                    avatar: member.user.displayAvatarURL({ dynamic: true }),
+                    role: memberRole || "Member",
+                    color,
+                    profile: `https://discord.com/users/${member.user.id}`
+                };
+            });
+
+        res.json(staffMembers);
+
+    } catch (err) {
+        console.error("STAFF REALTIME ERROR:", err);
+        res.status(500).json({ success:false, message: err.message });
+    }
+});
 app.get("/mainers", (req, res) => {
     res.json(mainers);
 });
