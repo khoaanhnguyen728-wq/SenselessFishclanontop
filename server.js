@@ -160,7 +160,7 @@ if (commandName === "blacklist") {
     });
     saveBlacklist();
 
-    // Embed trả về ngay
+    // Embed trả interaction ngay
     const embed = new EmbedBuilder()
         .setTitle("🚫 BLACKLIST + BAN")
         .setColor("#ff0000")
@@ -170,15 +170,15 @@ if (commandName === "blacklist") {
         )
         .setTimestamp();
 
-    // Trả interaction **ngay lập tức**
+    // 🔥 Trả interaction NGAY
     interaction.reply({ embeds: [embed] });
 
-    // ➤ Ban async, không await interaction
+    // ➤ Ban async, không await
     interaction.guild.members.ban(user.id, { reason: `Blacklist: ${reason}` })
-        .then(() => console.log("Đã auto-ban:", user.tag))
+        .then(() => console.log(`Đã ban ${user.tag}`))
         .catch(err => console.log("Ban lỗi:", err.message));
 
-    // ➤ Log async
+    // ➤ Gửi log async
     const logChannel = interaction.guild.channels.cache.get(process.env.BLACKLIST_LOG_CHANNEL);
     if (logChannel && logChannel.permissionsFor(logChannel.guild.members.me).has("SendMessages")) {
         const logEmbed = new EmbedBuilder()
@@ -192,10 +192,9 @@ if (commandName === "blacklist") {
             )
             .setFooter({ text: `ID: ${user.id}` })
             .setTimestamp();
+
         logChannel.send({ embeds: [logEmbed] }).catch(console.log);
     }
-
-    return interaction.editReply({ embeds: [embed] });
 }
 
 if (commandName === "unblacklist") {
