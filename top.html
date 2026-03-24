@@ -1122,7 +1122,7 @@ body{
 
 .top-card {
     width: 200px;
-    border-radius: 20px;
+    border-radius: 25px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1842,8 +1842,17 @@ document.addEventListener("DOMContentLoaded", () => {
     loadTop();
     loadStats();
 
-    setInterval(loadStats, 10000);
-    setInterval(loadTop, 15000);
+setInterval(()=>{
+  if(document.visibilityState === "visible"){
+    loadStats();
+  }
+},10000);
+
+setInterval(()=>{
+  if(document.visibilityState === "visible"){
+    loadTop();
+  }
+},15000);
 
     const box = document.querySelector(".account-box");
     if(box) box.classList.add("closed");
@@ -1857,7 +1866,7 @@ async function loadStats(){
 
 const box = document.getElementById("statsBox");
 
-const current = parseInt(box.dataset.total) || 0;
+const current = parseInt(box.dataset.total || 0);
 
 animateValue(box, current, data.total || 0, data.online || 0, 500);
 // lưu lại giá trị cũ
@@ -1890,14 +1899,6 @@ function toggleAccount(){
     const box = document.querySelector(".account-box");
     box.classList.toggle("closed");
 }
-</script>
-<script>
-window.addEventListener("DOMContentLoaded", () => {
-  const box = document.querySelector(".account-box");
-  if(box){
-    box.classList.add("closed");
-  }
-});
 </script>
 <script>
 function toggleTools(){
@@ -1986,6 +1987,23 @@ if(data.success){
     btn.innerText = "Đăng ký thi đấu";
     }
 }
+document.querySelector(".top-1").style.boxShadow = "0 0 50px gold";
+
+setTimeout(()=>{
+  document.querySelector(".top-1").style.boxShadow = "";
+},1500);
+const popup = document.createElement("div");
+popup.innerText = "+1";
+popup.style.position = "fixed";
+popup.style.top = "20px";
+popup.style.left = "20px";
+popup.style.color = "#00ffcc";
+popup.style.fontSize = "20px";
+popup.style.animation = "float 1s ease";
+
+document.body.appendChild(popup);
+
+setTimeout(()=>popup.remove(),1000);
 </script>
 </body>
 </html>
