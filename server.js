@@ -459,16 +459,41 @@ app.post("/register", async (req, res) => {
     try {
         const { discord, robloxUsername } = req.body;
 
-        const channel = await client.channels.fetch(process.env.CHANNEL_ID);
+        // ❗ Check input
+        if (!discord) {
+            return res.status(400).json({ error: "Thiếu Discord" });
+        }
 
+        // ❗ Check bot ready
+        if (!client.isReady()) {
+            return res.status(500).json({ error: "Bot chưa sẵn sàng" });
+        }
+
+        // ❗ Fetch channel
+        const channel = await client.channels.fetch(process.env.CHANNEL_ID).catch(() => null);
+
+        if (!channel) {
+            return res.status(500).json({ error: "Không tìm thấy channel" });
+        }
+
+        // ❗ Check quyền bot
+        if (!channel.permissionsFor(channel.guild.members.me).has("SendMessages")) {
+            return res.status(500).json({ error: "Bot không có quyền gửi tin nhắn" });
+        }
+
+        // ✅ Embed đẹp hơn
         const embed = new EmbedBuilder()
             .setTitle("📝 ĐĂNG KÝ THI ĐẤU")
-            .setColor(0x00ff00)
+            .setColor("#00eaff")
+            .setThumbnail(client.user.displayAvatarURL())
             .addFields(
-                { name: "Discord", value: discord },
-                { name: "Roblox", value: robloxUsername || "N/A" }
-            );
+                { name: " Discord", value: discord, inline: true },
+                { name: " Roblox", value: robloxUsername || "N/A", inline: true }
+            )
+            .setFooter({ text: "Senseless Fish Clan", iconURL: client.user.displayAvatarURL() })
+            .setTimestamp();
 
+        // ✅ Menu
         const menu = new StringSelectMenuBuilder()
             .setCustomId("select_stage")
             .setPlaceholder("Chọn Stage")
@@ -481,16 +506,18 @@ app.post("/register", async (req, res) => {
 
         const row = new ActionRowBuilder().addComponents(menu);
 
+        // ✅ Send
         await channel.send({
             embeds: [embed],
             components: [row]
         });
 
-        res.json({ success: true });
+        // ✅ Response OK
+        return res.json({ success: true });
 
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Register error" });
+        console.error("REGISTER ERROR:", err); // 🔥 log chi tiết
+        return res.status(500).json({ error: err.message });
     }
 });
 app.get("/", (req, res) => res.send("API Running"));
