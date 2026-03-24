@@ -1854,13 +1854,18 @@ async function loadStats(){
         const res = await fetch("https://senselessfishclanontop-1.onrender.com/stats?t=" + Date.now());
         const data = await res.json();
 
-const box = document.getElementById("statsBox");
+        console.log("STATS:", data); // 👈 DEBUG
 
-const current = parseInt(box.dataset.total || 0);
+        const box = document.getElementById("statsBox");
 
-animateValue(box, current, data.total || 0, data.online || 0, 500);
-// lưu lại giá trị cũ
-box.dataset.total = data.total || 0;
+        const current = parseInt(box.dataset.total || 0);
+
+        const total = Number(data.total) || 0;
+        const online = Number(data.online) || 0;
+
+        animateValue(box, current, total, online, 500);
+
+        box.dataset.total = total;
 
     }catch(err){
         console.error("Lỗi load stats:", err);
@@ -1871,12 +1876,15 @@ function animateValue(element, start, end, online, duration) {
 
     function animation(currentTime) {
         if (!startTime) startTime = currentTime;
+
         const progress = currentTime - startTime;
-        const value = Math.floor(start + (end - start) * (progress / duration));
+        const percent = Math.min(progress / duration, 1);
+
+        const value = Math.floor(start + (end - start) * percent);
 
         element.innerHTML = `👥 Total: ${value}<br>🟢 Online: ${online}`;
 
-        if (progress < duration) {
+        if (percent < 1) {
             requestAnimationFrame(animation);
         }
     }
