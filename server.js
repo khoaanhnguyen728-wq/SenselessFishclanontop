@@ -109,13 +109,35 @@ async function updateLeaderboard() {
         if (JSON.stringify(data) === lastTopData) return;
         lastTopData = JSON.stringify(data);
 
-        let text = `━━━━━━━━ 👑 TOP 1 👑 ━━━━━━━━\n⭐ **${data[1]?.id ? `<@${data[1].id}>` : "Vacant"}**\n━━━━━━━━━━━━━━━━━━━━\n\n`;
-        text += `🥈 **TOP 2** • ${data[2]?.id ? `<@${data[2].id}>` : "Vacant"}\n`;
-        text += `🥉 **TOP 3** • ${data[3]?.id ? `<@${data[3].id}>` : "Vacant"}\n`;
-        text += `━━━━━━━━━━━━━━━━━━━━\n`;
+        let text = "";
 
-        for (let i = 4; i <= 20; i++) {
-            text += `⁠⊱ **TOP ${i}** • ${data[i]?.id ? `<@${data[i].id}>` : "Vacant"}\n`;
+        for (let i = 1; i <= 20; i++) {
+            const member = data[i];
+
+            let medal, displayName;
+
+            if(i === 1){
+                medal = "👑"; // TOP 1 crown
+                displayName = `***${member?.id ? `<@${member.id}>` : "Vacant"}***`;
+            } else if(i === 2){
+                medal = "➠";
+                displayName = `**${member?.id ? `<@${member.id}>` : "Vacant"}**`;
+            } else if(i === 3){
+                medal = "➠";
+                displayName = `**${member?.id ? `<@${member.id}>` : "Vacant"}**`;
+            } else {
+
+            // Nếu không có member thì hiển thị Vacant
+            displayName = member?.id ? `<@${member.id}>` : "Vacant";
+
+            // In đậm TOP 1, TOP 2, TOP 3
+            if(i === 1){
+                displayName = `***${displayName}***`;
+            } else if(i === 2 || i === 3){
+                displayName = `**${displayName}**`;
+            }
+
+            text += `${medal} TOP ${i} • ${displayName}\n\n`;
         }
 
         const embed = new EmbedBuilder()
@@ -127,9 +149,11 @@ async function updateLeaderboard() {
         const channel = await client.channels.fetch(TOP_CHANNEL);
         const message = await channel.messages.fetch(TOP_MESSAGE);
         await message.edit({ embeds: [embed] });
-    } catch (err) { console.log("Lỗi update leaderboard:", err.message); }
-}
 
+    } catch (err) {
+        console.log("Lỗi update leaderboard:", err.message);
+    }
+}
 client.on("interactionCreate", async interaction => {
     try {
         if (interaction.isChatInputCommand()) {
