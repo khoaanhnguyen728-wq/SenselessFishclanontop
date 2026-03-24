@@ -142,19 +142,19 @@ if (commandName === "blacklist") {
     const reason = options.getString("reason") || "Không có";
     const member = interaction.member;
 
-    // ❗ Check quyền
+    // Check quyền
     if (!canBlacklist(member)) {
         return interaction.editReply("❌ Bạn không có quyền blacklist");
     }
 
     const guild = interaction.guild;
 
-    // ❌ Nếu đã bị blacklist
+    // Nếu đã blacklist
     if (blacklist.some(b => b.id === user.id)) {
         return interaction.editReply("⚠️ User đã bị blacklist trước đó");
     }
 
-    // 📌 Lưu JSON
+    // Lưu JSON
     blacklist.push({
         id: user.id,
         name: user.username,
@@ -163,15 +163,7 @@ if (commandName === "blacklist") {
     });
     saveBlacklist();
 
-    try {
-        // 🔨 Ban (kể cả không trong server vẫn ban được)
-        await guild.members.ban(user.id, { reason: `Blacklist: ${reason}` });
-    } catch (err) {
-        console.log("Ban lỗi:", err.message);
-        return interaction.editReply("❌ Không thể ban user (role cao hơn bot hoặc thiếu quyền)");
-    }
-
-    // 📦 Embed chính
+    // Embed trả về ngay
     const embed = new EmbedBuilder()
         .setTitle("🚫 BLACKLIST + BAN")
         .setColor("#ff0000")
@@ -181,9 +173,13 @@ if (commandName === "blacklist") {
         )
         .setTimestamp();
 
-    // 📜 LOG
-    const logChannel = interaction.guild.channels.cache.get(process.env.BLACKLIST_LOG_CHANNEL);
+    await interaction.editReply({ embeds: [embed] });
 
+    // Ban async (không await)
+    guild.members.ban(user.id, { reason: `Blacklist: ${reason}` }).catch(err => console.log("Ban lỗi:", err.message));
+
+    // Gửi log async
+    const logChannel = interaction.guild.channels.cache.get(process.env.BLACKLIST_LOG_CHANNEL);
     if (logChannel) {
         const logEmbed = new EmbedBuilder()
             .setTitle("🚫 BLACKLIST LOG")
@@ -196,8 +192,7 @@ if (commandName === "blacklist") {
             )
             .setFooter({ text: `ID: ${user.id}` })
             .setTimestamp();
-
-        logChannel.send({ embeds: [logEmbed] });
+        logChannel.send({ embeds: [logEmbed] }).catch(console.log);
     }
 
     return interaction.editReply({ embeds: [embed] });
@@ -209,38 +204,34 @@ if (commandName === "unblacklist") {
     const user = options.getUser("user");
     const member = interaction.member;
 
-    // ❗ Check quyền
     if (!canBlacklist(member)) {
         return interaction.editReply("❌ Bạn không có quyền unblacklist");
     }
 
     const guild = interaction.guild;
 
-    // ❌ Không có trong blacklist
     if (!blacklist.some(b => b.id === user.id)) {
         return interaction.editReply("⚠️ User không nằm trong blacklist");
     }
 
-    // 🧹 Xóa JSON
+    // Xóa JSON
     blacklist = blacklist.filter(b => b.id !== user.id);
     saveBlacklist();
 
-    try {
-        await guild.members.unban(user.id);
-    } catch (err) {
-        console.log("Unban lỗi:", err.message);
-    }
-
-    // 📦 Embed
+    // Embed trả về ngay
     const embed = new EmbedBuilder()
         .setTitle("✅ UNBLACKLIST")
         .setColor("#00ffcc")
         .addFields({ name: "User", value: `<@${user.id}>` })
         .setTimestamp();
 
-    // 📜 LOG
-    const logChannel = interaction.guild.channels.cache.get(process.env.BLACKLIST_LOG_CHANNEL);
+    await interaction.editReply({ embeds: [embed] });
 
+    // Unban async
+    guild.members.unban(user.id).catch(err => console.log("Unban lỗi:", err.message));
+
+    // Log async
+    const logChannel = interaction.guild.channels.cache.get(process.env.BLACKLIST_LOG_CHANNEL);
     if (logChannel) {
         const logEmbed = new EmbedBuilder()
             .setTitle("✅ UNBLACKLIST LOG")
@@ -252,8 +243,7 @@ if (commandName === "unblacklist") {
             )
             .setFooter({ text: `ID: ${user.id}` })
             .setTimestamp();
-
-        logChannel.send({ embeds: [logEmbed] });
+        logChannel.send({ embeds: [logEmbed] }).catch(console.log);
     }
 
     return interaction.editReply({ embeds: [embed] });
