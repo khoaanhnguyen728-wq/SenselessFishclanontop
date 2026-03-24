@@ -19,15 +19,6 @@ body{
     50%{background-position:100% 50%}
     100%{background-position:0% 50%}
 }
-#loginBtn:hover{
-  background:#00c3ff;
-  box-shadow:0 0 12px #00eaff;
-}
-
-#logoutBtn:hover{
-  background:#ff0000;
-  box-shadow:0 0 15px red;
-}
 
 /* BUTTON */
 .btn{
@@ -94,43 +85,13 @@ body{
 .manager{--c:#4dd0ff}
 .mod{--c:#55ff8f}
 
-/* ===== GLOW ROLE ĐỘNG ===== */
-.founder .avatar{
-    animation:glowFounder 2.5s infinite alternate;
-}
-.owner .avatar{
-    animation:glowOwner 2.5s infinite alternate;
-}
-.admin .avatar{
-    animation:glowAdmin 2.5s infinite alternate;
-}
-.manager .avatar{
-    animation:glowManager 2.5s infinite alternate;
-}
-.mod .avatar{
-    animation:glowMod 2.5s infinite alternate;
+.staff-card .avatar {
+    animation: glowGeneric 2.5s infinite alternate;
+    border: 4px solid var(--c);
 }
 
-/* KEYFRAMES */
-@keyframes glowFounder{
-    from{box-shadow:0 0 12px var(--c);}
-    to{box-shadow:0 0 30px var(--c);}
-}
-@keyframes glowOwner{
-    from{box-shadow:0 0 12px var(--c);}
-    to{box-shadow:0 0 30px var(--c);}
-}
-@keyframes glowAdmin{
-    from{box-shadow:0 0 12px var(--c);}
-    to{box-shadow:0 0 30px var(--c);}
-}
-@keyframes glowManager{
-    from{box-shadow:0 0 12px var(--c);}
-    to{box-shadow:0 0 30px var(--c);}
-}
-@keyframes glowMod{
-    from{box-shadow:0 0 12px var(--c);}
-    to{box-shadow:0 0 30px var(--c);}
+.staff-card .role {
+    color: var(--c);
 }
 
 /* ROLE TEXT */
@@ -1005,11 +966,13 @@ body{
 <div id="accountContent">
 
   <!-- USER INFO -->
-  <div id="userInfo" style="display:none; text-align:center;">
-    <img id="userAvatar" 
-         style="width:60px;height:60px;border-radius:50%;margin-bottom:8px;">
-    <div id="userName" style="font-weight:bold;"></div>
-  </div>
+<div id="userInfo" style="display:none; text-align:center;">
+  <img id="userAvatar" 
+       style="width:60px;height:60px;border-radius:50%;margin-bottom:8px;">
+  <div id="userName" style="font-weight:bold;"></div>
+  <!-- ADD THIS -->
+  <div id="userRoleDisplay" style="font-weight:bold;margin-top:4px;"></div>
+</div>
 
   <!-- STATUS -->
   <div id="loginStatus">🔴 Chưa đăng nhập</div>
@@ -1086,35 +1049,37 @@ const grid = document.getElementById("staffGrid");
 
 try{
 
-const res = await fetch("https://senselessfishclanontop-1.onrender.com/staff?" + Date.now());
+const res = await fetch("https://senselessfishclanontop-1.onrender.com/staff-realtime?" + Date.now());
 const data = await res.json();
 
 grid.innerHTML="";
 
 data.forEach(s=>{
 
-let roleClass="mod";
-
-if(s.role.includes("Founder")) roleClass="founder";
-else if(s.role.includes("Owner")) roleClass="owner";
-else if(s.role.includes("Administrator")) roleClass="admin";
-else if(s.role.includes("Manager")) roleClass="manager";
+let roleClass = "mod";
+if(s.role.includes("Founder")) roleClass = "founder";
+else if(s.role.includes("Owner")) roleClass = "owner";
+else if(s.role.includes("Administrator")) roleClass = "admin";
+else if(s.role.includes("Manager")) roleClass = "manager";
+else if(s.role.includes("DEV")) roleClass = "dev";
+else if(s.role.includes("JUNIOR_DEV")) roleClass = "junior_dev";
+else if(s.role.includes("SENIOR_DEV")) roleClass = "senior_dev";
+else if(s.role.includes("TRAIN")) roleClass = "train";
+else if(s.role.includes("TRYOUT")) roleClass = "tryout";
 
 const card = document.createElement("div");
 card.className = `staff-card ${roleClass}`;
 
+// set color từ API
+if(s.color) {
+    card.style.setProperty("--c", s.color);
+}
+
 card.innerHTML = `
 <div class="avatar" style="background-image:url('${s.avatar}')"></div>
-
 <div class="role">${s.role}</div>
-
 <div class="name">@${s.username}</div>
-
-<a class="view-dis"
-href="https://discord.com/users/${s.id}"
-target="_blank">
-View Discord
-</a>
+<a class="view-dis" href="https://discord.com/users/${s.id}" target="_blank">View Discord</a>
 `;
 
 grid.appendChild(card);
@@ -1127,7 +1092,8 @@ console.log("Staff load lỗi",err);
 
 }
 
-loadStaff();
+loadStaff(); // load lần đầu
+setInterval(loadStaff, 10000); // load lại mỗi 10s
 </script>
 <script>
 /* TOOLS MENU */
