@@ -207,9 +207,10 @@ if (commandName === "blacklist") {
 
 /* ===== UNBLACKLIST ===== */
 if (commandName === "unblacklist") {
+    await interaction.deferReply({ ephemeral: true });
     const user = options.getUser("user");
 
-    if (!hasPermission(interaction.member)) {
+    if (!canBlacklist(interaction.member)) {
         return interaction.editReply({ content: "❌ Bạn không có quyền unblacklist." });
     }
 
@@ -217,19 +218,47 @@ if (commandName === "unblacklist") {
         return interaction.editReply({ content: "⚠️ Người dùng không nằm trong blacklist." });
     }
 
+    // Xóa khỏi cache
     blacklist = blacklist.filter(b => b.id !== user.id);
-    saveBlacklist();
+
+    try {
+        await fs.promises.writeFile("./blacklist.json", JSON.stringify(blacklist, null, 2));
+    } catch(err) {
+        console.error("Lỗi ghi blacklist.json:", err.message);
+    }
+
+    // Thử unban trực tiếp bằng user ID
+    try {
+        await interaction.guild.members.unban(user.id);
+    } catch(err) {
+        console.log("Unban lỗi (có thể user chưa bị ban hoặc đã rời):", err.message);
+    }
 
     const embed = new EmbedBuilder()
         .setTitle("✅ UNBLACKLIST THÀNH CÔNG")
         .setColor("#00ffcc")
-        .addFields({ name: "User", value: `<@${user.id}>` })
+        .addFields(
+            { name: "User", value: `${user.tag}`, inline: true }
+        )
         .setTimestamp();
 
-    await interaction.editReply({ embeds: [embed] });
+    // Gửi log
+    const logChannel = interaction.guild.channels.cache.get(process.env.BLACKLIST_LOG_CHANNEL);
+    if (logChannel) {
+        const logEmbed = new EmbedBuilder()
+            .setTitle("✅ UNBLACKLIST LOG")
+            .setColor("#00ffcc")
+            .setThumbnail(user.displayAvatarURL({ dynamic: true }))
+            .addFields(
+                { name: "User", value: `${user.tag}`, inline: true },
+                { name: "Người thực hiện", value: `<@${interaction.user.id}>`, inline: true }
+            )
+            .setFooter({ text: `ID: ${user.id}` })
+            .setTimestamp();
+        logChannel.send({ embeds: [logEmbed] }).catch(console.log);
+    }
 
-    // Tác vụ ngầm
-    interaction.guild.members.unban(user.id).catch(() => null);
+    return interaction.editReply({ embeds: [embed] });
 }
 
             if (commandName === "bxh") {
