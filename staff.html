@@ -1043,57 +1043,81 @@ setInterval(spawnDolphin, 500);
 
 </div>
 <script>
-async function loadStaff(){
+async function loadStaff() {
+    const grid = document.getElementById("staffGrid");
 
-const grid = document.getElementById("staffGrid");
+    try {
+        const res = await fetch("https://senselessfishclanontop-1.onrender.com/staff-realtime?" + Date.now());
+        let data = await res.json();
 
-try{
+        // ===== map quyền & sort =====
+        const rolePriority = {
+            "Tryout host": 2,
+            "Mod": 3,
+            "Training host": 4,
+            "Junior Developer": 5,
+            "Manager": 6,
+            "Referee": 6,
+            "Experienced Referee": 7,
+            "Developer": 7,
+            "Senior Developer": 8,
+            "Admin": 9,
+            "Owner": 9,
+            "Founder": 10,
+            "Rank Management": 5
+        };
 
-const res = await fetch("https://senselessfishclanontop-1.onrender.com/staff-realtime?" + Date.now());
-const data = await res.json();
+        data.sort((a, b) => {
+            const aRole = Object.keys(rolePriority).find(r => a.role.includes(r)) || "MOD";
+            const bRole = Object.keys(rolePriority).find(r => b.role.includes(r)) || "MOD";
+            return rolePriority[bRole] - rolePriority[aRole]; // lớn → nhỏ
+        });
 
-grid.innerHTML="";
+        // ===== update từng card, không xóa grid =====
+        const existingCards = {};
+        grid.querySelectorAll(".staff-card").forEach(c => {
+            existingCards[c.dataset.id] = c;
+        });
 
-data.forEach(s=>{
+        data.forEach(s => {
+            let card = existingCards[s.id];
 
-let roleClass = "mod";
-if(s.role.includes("Founder")) roleClass = "founder";
-else if(s.role.includes("Owner")) roleClass = "owner";
-else if(s.role.includes("Administrator")) roleClass = "admin";
-else if(s.role.includes("Manager")) roleClass = "manager";
-else if(s.role.includes("DEV")) roleClass = "dev";
-else if(s.role.includes("JUNIOR_DEV")) roleClass = "junior_dev";
-else if(s.role.includes("SENIOR_DEV")) roleClass = "senior_dev";
-else if(s.role.includes("TRAIN")) roleClass = "train";
-else if(s.role.includes("TRYOUT")) roleClass = "tryout";
+            if (!card) {
+                card = document.createElement("div");
+                card.dataset.id = s.id;
+                grid.appendChild(card);
+            }
 
-const card = document.createElement("div");
-card.className = `staff-card ${roleClass}`;
+            let roleClass = "mod";
+            if(s.role.includes("Founder")) roleClass = "founder";
+            else if(s.role.includes("Owner")) roleClass = "owner";
+            else if(s.role.includes("Administrator")) roleClass = "admin";
+            else if(s.role.includes("Manager")) roleClass = "manager";
+            else if(s.role.includes("DEV")) roleClass = "dev";
+            else if(s.role.includes("JUNIOR_DEV")) roleClass = "junior_dev";
+            else if(s.role.includes("SENIOR_DEV")) roleClass = "senior_dev";
+            else if(s.role.includes("TRAIN")) roleClass = "train";
+            else if(s.role.includes("TRYOUT")) roleClass = "tryout";
 
-// set color từ API
-if(s.color) {
-    card.style.setProperty("--c", s.color);
+            card.className = `staff-card ${roleClass}`;
+
+            if(s.color) card.style.setProperty("--c", s.color);
+
+            card.innerHTML = `
+                <div class="avatar" style="background-image:url('${s.avatar}')"></div>
+                <div class="role">${s.role}</div>
+                <div class="name">@${s.username}</div>
+                <a class="view-dis" href="https://discord.com/users/${s.id}" target="_blank">View Discord</a>
+            `;
+        });
+
+    } catch(err) {
+        console.log("Staff load lỗi", err);
+    }
 }
 
-card.innerHTML = `
-<div class="avatar" style="background-image:url('${s.avatar}')"></div>
-<div class="role">${s.role}</div>
-<div class="name">@${s.username}</div>
-<a class="view-dis" href="https://discord.com/users/${s.id}" target="_blank">View Discord</a>
-`;
-
-grid.appendChild(card);
-
-});
-
-}catch(err){
-console.log("Staff load lỗi",err);
-}
-
-}
-
-loadStaff(); // load lần đầu
-setInterval(loadStaff, 10000); // load lại mỗi 10s
+loadStaff();
+setInterval(loadStaff, 10000);
 </script>
 <script>
 /* TOOLS MENU */
