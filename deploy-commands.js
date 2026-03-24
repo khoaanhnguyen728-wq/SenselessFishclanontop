@@ -89,18 +89,14 @@ o.setName("permission")
 .setRequired(true)
 .addChoices(
 {name:"Founder",value:"Founder"},
-{name:"Leader",value:"Leader"},
 {name:"Senior Developer",value:"Senior Developer"},
-{name:"Senior Admin",value:"Senior Admin"},
 {name:"Developer",value:"Developer"},
 {name:"Admin",value:"Admin"},
 {name:"Junior Developer",value:"Junior Developer"},
-{name:"Junior Admin",value:"Junior Admin"},
 {name:"Mod",value:"Mod"},
 {name:"Rank Management",value:"Rank Management"},
 {name:"Experienced Referee",value:"Experienced Referee"},
 {name:"Referee",value:"Referee"},
-{name:"Junior Referee",value:"Junior Referee"},
 {name:"Tryout host",value:"Tryout host"},
 {name:"Training host",value:"Training host"},
 )),
