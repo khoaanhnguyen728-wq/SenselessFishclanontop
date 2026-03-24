@@ -135,23 +135,84 @@ client.on("interactionCreate", async interaction => {
         if (interaction.isChatInputCommand()) {
             const { commandName, options } = interaction;
 
-            if (commandName === "blacklist") {
-                await interaction.deferReply();
-                const user = options.getUser("user");
-                const reason = options.getString("reason") || "Không có";
-                blacklist = blacklist.filter(b => b.id !== user.id);
-                blacklist.push({ id: user.id, name: user.username, reason, time: new Date().toLocaleString("vi-VN") });
-                saveBlacklist();
-                const embed = new EmbedBuilder().setTitle("🚫 BLACKLIST").setColor("#ff0000").addFields({ name: "User", value: `<@${user.id}>` }, { name: "Lý do", value: reason });
-                return interaction.editReply({ embeds: [embed] });
-            }
+if (commandName === "blacklist") {
+    await interaction.deferReply();
 
-            if (commandName === "unblacklist") {
-                const user = options.getUser("user");
-                blacklist = blacklist.filter(b => b.id !== user.id);
-                saveBlacklist();
-                return interaction.reply(`✅ Đã gỡ blacklist **${user.username}**`);
-            }
+    const user = options.getUser("user");
+    const reason = options.getString("reason") || "Không có";
+
+    const member = interaction.member;
+    if (!hasPermission(member)) {
+        return interaction.editReply("❌ Bạn không có quyền");
+    }
+
+    const guild = interaction.guild;
+
+    // ❌ Nếu đã blacklist rồi thì bỏ qua
+    if (blacklist.some(b => b.id === user.id)) {
+        return interaction.editReply("⚠️ User đã bị blacklist trước đó");
+    }
+
+    // 📌 Lưu JSON
+    blacklist.push({
+        id: user.id,
+        name: user.username,
+        reason,
+        time: new Date().toLocaleString("vi-VN")
+    });
+    saveBlacklist();
+
+    try {
+        // 🔨 BAN USER
+        await guild.members.ban(user.id, { reason: `Blacklist: ${reason}` });
+    } catch (err) {
+        console.log("Ban lỗi:", err.message);
+        return interaction.editReply("❌ Không thể ban user (có thể role cao hơn bot)");
+    }
+
+    const embed = new EmbedBuilder()
+        .setTitle("🚫 BLACKLIST + BAN")
+        .setColor("#ff0000")
+        .addFields(
+            { name: "User", value: `<@${user.id}>` },
+            { name: "Lý do", value: reason }
+        )
+        .setTimestamp();
+
+    return interaction.editReply({ embeds: [embed] });
+}
+
+if (commandName === "unblacklist") {
+    await interaction.deferReply();
+
+    const user = options.getUser("user");
+
+    const member = interaction.member;
+    if (!hasPermission(member)) {
+        return interaction.editReply("❌ Bạn không có quyền");
+    }
+
+    const guild = interaction.guild;
+
+    // ❌ Nếu không có trong blacklist
+    if (!blacklist.some(b => b.id === user.id)) {
+        return interaction.editReply("⚠️ User không nằm trong blacklist");
+    }
+
+    // 🧹 Xóa khỏi JSON
+    blacklist = blacklist.filter(b => b.id !== user.id);
+    saveBlacklist();
+
+    try {
+        // 🔓 UNBAN
+        await guild.members.unban(user.id);
+    } catch (err) {
+        console.log("Unban lỗi:", err.message);
+        return interaction.editReply("❌ Không thể unban (có thể chưa bị ban)");
+    }
+
+    return interaction.editReply(`✅ Đã gỡ blacklist & unban **${user.username}**`);
+}
 
             if (commandName === "bxh") {
                 const sub = options.getSubcommand();
