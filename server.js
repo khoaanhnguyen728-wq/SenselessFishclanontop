@@ -146,27 +146,29 @@ function canBlacklist(member) {
 
 /* ===== BLACKLIST ===== */
 if (commandName === "blacklist") {
+    // Không dùng deferReply ở đây nữa vì đã gọi ở dòng 110
     const user = options.getUser("user");
     const reason = options.getString("reason") || "Không có";
 
-    if (!canBlacklist(interaction.member)) {
-        return interaction.reply({ content: "❌ Bạn không có quyền thực hiện lệnh này.", flags: 64 });
+    // Kiểm tra quyền (Sử dụng hàm hasPermission bạn đã viết)
+    if (!hasPermission(interaction.member)) {
+        return interaction.editReply({ content: "❌ Bạn không có quyền thực hiện lệnh này." });
     }
 
     if (blacklist.some(b => b.id === user.id)) {
-        return interaction.reply({ content: "⚠️ Người dùng đã nằm trong blacklist.", flags: 64 });
+        return interaction.editReply({ content: "⚠️ Người dùng đã nằm trong blacklist." });
     }
 
-    // Cập nhật cache JSON
-    const entry = {
+    // 1. Cập nhật dữ liệu ngay
+    blacklist.push({
         id: user.id,
         name: user.username,
         reason,
         time: new Date().toLocaleString("vi-VN")
-    };
-    blacklist.push(entry);
+    });
+    saveBlacklist();
 
-    // Embed trả lời ngay
+    // 2. Chuẩn bị Embed
     const embed = new EmbedBuilder()
         .setTitle("🚫 BLACKLIST THÀNH CÔNG")
         .setColor("#ff0000")
@@ -176,49 +178,47 @@ if (commandName === "blacklist") {
         )
         .setTimestamp();
 
-    // Trả lời interaction ngay
-    await interaction.reply({ embeds: [embed], flags: 64 }).catch(console.log);
+    // 3. Phản hồi ngay lập tức bằng editReply
+    await interaction.editReply({ embeds: [embed] });
 
-    // Task async: ghi file, ban, gửi log
-    (async () => {
-        try { await fs.promises.writeFile("./blacklist.json", JSON.stringify(blacklist, null, 2)); } 
-        catch(err) { console.error("Lỗi ghi blacklist.json:", err.message); }
+    // 4. Các tác vụ chạy ngầm (Không bắt user đợi)
+    // Ban người dùng
+    interaction.guild.members.ban(user.id, { reason: `Blacklist: ${reason}` })
+        .then(() => console.log(`Đã ban ${user.tag}`))
+        .catch(err => console.log("Lỗi ban:", err.message));
 
-        try { await interaction.guild.members.ban(user.id, { reason: `Blacklist: ${reason}` }); }
-        catch(err) { console.log("Không thể ban:", err.message); }
-
-        const logChannel = interaction.guild.channels.cache.get(process.env.BLACKLIST_LOG_CHANNEL);
-        if (logChannel) {
-            const logEmbed = new EmbedBuilder()
-                .setTitle("🚫 BLACKLIST LOG")
-                .setColor("#ff0000")
-                .setThumbnail(user.displayAvatarURL({ dynamic: true }))
-                .addFields(
-                    { name: "User", value: `<@${user.id}>`, inline: true },
-                    { name: "Người thực hiện", value: `<@${interaction.user.id}>`, inline: true },
-                    { name: "Lý do", value: reason }
-                )
-                .setFooter({ text: `ID: ${user.id}` })
-                .setTimestamp();
-            logChannel.send({ embeds: [logEmbed] }).catch(console.log);
-        }
-    })();
+    // Gửi log
+    const logChannel = interaction.guild.channels.cache.get(process.env.BLACKLIST_LOG_CHANNEL);
+    if (logChannel) {
+        const logEmbed = new EmbedBuilder()
+            .setTitle("🚫 BLACKLIST LOG")
+            .setColor("#ff0000")
+            .setThumbnail(user.displayAvatarURL())
+            .addFields(
+                { name: "User", value: `<@${user.id}>`, inline: true },
+                { name: "Người thực hiện", value: `<@${interaction.user.id}>`, inline: true },
+                { name: "Lý do", value: reason }
+            )
+            .setFooter({ text: `ID: ${user.id}` })
+            .setTimestamp();
+        logChannel.send({ embeds: [logEmbed] }).catch(() => null);
+    }
 }
 
 /* ===== UNBLACKLIST ===== */
 if (commandName === "unblacklist") {
     const user = options.getUser("user");
 
-    if (!canBlacklist(interaction.member)) {
-        return interaction.reply({ content: "❌ Bạn không có quyền unblacklist.", flags: 64 });
+    if (!hasPermission(interaction.member)) {
+        return interaction.editReply({ content: "❌ Bạn không có quyền unblacklist." });
     }
 
     if (!blacklist.some(b => b.id === user.id)) {
-        return interaction.reply({ content: "⚠️ Người dùng không nằm trong blacklist.", flags: 64 });
+        return interaction.editReply({ content: "⚠️ Người dùng không nằm trong blacklist." });
     }
 
-    // Xóa khỏi cache
     blacklist = blacklist.filter(b => b.id !== user.id);
+    saveBlacklist();
 
     const embed = new EmbedBuilder()
         .setTitle("✅ UNBLACKLIST THÀNH CÔNG")
@@ -226,30 +226,10 @@ if (commandName === "unblacklist") {
         .addFields({ name: "User", value: `<@${user.id}>` })
         .setTimestamp();
 
-    await interaction.reply({ embeds: [embed], flags: 64 }).catch(console.log);
+    await interaction.editReply({ embeds: [embed] });
 
-    (async () => {
-        try { await fs.promises.writeFile("./blacklist.json", JSON.stringify(blacklist, null, 2)); } 
-        catch(err) { console.error("Lỗi ghi blacklist.json:", err.message); }
-
-        try { await interaction.guild.members.unban(user.id); } 
-        catch(err) { console.log("Unban lỗi:", err.message); }
-
-        const logChannel = interaction.guild.channels.cache.get(process.env.BLACKLIST_LOG_CHANNEL);
-        if (logChannel) {
-            const logEmbed = new EmbedBuilder()
-                .setTitle("✅ UNBLACKLIST LOG")
-                .setColor("#00ffcc")
-                .setThumbnail(user.displayAvatarURL({ dynamic: true }))
-                .addFields(
-                    { name: "User", value: `<@${user.id}>`, inline: true },
-                    { name: "Người thực hiện", value: `<@${interaction.user.id}>`, inline: true }
-                )
-                .setFooter({ text: `ID: ${user.id}` })
-                .setTimestamp();
-            logChannel.send({ embeds: [logEmbed] }).catch(console.log);
-        }
-    })();
+    // Tác vụ ngầm
+    interaction.guild.members.unban(user.id).catch(() => null);
 }
 
             if (commandName === "bxh") {
