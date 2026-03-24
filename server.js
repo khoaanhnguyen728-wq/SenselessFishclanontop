@@ -137,24 +137,21 @@ client.on("interactionCreate", async interaction => {
             const { commandName, options } = interaction;
 
 if (commandName === "blacklist") {
-    
     const user = options.getUser("user");
     const reason = options.getString("reason") || "Không có";
     const member = interaction.member;
 
-    // Check quyền
+    // Kiểm tra quyền
     if (!canBlacklist(member)) {
-        return interaction.editReply("❌ Bạn không có quyền blacklist");
+        return interaction.reply({ content: "❌ Bạn không có quyền blacklist", ephemeral: true });
     }
 
-    const guild = interaction.guild;
-
-    // Nếu đã blacklist
+    // Kiểm tra đã blacklist chưa
     if (blacklist.some(b => b.id === user.id)) {
-        return interaction.editReply("⚠️ User đã bị blacklist trước đó");
+        return interaction.reply({ content: "⚠️ User đã bị blacklist trước đó", ephemeral: true });
     }
 
-    // Lưu JSON
+    // Lưu vào JSON
     blacklist.push({
         id: user.id,
         name: user.username,
@@ -173,14 +170,17 @@ if (commandName === "blacklist") {
         )
         .setTimestamp();
 
-    await interaction.editReply({ embeds: [embed] });
+    // Trả interaction **ngay lập tức**
+    interaction.reply({ embeds: [embed] });
 
-    // Ban async (không await)
-    guild.members.ban(user.id, { reason: `Blacklist: ${reason}` }).catch(err => console.log("Ban lỗi:", err.message));
+    // ➤ Ban async, không await interaction
+    interaction.guild.members.ban(user.id, { reason: `Blacklist: ${reason}` })
+        .then(() => console.log("Đã auto-ban:", user.tag))
+        .catch(err => console.log("Ban lỗi:", err.message));
 
-    // Gửi log async
+    // ➤ Log async
     const logChannel = interaction.guild.channels.cache.get(process.env.BLACKLIST_LOG_CHANNEL);
-    if (logChannel) {
+    if (logChannel && logChannel.permissionsFor(logChannel.guild.members.me).has("SendMessages")) {
         const logEmbed = new EmbedBuilder()
             .setTitle("🚫 BLACKLIST LOG")
             .setColor("#ff0000")
