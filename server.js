@@ -589,16 +589,6 @@ app.post("/register", async (req, res) => {
         return res.status(500).json({ success:false, message: err.message });
     }
 });
-client.on("guildMemberAdd", async (member) => {
-    if (blacklist.some(b => b.id === member.id)) {
-        try {
-            await member.ban({ reason: "Blacklist auto-ban" });
-            console.log("Auto-ban:", member.user.tag);
-        } catch (err) {
-            console.log("Auto-ban lỗi:", err.message);
-        }
-    }
-});
 app.get("/", (req, res) => res.send("API Running"));
 app.get("/top", (req, res) => res.json(top));
 app.get("/blacklist", (req, res) => res.json(blacklist));
