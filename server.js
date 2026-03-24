@@ -136,62 +136,66 @@ client.on("interactionCreate", async interaction => {
             await interaction.deferReply({ ephemeral: true });
             const { commandName, options } = interaction;
 
+/* ===== BLACKLIST ===== */
 if (commandName === "blacklist") {
-    // 1. Gọi deferReply ngay lập tức để tránh lỗi "Thinking..." quá 3s
-    await interaction.deferReply(); 
+    // 1️⃣ Defer reply 1 lần, ephemeral để chỉ người dùng thấy
+    await interaction.deferReply({ ephemeral: true });
 
     const user = options.getUser("user");
     const reason = options.getString("reason") || "Không có";
 
-    // Kiểm tra quyền
+    // 2️⃣ Kiểm tra quyền
     if (!canBlacklist(interaction.member)) {
         return interaction.editReply({ content: "❌ Bạn không có quyền thực hiện lệnh này." });
     }
 
-    // Kiểm tra xem đã có trong blacklist chưa
+    // 3️⃣ Kiểm tra xem user đã trong blacklist chưa
     if (blacklist.some(b => b.id === user.id)) {
         return interaction.editReply({ content: "⚠️ Người dùng này đã nằm trong danh sách đen từ trước." });
     }
 
-    try {
-        // 2. Cập nhật Cache & Lưu File (Sử dụng try-catch để an toàn)
-        blacklist.push({ 
-            id: user.id, 
-            name: user.username, 
-            reason, 
-            time: new Date().toLocaleString("vi-VN") 
-        });
+    // 4️⃣ Cập nhật JSON cache
+    const entry = {
+        id: user.id,
+        name: user.username,
+        reason,
+        time: new Date().toLocaleString("vi-VN")
+    };
+    blacklist.push(entry);
 
-        // Ghi file không đồng bộ (nên dùng fs.promises.writeFile)
-        fs.promises.writeFile("./blacklist.json", JSON.stringify(blacklist, null, 2))
-            .catch(err => console.error("Lỗi ghi file:", err));
+    // 5️⃣ Chuẩn bị embed trả về ngay
+    const embed = new EmbedBuilder()
+        .setTitle("🚫 BLACKLIST THÀNH CÔNG")
+        .setColor("#ff0000")
+        .addFields(
+            { name: "User", value: `<@${user.id}> (${user.tag})`, inline: true },
+            { name: "Lý do", value: reason, inline: true }
+        )
+        .setTimestamp();
 
-        // 3. Thực hiện Ban (Chạy song song)
-        const banPromise = interaction.guild.members.ban(user.id, { reason: `Blacklist: ${reason}` })
-            .catch(err => `Không thể ban: ${err.message}`);
+    // 6️⃣ Trả lời người dùng ngay
+    await interaction.editReply({ embeds: [embed] });
 
-        // 4. Chuẩn bị Embed phản hồi
-        const embed = new EmbedBuilder()
-            .setTitle("🚫 BLACKLIST & BAN THÀNH CÔNG")
-            .setColor("#ff0000")
-            .addFields(
-                { name: "Đối tượng", value: `<@${user.id}> (${user.tag})`, inline: true },
-                { name: "Lý do", value: reason, inline: true }
-            )
-            .setTimestamp();
+    // 7️⃣ Background tasks: ghi file, ban, gửi log
+    (async () => {
+        try {
+            await fs.promises.writeFile("./blacklist.json", JSON.stringify(blacklist, null, 2));
+        } catch(err) {
+            console.error("Lỗi ghi blacklist.json:", err.message);
+        }
 
-        // Trả lời kết quả
-        await interaction.editReply({ embeds: [embed] });
+        try {
+            await interaction.guild.members.ban(user.id, { reason: `Blacklist: ${reason}` });
+        } catch(err) {
+            console.log("Không thể ban:", err.message);
+        }
 
-        // 5. Gửi Log (Không cần đợi - Background task)
-        const logChannelId = process.env.BLACKLIST_LOG_CHANNEL;
-        const logChannel = interaction.guild.channels.cache.get(logChannelId);
-        
+        const logChannel = interaction.guild.channels.cache.get(process.env.BLACKLIST_LOG_CHANNEL);
         if (logChannel) {
             const logEmbed = new EmbedBuilder()
                 .setTitle("🚫 BLACKLIST LOG")
                 .setColor("#ff0000")
-                .setThumbnail(user.displayAvatarURL())
+                .setThumbnail(user.displayAvatarURL({ dynamic: true }))
                 .addFields(
                     { name: "User", value: `<@${user.id}>`, inline: true },
                     { name: "Người thực hiện", value: `<@${interaction.user.id}>`, inline: true },
@@ -199,65 +203,68 @@ if (commandName === "blacklist") {
                 )
                 .setFooter({ text: `ID: ${user.id}` })
                 .setTimestamp();
-
-            logChannel.send({ embeds: [logEmbed] }).catch(() => null);
+            logChannel.send({ embeds: [logEmbed] }).catch(console.log);
         }
-
-    } catch (error) {
-        console.error("Lỗi tổng quát:", error);
-        await interaction.editReply({ content: "🔥 Có lỗi xảy ra khi thực hiện lệnh." });
-    }
+    })();
 }
 
+/* ===== UNBLACKLIST ===== */
 if (commandName === "unblacklist") {
-    await interaction.deferReply();
+    await interaction.deferReply({ ephemeral: true });
 
     const user = options.getUser("user");
-    const member = interaction.member;
 
-    if (!canBlacklist(member)) {
-        return interaction.editReply("❌ Bạn không có quyền unblacklist");
+    // Kiểm tra quyền
+    if (!canBlacklist(interaction.member)) {
+        return interaction.editReply({ content: "❌ Bạn không có quyền unblacklist" });
     }
 
-    const guild = interaction.guild;
-
+    // Kiểm tra user có trong blacklist không
     if (!blacklist.some(b => b.id === user.id)) {
-        return interaction.editReply("⚠️ User không nằm trong blacklist");
+        return interaction.editReply({ content: "⚠️ Người dùng không nằm trong blacklist" });
     }
 
-    // Xóa JSON
+    // Xóa khỏi cache JSON
     blacklist = blacklist.filter(b => b.id !== user.id);
-    saveBlacklist();
 
-    // Embed trả về ngay
     const embed = new EmbedBuilder()
-        .setTitle("✅ UNBLACKLIST")
+        .setTitle("✅ UNBLACKLIST THÀNH CÔNG")
         .setColor("#00ffcc")
         .addFields({ name: "User", value: `<@${user.id}>` })
         .setTimestamp();
 
+    // Trả lời ngay
     await interaction.editReply({ embeds: [embed] });
 
-    // Unban async
-    guild.members.unban(user.id).catch(err => console.log("Unban lỗi:", err.message));
+    // Background tasks: lưu file, unban, log
+    (async () => {
+        try {
+            await fs.promises.writeFile("./blacklist.json", JSON.stringify(blacklist, null, 2));
+        } catch(err) {
+            console.error("Lỗi ghi blacklist.json:", err.message);
+        }
 
-    // Log async
-    const logChannel = interaction.guild.channels.cache.get(process.env.BLACKLIST_LOG_CHANNEL);
-    if (logChannel) {
-        const logEmbed = new EmbedBuilder()
-            .setTitle("✅ UNBLACKLIST LOG")
-            .setColor("#00ffcc")
-            .setThumbnail(user.displayAvatarURL({ dynamic: true }))
-            .addFields(
-                { name: "User", value: `<@${user.id}>`, inline: true },
-                { name: "By", value: `<@${interaction.user.id}>`, inline: true }
-            )
-            .setFooter({ text: `ID: ${user.id}` })
-            .setTimestamp();
-        logChannel.send({ embeds: [logEmbed] }).catch(console.log);
-    }
+        try {
+            await interaction.guild.members.unban(user.id);
+        } catch(err) {
+            console.log("Unban lỗi:", err.message);
+        }
 
-    return interaction.editReply({ embeds: [embed] });
+        const logChannel = interaction.guild.channels.cache.get(process.env.BLACKLIST_LOG_CHANNEL);
+        if (logChannel) {
+            const logEmbed = new EmbedBuilder()
+                .setTitle("✅ UNBLACKLIST LOG")
+                .setColor("#00ffcc")
+                .setThumbnail(user.displayAvatarURL({ dynamic: true }))
+                .addFields(
+                    { name: "User", value: `<@${user.id}>`, inline: true },
+                    { name: "Người thực hiện", value: `<@${interaction.user.id}>`, inline: true }
+                )
+                .setFooter({ text: `ID: ${user.id}` })
+                .setTimestamp();
+            logChannel.send({ embeds: [logEmbed] }).catch(console.log);
+        }
+    })();
 }
 
             if (commandName === "bxh") {
