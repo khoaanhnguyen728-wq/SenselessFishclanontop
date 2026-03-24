@@ -59,13 +59,17 @@ const ROLE_MAP = {
 
 const LOG_CHANNEL = process.env.LOG_CHANNEL;
 
-// ✅ FIX CHUẨN
 function hasPermission(member) {
     if (!process.env.ADMIN_ROLE) return false;
 
     const roles = process.env.ADMIN_ROLE.split(",").map(r => r.trim());
 
-    return roles.some(roleId => member.roles.cache.has(roleId));
+    const userRoles = member.roles.cache.map(r => r.id);
+
+    console.log("USER:", userRoles);
+    console.log("ADMIN:", roles);
+
+    return roles.some(roleId => userRoles.includes(roleId));
 }
 
 /* ================= DISCORD BOT ================= */
@@ -217,7 +221,7 @@ if (commandName === "promote") {
     const user = options.getUser("user");
     const roleName = options.getString("permission");
 
-    const member = await interaction.guild.members.fetch(interaction.user.id);
+    const member = interaction.member;
     if (!hasPermission(member)) {
         return interaction.editReply("❌ Bạn không có quyền dùng lệnh này");
     }
@@ -301,10 +305,12 @@ if (logChannel) {
 if (commandName === "demote") {
     const user = options.getUser("user");
 
-    const member = await interaction.guild.members.fetch(interaction.user.id);
+    const member = interaction.member;
     if (!hasPermission(member)) {
         return interaction.reply({ content: "❌ Bạn không có quyền dùng lệnh này", ephemeral: true });
     }
+
+    const logChannel = interaction.guild.channels.cache.get(LOG_CHANNEL); // ✅ THÊM DÒNG NÀY
 
     const target = await interaction.guild.members.fetch(user.id);
 
