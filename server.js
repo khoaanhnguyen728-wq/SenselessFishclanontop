@@ -460,26 +460,22 @@ app.post("/register", async (req, res) => {
         const { discord, robloxUsername } = req.body;
 
         if (!discord) {
-            return res.status(400).json({ error: "Thiếu Discord" });
+            return res.status(400).json({ success:false, message:"Thiếu Discord" });
         }
 
         if (!client.isReady()) {
-            return res.status(500).json({ error: "Bot chưa sẵn sàng" });
+            return res.status(500).json({ success:false, message:"Bot chưa sẵn sàng" });
         }
 
         const channel = await client.channels.fetch(process.env.CHANNEL_ID).catch(() => null);
 
         if (!channel) {
-            return res.status(500).json({ error: "Không tìm thấy channel" });
+            return res.status(500).json({ success:false, message:"Không tìm thấy channel" });
         }
 
-        // 🔥 LƯU DATA
-        register.push({
-            discord,
-            robloxUsername,
-            time: new Date()
-        });
-        saveRegister();
+        if (!channel.permissionsFor(channel.guild.members.me).has("SendMessages")) {
+            return res.status(500).json({ success:false, message:"Bot không có quyền gửi tin nhắn" });
+        }
 
         const embed = new EmbedBuilder()
             .setTitle("📝 ĐĂNG KÝ THI ĐẤU")
@@ -507,11 +503,11 @@ app.post("/register", async (req, res) => {
             components: [row]
         });
 
-        return res.json({ success: true });
+        return res.json({ success:true });
 
     } catch (err) {
         console.error("REGISTER ERROR:", err);
-        return res.status(500).json({ error: err.message });
+        return res.status(500).json({ success:false, message: err.message });
     }
 });
 app.get("/", (req, res) => res.send("API Running"));
