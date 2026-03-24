@@ -1647,9 +1647,6 @@ function loginDiscord() {
 }
 
 // Cập nhật lại window.onload để chạy hàm kiểm tra khi vừa mở trang
-window.onload = () => {
-    checkLogin();
-};
 function logout(){
     localStorage.removeItem("discord_token");
     discordUser = null;
@@ -1855,7 +1852,7 @@ document.addEventListener("DOMContentLoaded", () => {
 <script>
 async function loadStats(){
     try{
-        const res = await fetch("https://senselessfishclanontop-1.onrender.com/stats");
+        const res = await fetch("https://senselessfishclanontop-1.onrender.com/stats?t=" + Date.now());
         const data = await res.json();
 
 const box = document.getElementById("statsBox");
@@ -1887,13 +1884,6 @@ function animateValue(element, start, end, online, duration) {
 
     requestAnimationFrame(animation);
 }
-
-// load lần đầu
-loadStats();
-
-// auto update mỗi 10s
-setInterval(loadStats, 10000);
-
 
 // ===== TOGGLE ACCOUNT =====
 function toggleAccount(){
