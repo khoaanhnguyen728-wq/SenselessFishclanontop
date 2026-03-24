@@ -45,18 +45,14 @@ const saveMainers = () => fs.writeFileSync("mainers.json", JSON.stringify(mainer
 
 const ROLE_MAP = {
     "Founder": process.env.ROLE_FOUNDER,
-    "Leader": process.env.ROLE_LEADER,
     "Senior Developer": process.env.ROLE_SENIOR_DEV,
-    "Senior Admin": process.env.ROLE_SENIOR_ADMIN,
     "Developer": process.env.ROLE_DEV,
     "Admin": process.env.ROLE_ADMIN,
     "Junior Developer": process.env.ROLE_JUNIOR_DEV,
-    "Junior Admin": process.env.ROLE_JUNIOR_ADMIN,
     "Mod": process.env.ROLE_MOD,
     "Rank Management": process.env.ROLE_RANK,
     "Experienced Referee": process.env.ROLE_EXP_REF,
     "Referee": process.env.ROLE_REF,
-    "Junior Referee": process.env.ROLE_JUNIOR_REF,
     "Tryout host": process.env.ROLE_TRYOUT,
     "Training host": process.env.ROLE_TRAIN
 };
@@ -216,23 +212,25 @@ if (sub === "aov") {
             }
 
 if (commandName === "promote") {
+    await interaction.deferReply(); // ✅ thêm dòng này
+
     const user = options.getUser("user");
     const roleName = options.getString("permission");
 
     const member = await interaction.guild.members.fetch(interaction.user.id);
     if (!hasPermission(member)) {
-        return interaction.reply({ content: "❌ Bạn không có quyền dùng lệnh này", ephemeral: true });
+        return interaction.editReply("❌ Bạn không có quyền dùng lệnh này");
     }
 
     const target = await interaction.guild.members.fetch(user.id);
 
     const roleId = ROLE_MAP[roleName];
-    if (!roleId) return interaction.reply("❌ Role không tồn tại");
+    if (!roleId) return interaction.editReply("❌ Role không tồn tại");
 
     const newRole = interaction.guild.roles.cache.get(roleId);
-    if (!newRole) return interaction.reply("❌ Không tìm thấy role");
+    if (!newRole) return interaction.editReply("❌ Không tìm thấy role");
 
-    // ❗ Xóa toàn bộ role staff cũ
+    // ❗ Xóa role cũ
     for (let r of Object.values(ROLE_MAP)) {
         let role = interaction.guild.roles.cache.get(r);
         if (role && target.roles.cache.has(role.id)) {
@@ -254,12 +252,29 @@ if (commandName === "promote") {
     saveStaff();
 
     // 📜 LOG
-    const logChannel = interaction.guild.channels.cache.get(LOG_CHANNEL);
-    if (logChannel) {
-        logChannel.send(`📢 ${interaction.user.username} đã promote ${user.username} → **${roleName}**`);
-    }
+const logChannel = interaction.guild.channels.cache.get(LOG_CHANNEL);
 
-    return interaction.reply(`✅ ${user.username} đã được set role **${roleName}**`);
+if (logChannel) {
+    const embed = new EmbedBuilder()
+        .setColor("#00ffcc")
+        .setTitle("📢 ROLE UPDATE")
+        .setThumbnail(user.displayAvatarURL({ dynamic: true }))
+        .addFields(
+            { name: " User", value: `<@${user.id}>`, inline: true },
+            { name: " Role", value: roleName, inline: true },
+            { name: " Action", value: "Promote", inline: true },
+            { name: " By", value: `<@${interaction.user.id}>`, inline: true }
+        )
+        .setFooter({
+            text: `ID: ${user.id}`,
+            iconURL: interaction.user.displayAvatarURL()
+        })
+        .setTimestamp();
+
+    logChannel.send({ embeds: [embed] });
+}
+
+    return interaction.editReply(`✅ ${user.username} đã được set role **${roleName}**`);
 }
             if (commandName === "detop") {
     const user = options.getUser("user");
@@ -306,10 +321,24 @@ if (commandName === "demote") {
     saveStaff();
 
     // 📜 LOG
-    const logChannel = interaction.guild.channels.cache.get(LOG_CHANNEL);
-    if (logChannel) {
-        logChannel.send(`📢 ${interaction.user.username} đã demote ${user.username}`);
-    }
+if (logChannel) {
+    const embed = new EmbedBuilder()
+        .setColor("#ff4d4d")
+        .setTitle("📢 ROLE REMOVED")
+        .setThumbnail(user.displayAvatarURL({ dynamic: true }))
+        .addFields(
+            { name: " User", value: `<@${user.id}>`, inline: true },
+            { name: " Action", value: "Demote", inline: true },
+            { name: " By", value: `<@${interaction.user.id}>`, inline: true }
+        )
+        .setFooter({
+            text: `ID: ${user.id}`,
+            iconURL: interaction.user.displayAvatarURL()
+        })
+        .setTimestamp();
+
+    logChannel.send({ embeds: [embed] });
+}
 
     return interaction.reply(`❌ Đã gỡ toàn bộ role của ${user.username}`);
 }
