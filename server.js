@@ -111,37 +111,29 @@ async function updateLeaderboard() {
 
         let text = "";
 
-        for (let i = 1; i <= 20; i++) {
-            const member = data[i];
+for (let i = 1; i <= 20; i++) {
+    const member = data[i];
 
-            let medal, displayName;
+    // Chọn medal theo thứ hạng
+    let medal = "➠"; // default
+    if (i === 1) medal = "👑";
+    else if (i === 2) medal = "➤";
+    else if (i === 3) medal = "➤";
 
-            if(i === 1){
-                medal = "👑"; // TOP 1 crown
-                displayName = `***${member?.id ? `<@${member.id}>` : "Vacant"}***`;
-            } else if(i === 2){
-                medal = "➠";
-                displayName = `**${member?.id ? `<@${member.id}>` : "Vacant"}**`;
-            } else if(i === 3){
-                medal = "➠";
-                displayName = `**${member?.id ? `<@${member.id}>` : "Vacant"}**`;
-            } else {
+    // Nếu không có member thì hiển thị Vacant
+    let displayName = member?.id ? `<@${member.id}>` : "Vacant";
 
-            // Nếu không có member thì hiển thị Vacant
-            displayName = member?.id ? `<@${member.id}>` : "Vacant";
+    // In đậm TOP 1, TOP 2, TOP 3
+    if (i === 1) displayName = `***${displayName}***`;
+    else if (i === 2 || i === 3) displayName = `**${displayName}**`;
 
-            // In đậm TOP 1, TOP 2, TOP 3
-            if(i === 1){
-                displayName = `***${displayName}***`;
-            } else if(i === 2 || i === 3){
-                displayName = `**${displayName}**`;
-            }
-
-            text += `${medal} TOP ${i} • ${displayName}\n\n`;
-        }
+    // Thêm vào text
+    text += `${medal} TOP ${i} • ${displayName}\n\n`;
+}
 
         const embed = new EmbedBuilder()
             .setColor("#00eaff")
+            .setImage("https://tenor.com/view/blue-white-gradient-carrd-gif-23556830") // GIF chạy được
             .setTitle("🏆 SENSELESS FISH CLAN LEADERBOARD")
             .setDescription(text)
             .setTimestamp();
