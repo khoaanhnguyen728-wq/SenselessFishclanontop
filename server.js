@@ -282,40 +282,26 @@ if (commandName === "unblacklist") {
             if (commandName === "bxh") {
                 const sub = options.getSubcommand();
 if (sub === "aov") {
-    
-    let text = "\n"; 
 
-    // Hàm hỗ trợ lấy emoji an toàn
-    const getEmoji = (id, fallback) => client.emojis.cache.get(id) || fallback;
+    const embeds = [];
+    const bar = "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExbG5pdnR4NTFucGdxczBiZnZlYXcyd3F0NmdwMWJiY2U5cTN4Y2FtNCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/vgJwU7isfXHMP93iLk/giphy.gif";
 
-    // TOP 1
-    let t1 = top[1]?.id ? `<@${top[1].id}>` : "*Trống*";
-    text += `${getEmoji("1485571100900458499", "👑")} **ＴＯＰ  １**\n╚═⭐ ${t1}\n\n`;
+    const arrow = "<a:emoji_123:YOUR_EMOJI_ID>"; // 👈 emoji động mũi tên
 
-    // TOP 2 & 3
-    let t2 = top[2]?.id ? `<@${top[2].id}>` : "*Trống*";
-    let t3 = top[3]?.id ? `<@${top[3].id}>` : "*Trống*";
-    
-    text += `${getEmoji("1485571314420027403", "🥈")} **ＴＯＰ  ２**\n╚═ ${t2}\n\n`;
-    text += `${getEmoji("1485571314420027403", "🥉")} **ＴＯＰ  ３**\n╚═ ${t3}\n\n`;
+    for (let i = 1; i <= 20; i++) {
+        const user = top[i]?.id ? `<@${top[i].id}>` : "VACANT";
 
-    text += `──────────────────\n\n`;
+        const embed = new EmbedBuilder()
+            .setColor("#2b2d31")
+            .setTitle(`**ＴＯＰ ${i}**`)
+            .setDescription(`\n${arrow} ${user}\n`)
+            .setImage(bar);
 
-    // Các TOP còn lại
-    for (let i = 4; i <= 20; i++) {
-        let user = top[i]?.id ? `<@${top[i].id}>` : "*Vacant*";
-        text += `➠ **ＴＯＰ  ${i}** • ${user}\n\n`; 
+        embeds.push(embed);
     }
 
-    const embed = new EmbedBuilder()
-        .setTitle("🏆 SENSELESS FISH CLAN LEADERBOARD")
-        .setDescription(text)
-        .setColor("#00eaff")
-        .setThumbnail(interaction.guild.iconURL({ dynamic: true }))
-        .setTimestamp()
-        .setFooter({ text: "Dữ liệu cập nhật tự động", iconURL: client.user.displayAvatarURL() });
-
-    return interaction.editReply({ embeds: [embed] });
+    await interaction.editReply({ embeds: embeds.slice(0, 10) });
+    await interaction.followUp({ embeds: embeds.slice(10, 20) });
 }
                 
                 if (sub === "kill" || sub === "chat") return interaction.editReply({ content: "Tính năng đang phát triển.", ephemeral: true });
