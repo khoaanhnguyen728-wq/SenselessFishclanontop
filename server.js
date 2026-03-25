@@ -284,7 +284,7 @@ if (commandName === "unblacklist") {
 if (sub === "aov") {
 
     const embeds = [];
-    const bar = "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExbG5pdnR4NTFucGdxczBiZnZlYXcyd3F0NmdwMWJiY2U5cTN4Y2FtNCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/vgJwU7isfXHMP93iLk/giphy.gif";
+    const bar = "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExMTY3cnc0bGdxaGR3Y3YxZnJ0NTdwZzNrbTBpem82MWpjeTNvZXUxNCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/WpJNpxWwf8dLB1p5j0/giphy.gif";
 
     const arrow = "<a:emoji_123:YOUR_EMOJI_ID>"; // 👈 emoji động mũi tên
 
