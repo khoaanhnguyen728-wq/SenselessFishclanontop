@@ -286,7 +286,7 @@ if (sub === "aov") {
     const embeds = [];
     const bar = "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExMTY3cnc0bGdxaGR3Y3YxZnJ0NTdwZzNrbTBpem82MWpjeTNvZXUxNCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/WpJNpxWwf8dLB1p5j0/giphy.gif";
 
-    const arrow = "<a:emoji_123:1486382493853552810>"; // 👈 emoji động mũi tên
+    const arrow = "<a:emoji_123:1479479087071498371>"; // 👈 emoji động mũi tên
 
     for (let i = 1; i <= 20; i++) {
         const user = top[i]?.id ? `<@${top[i].id}>` : "VACANT";
