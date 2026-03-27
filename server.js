@@ -111,12 +111,15 @@ client.once("ready", () => {
 
 async function updateAOVLeaderboard() {
     console.log("🔥 chạy function AOV");
+
     try {
         const channel = await client.channels.fetch(AOV_CHANNEL).catch(() => null);
-        if (!channel) return;
+        if (!channel) return console.log("❌ Channel không tồn tại");
 
-        const message = await channel.messages.fetch(AOV_MESSAGE).catch(() => null);
-        if (!message) return;
+        const msg = await channel.messages.fetch(AOV_MESSAGE).catch(() => null);
+        if (!msg || typeof msg.edit !== "function") {
+            return console.log("❌ Message không hợp lệ hoặc không edit được");
+        }
 
         let text = "";
 
@@ -125,12 +128,12 @@ async function updateAOVLeaderboard() {
 
             let medal = "➠";
             if (i === 1) medal = "👑";
-            else if (i === 2 || i === 3) medal = "➤";
+            else if (i <= 3) medal = "➤";
 
             let displayName = member?.id ? `<@${member.id}>` : "Vacant";
 
             if (i === 1) displayName = `***${displayName}***`;
-            else if (i === 2 || i === 3) displayName = `**${displayName}**`;
+            else if (i <= 3) displayName = `**${displayName}**`;
 
             text += `${medal} **TOP ${i}** • ${displayName}\n\n`;
         }
@@ -141,13 +144,12 @@ async function updateAOVLeaderboard() {
             .setDescription(text)
             .setTimestamp();
 
-        await message.edit({ embeds: [embed] });
+        await msg.edit({ embeds: [embed] });
 
     } catch (err) {
-        console.log("AOV ERROR:", err.message);
+        console.log("AOV ERROR:", err);
     }
 }
-
 function buildRuleEmbeds() {
     const rules = [
         {
@@ -232,29 +234,31 @@ client.on("messageCreate", async (message) => {
     cooldown.set(message.author.id, now);
 
     // ================= RULE =================
-    if (message.channel.id === RULE_CHANNEL) {
-
-        if (!message.member.roles.cache.has(ADMIN_ROLE)) return;
+if (message.channel.id === RULE_CHANNEL) {
+        // SỬA TẠI ĐÂY: Dùng hàm hasPermission để check được nhiều Role Admin
+        if (!hasPermission(message.member)) return; 
 
         if (content === "rule" || content === "rule list") {
-            const embeds = buildRuleEmbeds();
-
-            message.delete().catch(() => {});
-            return message.channel.send({ embeds });
+            try {
+                const embeds = buildRuleEmbeds();
+                await message.delete().catch(() => {});
+                return await message.channel.send({ embeds });
+            } catch (err) {
+                console.error("Lỗi gửi Rule:", err);
+            }
         }
     }
 
     // ================= AOV =================
     if (message.channel.id === AOV_CHANNEL) {
-
-        if (!message.member.roles.cache.has(ADMIN_ROLE)) return;
+        if (!hasPermission(message.member)) return; // Đồng bộ check quyền
 
         if (content === "aov" || content === "aov list") {
-
             await updateAOVLeaderboard();
-
             message.delete().catch(() => {});
-            return message.reply("✅ Đã cập nhật leaderboard!");
+            return message.reply("✅ Đã cập nhật leaderboard!").then(m => {
+                setTimeout(() => m.delete(), 3000); // Tự xóa thông báo sau 3s cho sạch
+            });
         }
     }
 });
