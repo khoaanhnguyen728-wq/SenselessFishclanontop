@@ -56,8 +56,12 @@ const ROLE_MAP = {
     "Tryout host": process.env.ROLE_TRYOUT,
     "Training host": process.env.ROLE_TRAIN
 };
-
+const cooldown = new Map();
 const LOG_CHANNEL = process.env.LOG_CHANNEL;
+const AOV_CHANNEL = process.env.AOV_CHANNEL;
+const AOV_MESSAGE = process.env.AOV_MESSAGE;
+const RULE_CHANNEL = process.env.RULE_CHANNEL;
+const ADMIN_ROLE = process.env.ADMIN_ROLE;
 
 function hasPermission(member) {
     if (!process.env.ADMIN_ROLE) return false;
@@ -102,52 +106,154 @@ client.once("ready", () => {
     }, 10000);
 });
 
-async function updateLeaderboard() {
+async function updateAOVLeaderboard() {
     try {
-        const res = await axios.get("https://senselessfishclanontop-1.onrender.com/top");
-        const data = res.data || {};
-        if (JSON.stringify(data) === lastTopData) return;
-        lastTopData = JSON.stringify(data);
+        const channel = await client.channels.fetch(AOV_CHANNEL).catch(() => null);
+        if (!channel) return;
+
+        const message = await channel.messages.fetch(AOV_MESSAGE).catch(() => null);
+        if (!message) return;
 
         let text = "";
 
-for (let i = 1; i <= 20; i++) {
-    const member = data[i];
+        for (let i = 1; i <= 20; i++) {
+            const member = top[i];
 
-    // Chọn medal theo thứ hạng
-    let medal = "➠"; // default
-    if (i === 1) medal = "👑";
-    else if (i === 2) medal = "➤";
-    else if (i === 3) medal = "➤";
+            let medal = "➠";
+            if (i === 1) medal = "👑";
+            else if (i === 2 || i === 3) medal = "➤";
 
-    // Nếu không có member thì hiển thị Vacant
-    let displayName = member?.id ? `<@${member.id}>` : "Vacant";
+            let displayName = member?.id ? `<@${member.id}>` : "Vacant";
 
-    // In đậm + in nghiêng + chữ TOP viết to
-    let topText = `***➤TOP ${i}***`;
+            if (i === 1) displayName = `***${displayName}***`;
+            else if (i === 2 || i === 3) displayName = `**${displayName}**`;
 
-    // TOP 1–3 in đậm + nghiêng + caps
-    if (i === 1) displayName = `***${displayName}***`;      // TOP 1 nổi bật nhất
-    else if (i === 2 || i === 3) displayName = `**${displayName}**`;
-
-    // Thêm vào text, xuống dòng dài hơn
-    text += `${medal} ${topText} • ${displayName}\n\n\n`;
-}
+            text += `${medal} **TOP ${i}** • ${displayName}\n\n`;
+        }
 
         const embed = new EmbedBuilder()
             .setColor("#00eaff")
-            .setTitle("🏆 SENSELESS FISH CLAN LEADERBOARD")
+            .setTitle("🏆 AOV LEADERBOARD")
             .setDescription(text)
             .setTimestamp();
 
-        const channel = await client.channels.fetch(TOP_CHANNEL);
-        const message = await channel.messages.fetch(TOP_MESSAGE);
         await message.edit({ embeds: [embed] });
 
     } catch (err) {
-        console.log("Lỗi update leaderboard:", err.message);
+        console.log("AOV ERROR:", err.message);
     }
 }
+
+function buildRuleEmbeds() {
+    const rules = [
+        {
+            title: "<:slf_bleh:1485507133838462976> **1. THÁI ĐỘ**",
+            content: `
+**Đối xử với mọi người như cách bạn muốn được đối xử.**
+
+• Không xúc phạm (toxic), kỳ thị, quấy rối, công kích cá nhân hay bắt nạt bất kì ai.  
+• Giữ thái độ chuẩn mực khi tranh luận, đừng để mọi chuyện đi quá xa.
+            `
+        },
+        {
+            title: "<:slf_bleh:1485507133838462976> **2. NỘI DUNG**",
+            content: `
+• Nói chuyện đúng chủ đề của kênh chat.  
+• Không spam tin nhắn, emoji, ping hoặc gây war, cà khịa quá đà.  
+• Cấm nội dung 18+, NSFW, gore, phản cảm (kể cả avatar, nickname).  
+• Không gửi link độc hại, lừa đảo, jumpscare, gây ám ảnh.
+            `
+        },
+        {
+            title: "<:slf_bleh:1485507133838462976> **3. BA KHÔNG**",
+            content: `
+• Không phân biệt vùng miền dưới mọi hình thức.  
+• Không phân biệt chủng tộc, màu da (ví dụ: nigga, nigger,...).  
+• Không phân biệt giới tính, xúc phạm hay chế giễu người khác.
+            `
+        },
+        {
+            title: "<:slf_bleh:1485507133838462976> **4. KHÔNG QUẢNG CÁO**",
+            content: `
+• Cấm quảng cáo Discord, Youtube, website khi chưa được phép.  
+• Mọi hình thức quảng cáo sẽ bị xóa và cảnh cáo ngay lập tức.  
+• Liên hệ Admin/Owner nếu muốn xin phép quảng cáo.
+            `
+        },
+        {
+            title: "<:slf_bleh:1485507133838462976> **5. GIỌNG NÓI & NHẠC**",
+            content: `
+• Không chửi thề, cãi nhau trong voice chat.  
+• Không bật nhạc gây ồn ào, làm phiền người khác.  
+• Bật lọc tiếng ồn và giữ thái độ lịch sự khi nói chuyện.
+            `
+        },
+        {
+            title: "<:slf_bleh:1485507133838462976> **6. KHÔNG LÀM PHIỀN QUẢN LÍ**",
+            content: `
+• Không ping staff khi không cần thiết.  
+• Không làm phiền Owner/Admin.  
+• Đội ngũ sẽ hỗ trợ bạn sớm nhất có thể.
+            `
+        }
+    ];
+
+    return rules.map((r, i) =>
+        new EmbedBuilder()
+            .setColor("#0B3C5D")
+            .setDescription(
+`╔════════════════════════════╗
+**<:slf_Minecraft_Fish7:1482335219099893831> ◞☼✦ SENSELESSFISH RULES ✦☼◟ <:slf_Minecraft_Fish7:1482335219099893831>**
+╚════════════════════════════╝
+
+📌 ${r.title}
+
+${r.content}
+
+━━━━━━━━━━━━━━━━━━━━━━━━`
+            )
+            .setFooter({ text: `Rule ${i + 1} / 6 • SenselessFish` })
+    );
+}
+client.on("messageCreate", async (message) => {
+    if (message.author.bot) return;
+
+    const content = message.content.toLowerCase();
+
+    // ⏳ cooldown chung 5s
+    const now = Date.now();
+    const last = cooldown.get(message.author.id) || 0;
+
+    if (now - last < 5000) return;
+    cooldown.set(message.author.id, now);
+
+    // ================= RULE =================
+    if (message.channel.id === RULE_CHANNEL) {
+
+        if (!message.member.roles.cache.has(ADMIN_ROLE)) return;
+
+        if (content === "rule" || content === "rule list") {
+            const embeds = buildRuleEmbeds();
+
+            message.delete().catch(() => {});
+            return message.channel.send({ embeds });
+        }
+    }
+
+    // ================= AOV =================
+    if (message.channel.id === AOV_CHANNEL) {
+
+        if (!message.member.roles.cache.has(ADMIN_ROLE)) return;
+
+        if (content === "aov" || content === "aov list") {
+
+            await updateAOVLeaderboard();
+
+            message.delete().catch(() => {});
+            return message.reply("✅ Đã cập nhật leaderboard!");
+        }
+    }
+});
 client.on("interactionCreate", async interaction => {
     try {
         if (interaction.isChatInputCommand()) {
@@ -281,29 +387,7 @@ if (commandName === "unblacklist") {
 
             if (commandName === "bxh") {
                 const sub = options.getSubcommand();
-if (sub === "aov") {
-
-    const embeds = [];
-    const bar = "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExMTY3cnc0bGdxaGR3Y3YxZnJ0NTdwZzNrbTBpem82MWpjeTNvZXUxNCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/WpJNpxWwf8dLB1p5j0/giphy.gif";
-
-    const arrow = "<a:emoji_123:1479479087071498371>"; // 👈 emoji động mũi tên
-
-    for (let i = 1; i <= 20; i++) {
-        const user = top[i]?.id ? `<@${top[i].id}>` : "VACANT";
-
-        const embed = new EmbedBuilder()
-            .setColor("#2b2d31")
-            .setTitle(`**ＴＯＰ ${i}**`)
-            .setDescription(`\n${arrow} ${user}\n`)
-            .setImage(bar);
-
-        embeds.push(embed);
-    }
-
-    await interaction.editReply({ embeds: embeds.slice(0, 10) });
-    await interaction.followUp({ embeds: embeds.slice(10, 20) });
-}
-                
+             
                 if (sub === "kill" || sub === "chat") return interaction.editReply({ content: "Tính năng đang phát triển.", ephemeral: true });
             }
 
@@ -316,14 +400,24 @@ if (sub === "aov") {
                 return interaction.editReply({ embeds: [new EmbedBuilder().setTitle(`📋 Danh sách ${type}`).setDescription(text || "Không có dữ liệu").setColor(0x00eaff)] });
             }
 
-            if (commandName === "settop") {
-                const user = options.getUser("user");
-                const rank = options.getInteger("top");
-                top[rank] = { id: user.id, name: user.username, avatar: user.displayAvatarURL({ extension: "png" }), profile: `https://discord.com/users/${user.id}` };
-                saveTop();
-                updateLeaderboard();
-                return interaction.editReply(`✅ Đã đưa **${user.username}** vào **TOP ${rank}**`);
-            }
+if (commandName === "settop") {
+    const user = options.getUser("user");
+    const rank = options.getInteger("top");
+
+    top[rank] = {
+        id: user.id,
+        name: user.username,
+        avatar: user.displayAvatarURL({ extension: "png" }),
+        profile: `https://discord.com/users/${user.id}`
+    };
+
+    saveTop();
+
+    // 🔥 AUTO UPDATE
+    await updateAOVLeaderboard();
+
+    return interaction.editReply(`✅ ${user.username} vào TOP ${rank}`);
+}
 
 if (commandName === "promote") {
 
@@ -389,7 +483,7 @@ if (logChannel) {
 
     return interaction.editReply(`✅ ${user.username} đã được set role **${roleName}**`);
 }
-            if (commandName === "detop") {
+if (commandName === "detop") {
     const user = options.getUser("user");
 
     let found = false;
@@ -403,8 +497,11 @@ if (logChannel) {
 
     if (found) {
         saveTop();
-        updateLeaderboard();
-        return interaction.editReply(`🗑️ Đã xóa **${user.username}** khỏi TOP`);
+
+        // 🔥 AUTO UPDATE
+        await updateAOVLeaderboard();
+
+        return interaction.editReply(`🗑️ Đã xóa ${user.username} khỏi TOP`);
     }
 
     return interaction.editReply("❌ User không có trong TOP");
