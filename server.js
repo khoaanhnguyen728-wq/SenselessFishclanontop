@@ -206,15 +206,20 @@ function buildRuleEmbeds() {
 const gradientColors = ["#FFFFFF", "#D1E1EC", "#A2C2D9", "#74A4C5", "#4585B1", "#0B3C5D"];
     const webLink = "https://senselessfishclan.pages.dev"; 
 
-    // Header chỉ còn chữ và emoji, đã căn giữa bằng khoảng trắng
-    const header = `          **<:slf_Minecraft_Fish7:1482335219099893831> ◞☼✦ SENSELESSFISH RULES ✦☼◟ <:slf_Minecraft_Fish7:1482335219099893831>**\n\n`;
+    // Sử dụng ký tự Unicode Space để căn giữa chuẩn hơn
+    const centerSpace = "            "; // Khoảng trắng đặc biệt
+    const header = `${centerSpace}**<:slf_Minecraft_Fish7:1482335219099893831> ◞☼✦ SENSELESSFISH RULES ✦☼◟ <:slf_Minecraft_Fish7:1482335219099893831>**\n\n`;
 
     return rules.map((r, i) => {
-        const description = (i === 0 ? header : "") + 
+        let description = (i === 0 ? header : "") + 
             `📌 ${r.title}\n\n` +
             `${r.content.trim()}\n\n` +
-            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-            `*Xem thêm [tại đây](${webLink})*`;
+            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+
+        // Chỉ thêm link vào Rule cuối cùng (Rule 6)
+        if (i === 5) {
+            description += `\n*Xem thêm [tại đây](${webLink})*`;
+        }
 
         return new EmbedBuilder()
             .setColor(gradientColors[i])
