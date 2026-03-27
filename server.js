@@ -217,7 +217,7 @@ const gradientColors = ["#FFFFFF", "#D1E1EC", "#A2C2D9", "#74A4C5", "#4585B1", "
 
     return rules.map((r, i) => {
         let description = (i === 0 ? header : "") + 
-            `📌 ${r.title}\n\n` +
+            ` ${r.title}\n\n` +
             `${r.content.trim()}\n\n` +
             `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
