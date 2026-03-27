@@ -207,8 +207,9 @@ const gradientColors = ["#FFFFFF", "#D1E1EC", "#A2C2D9", "#74A4C5", "#4585B1", "
     const webLink = "https://senselessfishclan.pages.dev"; 
 
     // Sử dụng ký tự Unicode Space để căn giữa chuẩn hơn
-    const centerSpace = "            "; // Khoảng trắng đặc biệt
-    const header = `${centerSpace}**<:slf_Minecraft_Fish7:1482335219099893831> ◞☼✦ SENSELESSFISH RULES ✦☼◟ <:slf_Minecraft_Fish7:1482335219099893831>**\n\n`;
+    const centerShift = "                  "; 
+    
+    const header = `${centerShift}**SENSELESSFISH RULES**\n${centerShift}<:slf_Minecraft_Fish7:1482335219099893831> ◞☼✦ ✦☼◟ <:slf_Minecraft_Fish7:1482335219099893831>\n\n`;
 
     return rules.map((r, i) => {
         let description = (i === 0 ? header : "") + 
