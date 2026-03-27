@@ -243,21 +243,29 @@ client.on("messageCreate", async (message) => {
     if (now - last < 5000) return;
     cooldown.set(message.author.id, now);
 
-    // ================= RULE =================
-if (message.channel.id === RULE_CHANNEL) {
-        // SỬA TẠI ĐÂY: Dùng hàm hasPermission để check được nhiều Role Admin
-        if (!hasPermission(message.member)) return; 
+// ================= RULE =================
+if (message.content.toLowerCase().startsWith("rule")) { // Kiểm tra từ khóa "rule" trước
+    
+    // 1. Kiểm tra xem có đúng channel không
+    if (message.channel.id !== process.env.RULE_CHANNEL) return;
 
-        if (content === "rule" || content === "rule list") {
-            try {
-                const embeds = buildRuleEmbeds();
-                await message.delete().catch(() => {});
-                return await message.channel.send({ embeds });
-            } catch (err) {
-                console.error("Lỗi gửi Rule:", err);
-            }
+    // 2. Kiểm tra quyền (Hãy chắc chắn ADMIN_ROLE trong .env đã chuẩn)
+    if (!hasPermission(message.member)) {
+        return message.reply("❌ Bạn không có quyền dùng lệnh này!").then(m => setTimeout(() => m.delete(), 3000));
+    }
+
+    const cmd = message.content.toLowerCase();
+    if (cmd === "rule" || cmd === "rule list") {
+        try {
+            const embeds = buildRuleEmbeds();
+            await message.delete().catch(() => {});
+            return await message.channel.send({ embeds });
+        } catch (err) {
+            console.error("Lỗi gửi Rule:", err);
+            message.channel.send("❌ Đã xảy ra lỗi khi gửi Rule, check Console!");
         }
     }
+}
 
     // ================= AOV =================
     if (message.channel.id === AOV_CHANNEL) {
