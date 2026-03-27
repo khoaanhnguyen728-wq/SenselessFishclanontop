@@ -155,7 +155,7 @@ function buildRuleEmbeds() {
         {
             title: "<a:slf_bleh:1485507133838462976> **1. THÁI ĐỘ**",
             content: `
-**Đối xử với mọi người như cách bạn muốn được đối xử.**
+**Đối xử với mọi người như cách bạn muốn được đối xử.
 
 • Không xúc phạm (toxic), kỳ thị, quấy rối, công kích cá nhân hay bắt nạt bất kì ai.  
 • Giữ thái độ chuẩn mực khi tranh luận, đừng để mọi chuyện đi quá xa.
@@ -213,7 +213,7 @@ const gradientColors = ["#FFFFFF", "#D1E1EC", "#A2C2D9", "#74A4C5", "#4585B1", "
     // Bạn có thể thêm/bớt ký tự " " bên dưới để tinh chỉnh nếu thấy lệch
     const centerShift = "                "; 
 
-    const header = `${centerShift}${fish}***◞☼✦ SENSELESSFISH RULES ✦☼◟***${fish}\n\n`;
+    const header = `${centerShift}${fish}***◞☼✦—SENSELESSFISH RULES—✦☼◟***${fish}\n\n`;
 
     return rules.map((r, i) => {
         let description = (i === 0 ? header : "") + 
@@ -274,9 +274,16 @@ if (message.channel.id === RULE_CHANNEL) {
 });
 client.on("interactionCreate", async interaction => {
     try {
+
         if (interaction.isChatInputCommand()) {
-            // Chỉ defer MỘT LẦN DUY NHẤT ở đây cho tất cả các lệnh
             await interaction.deferReply({ ephemeral: true });
+        }
+
+        if (interaction.isStringSelectMenu() && interaction.customId !== "select_stage") {
+            await interaction.deferReply({ ephemeral: true });
+        }
+
+        if (interaction.isChatInputCommand()) {
             const { commandName, options } = interaction;
 
 /* ===== CAN BLACKLIST FUNCTION ===== */
@@ -666,6 +673,7 @@ if (interaction.isStringSelectMenu()) {
 }
 
         if (interaction.isModalSubmit()) {
+            await interaction.deferReply({ ephemeral: true });
             if (interaction.customId === "submit_score") {
                 const score = interaction.fields.getTextInputValue("score");
                 const stage = selected.get(interaction.user.id) || "Unknown";
