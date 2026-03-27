@@ -95,7 +95,10 @@ const selected = new Map();
 
 client.once("ready", () => {
     console.log("Bot online:", client.user.tag);
-    setInterval(updateAOVLeaderboard, 10000);
+    setInterval(() => {
+    console.log("⏳ Đang update AOV...");
+    updateAOVLeaderboard().catch(console.error);
+}, 10000);
     setInterval(() => {
         const guild = client.guilds.cache.get(process.env.GUILD_ID);
         if (!guild) return;
@@ -107,6 +110,7 @@ client.once("ready", () => {
 });
 
 async function updateAOVLeaderboard() {
+    console.log("🔥 chạy function AOV");
     try {
         const channel = await client.channels.fetch(AOV_CHANNEL).catch(() => null);
         if (!channel) return;
