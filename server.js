@@ -95,7 +95,7 @@ const selected = new Map();
 
 client.once("ready", () => {
     console.log("Bot online:", client.user.tag);
-    setInterval(updateLeaderboard, 10000);
+    setInterval(updateAOVLeaderboard, 10000);
     setInterval(() => {
         const guild = client.guilds.cache.get(process.env.GUILD_ID);
         if (!guild) return;
