@@ -153,53 +153,53 @@ async function updateAOVLeaderboard() {
 function buildRuleEmbeds() {
     const rules = [
         {
-            title: "<a:slf_bleh:1485507133838462976> **1. THÁI ĐỘ**",
+            title: "<a:slf_bleh:1485507133838462976># **1. THÁI ĐỘ**",
             content: `
 **Đối xử với mọi người như cách bạn muốn được đối xử.
 
-• Không xúc phạm (toxic), kỳ thị, quấy rối, công kích cá nhân hay bắt nạt bất kì ai.  
-• Giữ thái độ chuẩn mực khi tranh luận, đừng để mọi chuyện đi quá xa.
+• '''Không xúc phạm (toxic), kỳ thị, quấy rối, công kích cá nhân hay bắt nạt bất kì ai.  
+• '''Giữ thái độ chuẩn mực khi tranh luận, đừng để mọi chuyện đi quá xa.
             `
         },
         {
-            title: "<a:slf_bleh:1485507133838462976> **2. NỘI DUNG**",
+            title: "<a:slf_bleh:1485507133838462976># **2. NỘI DUNG**",
             content: `
-• Nói chuyện đúng chủ đề của kênh chat.  
-• Không spam tin nhắn, emoji, ping hoặc gây war, cà khịa quá đà.  
-• Cấm nội dung 18+, NSFW, gore, phản cảm (kể cả avatar, nickname).  
-• Không gửi link độc hại, lừa đảo, jumpscare, gây ám ảnh.
+• '''Nói chuyện đúng chủ đề của kênh chat.  
+• '''Không spam tin nhắn, emoji, ping hoặc gây war, cà khịa quá đà.  
+• '''Cấm nội dung 18+, NSFW, gore, phản cảm (kể cả avatar, nickname).  
+• '''Không gửi link độc hại, lừa đảo, jumpscare, gây ám ảnh.
             `
         },
         {
-            title: "<a:slf_bleh:1485507133838462976> **3. BA KHÔNG**",
+            title: "<a:slf_bleh:1485507133838462976># **3. BA KHÔNG**",
             content: `
-• Không phân biệt vùng miền dưới mọi hình thức.  
-• Không phân biệt chủng tộc, màu da (ví dụ: nigga, nigger,...).  
-• Không phân biệt giới tính, xúc phạm hay chế giễu người khác.
+• '''Không phân biệt vùng miền dưới mọi hình thức.  
+• '''Không phân biệt chủng tộc, màu da (ví dụ: nigga, nigger,...).  
+• '''Không phân biệt giới tính, xúc phạm hay chế giễu người khác.
             `
         },
         {
-            title: "<a:slf_bleh:1485507133838462976> **4. KHÔNG QUẢNG CÁO**",
+            title: "<a:slf_bleh:1485507133838462976># **4. KHÔNG QUẢNG CÁO**",
             content: `
-• Cấm quảng cáo Discord, Youtube, website khi chưa được phép.  
-• Mọi hình thức quảng cáo sẽ bị xóa và cảnh cáo ngay lập tức.  
-• Liên hệ Admin/Owner nếu muốn xin phép quảng cáo.
+• '''Cấm quảng cáo Discord, Youtube, website khi chưa được phép.  
+• '''Mọi hình thức quảng cáo sẽ bị xóa và cảnh cáo ngay lập tức.  
+• '''Liên hệ Admin/Owner nếu muốn xin phép quảng cáo.
             `
         },
         {
-            title: "<a:slf_bleh:1485507133838462976> **5. GIỌNG NÓI & NHẠC**",
+            title: "<a:slf_bleh:1485507133838462976># **5. GIỌNG NÓI & NHẠC**",
             content: `
-• Không chửi thề, cãi nhau trong voice chat.  
-• Không bật nhạc gây ồn ào, làm phiền người khác.  
-• Bật lọc tiếng ồn và giữ thái độ lịch sự khi nói chuyện.
+• '''Không chửi thề, cãi nhau trong voice chat.  
+• '''Không bật nhạc gây ồn ào, làm phiền người khác.  
+• '''Bật lọc tiếng ồn và giữ thái độ lịch sự khi nói chuyện.
             `
         },
         {
-            title: "<a:slf_bleh:1485507133838462976> **6. KHÔNG LÀM PHIỀN QUẢN LÍ**",
+            title: "<a:slf_bleh:1485507133838462976># **6. KHÔNG LÀM PHIỀN QUẢN LÍ**",
             content: `
-• Không ping staff khi không cần thiết.  
-• Không làm phiền Owner/Admin.  
-• Đội ngũ sẽ hỗ trợ bạn sớm nhất có thể.
+• '''Không ping staff khi không cần thiết.  
+• '''Không làm phiền Owner/Admin.  
+• '''Đội ngũ sẽ hỗ trợ bạn sớm nhất có thể.
             `
         }
     ];
@@ -213,7 +213,7 @@ const gradientColors = ["#FFFFFF", "#D1E1EC", "#A2C2D9", "#74A4C5", "#4585B1", "
     // Bạn có thể thêm/bớt ký tự " " bên dưới để tinh chỉnh nếu thấy lệch
     const centerShift = "                "; 
 
-    const header = `${centerShift}${fish}***◞☼✦—SENSELESSFISH RULES—✦☼◟***${fish}\n\n`;
+    const header = `${centerShift}${fish}***#◞☼✦—SENSELESSFISH RULES—✦☼◟***${fish}\n\n`;
 
     return rules.map((r, i) => {
         let description = (i === 0 ? header : "") + 
