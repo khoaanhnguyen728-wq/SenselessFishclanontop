@@ -219,7 +219,7 @@ const gradientColors = ["#FFFFFF", "#D1E1EC", "#A2C2D9", "#74A4C5", "#4585B1", "
         let description = (i === 0 ? header : "") + 
             `📌 ${r.title}\n\n` +
             `${r.content.trim()}\n\n` +
-            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
         if (i === 5) {
             description += `\n*Xem thêm [tại đây](${webLink})*`;
