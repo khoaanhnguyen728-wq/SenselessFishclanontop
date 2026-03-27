@@ -204,22 +204,25 @@ function buildRuleEmbeds() {
         }
     ];
 const gradientColors = [
-        "#FFFFFF", // Trắng (Rule 1)
-        "#D1E1EC", // Xanh cực nhạt
-        "#A2C2D9", // Xanh nhạt
-        "#74A4C5", // Xanh vừa
-        "#4585B1", // Xanh đậm vừa
-        "#0B3C5D"  // Xanh đậm (Rule 6)
+        "#FFFFFF", // Rule 1
+        "#D1E1EC", // Rule 2
+        "#A2C2D9", // Rule 3
+        "#74A4C5", // Rule 4
+        "#4585B1", // Rule 5
+        "#0B3C5D"  // Rule 6
     ];
 
-const header = `╔════════════════════════════╗\n**<:slf_Minecraft_Fish7:1482335219099893831> ◞☼✦ SENSELESSFISH RULES ✦☼◟ <:slf_Minecraft_Fish7:1482335219099893831>**\n╚════════════════════════════╝\n\n`;
+const header = `\n**<:slf_Minecraft_Fish7:1482335219099893831> ◞☼✦ SENSELESSFISH RULES ✦☼◟ <:slf_Minecraft_Fish7:1482335219099893831>**\n\n\n`;
 
     return rules.map((r, i) => {
-        // Chỉ thêm header vào Embed đầu tiên (index 0)
-        const description = (i === 0 ? header : "") + `📌 ${r.title}\n\n${r.content}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+        // Tạo nội dung: (Header nếu là i=0) + Tiêu đề + Nội dung + Thanh ngang cuối cùng
+        const description = (i === 0 ? header : "") + 
+            `📌 ${r.title}\n\n` +
+            `${r.content}\n\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`; // Thanh ngang ở dưới cùng mỗi rule
 
         return new EmbedBuilder()
-            .setColor("#065386")
+            .setColor(gradientColors[i])
             .setDescription(description)
             .setFooter({ text: `Rule ${i + 1} / 6 • SenselessFish` });
     });
