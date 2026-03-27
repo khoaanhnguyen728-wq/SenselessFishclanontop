@@ -203,23 +203,23 @@ function buildRuleEmbeds() {
             `
         }
     ];
-const gradientColors = [
-        "#FFFFFF", // Rule 1
-        "#D1E1EC", // Rule 2
-        "#A2C2D9", // Rule 3
-        "#74A4C5", // Rule 4
-        "#4585B1", // Rule 5
-        "#0B3C5D"  // Rule 6
-    ];
+const gradientColors = ["#FFFFFF", "#D1E1EC", "#A2C2D9", "#74A4C5", "#4585B1", "#0B3C5D"];
+    
+    // Thay LINK_WEB_CUA_BAN bằng link thực tế của bạn nhé
+    const webLink = "https://senselessfishclan.pages.dev"; 
 
-const header = `\n**<:slf_Minecraft_Fish7:1482335219099893831> ◞☼✦ SENSELESSFISH RULES ✦☼◟ <:slf_Minecraft_Fish7:1482335219099893831>**\n\n\n`;
+    // Header đã bỏ dòng kẻ dưới
+    const header = 
+`
+      **<:slf_Minecraft_Fish7:1482335219099893831> ◞☼✦ SENSELESSFISH RULES ✦☼◟ <:slf_Minecraft_Fish7:1482335219099893831>**
+\n`;
 
     return rules.map((r, i) => {
-        // Tạo nội dung: (Header nếu là i=0) + Tiêu đề + Nội dung + Thanh ngang cuối cùng
         const description = (i === 0 ? header : "") + 
             `📌 ${r.title}\n\n` +
             `${r.content}\n\n` +
-            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`; // Thanh ngang ở dưới cùng mỗi rule
+            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+            `*Xem thêm [tại đây](${webLink})*`; // Phần link màu xanh
 
         return new EmbedBuilder()
             .setColor(gradientColors[i])
