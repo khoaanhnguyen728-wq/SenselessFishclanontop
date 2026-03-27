@@ -203,23 +203,26 @@ function buildRuleEmbeds() {
             `
         }
     ];
+const gradientColors = [
+        "#FFFFFF", // Trắng (Rule 1)
+        "#D1E1EC", // Xanh cực nhạt
+        "#A2C2D9", // Xanh nhạt
+        "#74A4C5", // Xanh vừa
+        "#4585B1", // Xanh đậm vừa
+        "#0B3C5D"  // Xanh đậm (Rule 6)
+    ];
 
-    return rules.map((r, i) =>
-        new EmbedBuilder()
-            .setColor("#0B3C5D")
-            .setDescription(
-`╔════════════════════════════╗
-**<:slf_Minecraft_Fish7:1482335219099893831> ◞☼✦ SENSELESSFISH RULES ✦☼◟ <:slf_Minecraft_Fish7:1482335219099893831>**
-╚════════════════════════════╝
+const header = `╔════════════════════════════╗\n**<:slf_Minecraft_Fish7:1482335219099893831> ◞☼✦ SENSELESSFISH RULES ✦☼◟ <:slf_Minecraft_Fish7:1482335219099893831>**\n╚════════════════════════════╝\n\n`;
 
- ${r.title}
+    return rules.map((r, i) => {
+        // Chỉ thêm header vào Embed đầu tiên (index 0)
+        const description = (i === 0 ? header : "") + `📌 ${r.title}\n\n${r.content}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
-${r.content}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
-            )
-            .setFooter({ text: `Rule ${i + 1} / 6 • SenselessFish` })
-    );
+        return new EmbedBuilder()
+            .setColor("#065386")
+            .setDescription(description)
+            .setFooter({ text: `Rule ${i + 1} / 6 • SenselessFish` });
+    });
 }
 client.on("messageCreate", async (message) => {
     if (message.author.bot) return;
