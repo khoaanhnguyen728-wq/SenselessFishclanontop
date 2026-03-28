@@ -153,7 +153,7 @@ async function updateAOVLeaderboard() {
 function buildRuleEmbeds() {
     const rules = [
         {
-            title: "<a:slf_bleh:1485507133838462976>## **1. THÁI ĐỘ**",
+            title: "<a:slf_bleh:1485507133838462976>**1. THÁI ĐỘ**",
             content: `
 **Đối xử với mọi người như cách bạn muốn được đối xử.
 \`\`\`
@@ -162,7 +162,7 @@ function buildRuleEmbeds() {
 \`\`\`           `
         },
         {
-            title: "<a:slf_bleh:1485507133838462976>## **2. NỘI DUNG**",
+            title: "<a:slf_bleh:1485507133838462976>**2. NỘI DUNG**",
             content: `
 \`\`\`
 • Nói chuyện đúng chủ đề của kênh chat.  
@@ -172,7 +172,7 @@ function buildRuleEmbeds() {
 \`\`\`           `
         },
         {
-            title: "<a:slf_bleh:1485507133838462976>## **3. BA KHÔNG**",
+            title: "<a:slf_bleh:1485507133838462976>**3. BA KHÔNG**",
             content: `
 \`\`\`
 • Không phân biệt vùng miền dưới mọi hình thức.  
@@ -181,7 +181,7 @@ function buildRuleEmbeds() {
 \`\`\`           `
         },
         {
-            title: "<a:slf_bleh:1485507133838462976>## **4. KHÔNG QUẢNG CÁO**",
+            title: "<a:slf_bleh:1485507133838462976>**4. KHÔNG QUẢNG CÁO**",
             content: `
 \`\`\`
 • Cấm quảng cáo Discord, Youtube, website khi chưa được phép.  
@@ -190,7 +190,7 @@ function buildRuleEmbeds() {
 \`\`\`           `
         },
         {
-            title: "<a:slf_bleh:1485507133838462976>## **5. GIỌNG NÓI & NHẠC**",
+            title: "<a:slf_bleh:1485507133838462976>**5. GIỌNG NÓI & NHẠC**",
             content: `
 \`\`\`
 • Không chửi thề, cãi nhau trong voice chat.  
@@ -199,13 +199,24 @@ function buildRuleEmbeds() {
 \`\`\`           `
         },
         {
-            title: "<a:slf_bleh:1485507133838462976># **6. KHÔNG LÀM PHIỀN QUẢN LÍ**",
+            title: "<a:slf_bleh:1485507133838462976>**6. KHÔNG LÀM PHIỀN QUẢN LÍ**",
             content: `
 \`\`\`
 • Không ping staff khi không cần thiết.  
 • Không làm phiền Owner/Admin.  
 • Đội ngũ sẽ hỗ trợ bạn sớm nhất có thể.
 \`\`\`           `
+        },
+        {
+    title: "<a::slf_capoo_bcmischeifbatcat:1479448873226473616>**7. Vi phạm**",
+    content: `
+\`\`\`
+• STRIKE 1: Cảnh báo 1/3 
+• STRIKE 2: Cảnh báo 2/3 
+• STRIKE 3: Cảnh báo 3/3 
+• Blacklist: STRIKE 3 lần sẽ bị baned (tùy theo mức độ vi phạm mà có thể bị ban ngay từ lần đầu).
+\`\`\`
+`
         }
     ];
 const gradientColors = ["#FFFFFF", "#D1E1EC", "#A2C2D9", "#74A4C5", "#4585B1", "#0B3C5D"];
@@ -218,7 +229,7 @@ const gradientColors = ["#FFFFFF", "#D1E1EC", "#A2C2D9", "#74A4C5", "#4585B1", "
     // Bạn có thể thêm/bớt ký tự " " bên dưới để tinh chỉnh nếu thấy lệch
     const centerShift = "                "; 
 
-    const header = `${centerShift}${fish}***# ◞☼✦—SENSELESSFISH RULES—✦☼◟***${fish}\n\n`;
+    const header = `${centerShift}${fish}***◞☼✦—SENSELESSFISH RULES—✦☼◟***${fish}\n\n`;
 
 return rules.map((r, i) => {
     let description = (i === 0 ? header : "") + 
