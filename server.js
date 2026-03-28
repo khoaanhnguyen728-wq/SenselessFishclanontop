@@ -273,6 +273,12 @@ if (content.startsWith("rule")) {
             const embeds = buildRuleEmbeds();
 
             await message.channel.send({ embeds });
+            await message.channel.send(`
+# 💖 CẢM ƠN BẠN ĐÃ ĐỌC RULE
+
+**CHÚC BẠN CÓ TRẢI NGHIỆM TỐT  
+TẠI SENSELESSFISH**
+`);
 
             await message.delete().catch(() => {});
 
