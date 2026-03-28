@@ -156,51 +156,56 @@ function buildRuleEmbeds() {
             title: "<a:slf_bleh:1485507133838462976>## **1. THÁI ĐỘ**",
             content: `
 **Đối xử với mọi người như cách bạn muốn được đối xử.
-
-• '''Không xúc phạm (toxic), kỳ thị, quấy rối, công kích cá nhân hay bắt nạt bất kì ai.  
-• '''Giữ thái độ chuẩn mực khi tranh luận, đừng để mọi chuyện đi quá xa.
-            `
+\`\`\`
+• Không xúc phạm (toxic), kỳ thị, quấy rối, công kích cá nhân hay bắt nạt bất kì ai.  
+• Giữ thái độ chuẩn mực khi tranh luận, đừng để mọi chuyện đi quá xa.
+\`\`\`           `
         },
         {
             title: "<a:slf_bleh:1485507133838462976>## **2. NỘI DUNG**",
             content: `
-• '''Nói chuyện đúng chủ đề của kênh chat.  
-• '''Không spam tin nhắn, emoji, ping hoặc gây war, cà khịa quá đà.  
-• '''Cấm nội dung 18+, NSFW, gore, phản cảm (kể cả avatar, nickname).  
-• '''Không gửi link độc hại, lừa đảo, jumpscare, gây ám ảnh.
-            `
+\`\`\`
+• Nói chuyện đúng chủ đề của kênh chat.  
+• Không spam tin nhắn, emoji, ping hoặc gây war, cà khịa quá đà.  
+• Cấm nội dung 18+, NSFW, gore, phản cảm (kể cả avatar, nickname).  
+• Không gửi link độc hại, lừa đảo, jumpscare, gây ám ảnh.
+\`\`\`           `
         },
         {
             title: "<a:slf_bleh:1485507133838462976>## **3. BA KHÔNG**",
             content: `
-• '''Không phân biệt vùng miền dưới mọi hình thức.  
-• '''Không phân biệt chủng tộc, màu da (ví dụ: nigga, nigger,...).  
-• '''Không phân biệt giới tính, xúc phạm hay chế giễu người khác.
-            `
+\`\`\`
+• Không phân biệt vùng miền dưới mọi hình thức.  
+• Không phân biệt chủng tộc, màu da (ví dụ: nigga, nigger,...).  
+• Không phân biệt giới tính, xúc phạm hay chế giễu người khác.
+\`\`\`           `
         },
         {
             title: "<a:slf_bleh:1485507133838462976>## **4. KHÔNG QUẢNG CÁO**",
             content: `
-• '''Cấm quảng cáo Discord, Youtube, website khi chưa được phép.  
-• '''Mọi hình thức quảng cáo sẽ bị xóa và cảnh cáo ngay lập tức.  
-• '''Liên hệ Admin/Owner nếu muốn xin phép quảng cáo.
-            `
+\`\`\`
+• Cấm quảng cáo Discord, Youtube, website khi chưa được phép.  
+• Mọi hình thức quảng cáo sẽ bị xóa và cảnh cáo ngay lập tức.  
+• Liên hệ Admin/Owner nếu muốn xin phép quảng cáo.
+\`\`\`           `
         },
         {
             title: "<a:slf_bleh:1485507133838462976>## **5. GIỌNG NÓI & NHẠC**",
             content: `
-• ''' Không chửi thề, cãi nhau trong voice chat.  
-• ''' Không bật nhạc gây ồn ào, làm phiền người khác.  
-• ''' Bật lọc tiếng ồn và giữ thái độ lịch sự khi nói chuyện.
-            `
+\`\`\`
+• Không chửi thề, cãi nhau trong voice chat.  
+• Không bật nhạc gây ồn ào, làm phiền người khác.  
+• Bật lọc tiếng ồn và giữ thái độ lịch sự khi nói chuyện.
+\`\`\`           `
         },
         {
             title: "<a:slf_bleh:1485507133838462976># **6. KHÔNG LÀM PHIỀN QUẢN LÍ**",
             content: `
-• 'Không ping staff khi không cần thiết.  
-• 'Không làm phiền Owner/Admin.  
-• 'Đội ngũ sẽ hỗ trợ bạn sớm nhất có thể.
-            `
+\`\`\`
+• Không ping staff khi không cần thiết.  
+• Không làm phiền Owner/Admin.  
+• Đội ngũ sẽ hỗ trợ bạn sớm nhất có thể.
+\`\`\`           `
         }
     ];
 const gradientColors = ["#FFFFFF", "#D1E1EC", "#A2C2D9", "#74A4C5", "#4585B1", "#0B3C5D"];
@@ -215,21 +220,21 @@ const gradientColors = ["#FFFFFF", "#D1E1EC", "#A2C2D9", "#74A4C5", "#4585B1", "
 
     const header = `${centerShift}${fish}***# ◞☼✦—SENSELESSFISH RULES—✦☼◟***${fish}\n\n`;
 
-    return rules.map((r, i) => {
-        let description = (i === 0 ? header : "") + 
-            ` ${r.title}\n\n` +
-            `${r.content.trim()}\n\n` +
-            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+return rules.map((r, i) => {
+    let description = (i === 0 ? header : "") + 
+        ` ${r.title}\n\n` +
+        `${r.content.trim()}\n\n`;
 
-        if (i === 5) {
-            description += `\n*Xem thêm [tại đây](${webLink})*`;
-        }
+    if (i === 5) {
+        description += `\n*Xem thêm [tại đây](${webLink})*`;
+    }
 
-        return new EmbedBuilder()
-            .setColor(gradientColors[i])
-            .setDescription(description)
-            .setFooter({ text: `Rule ${i + 1} / 6 • SenselessFish` });
-    });
+    return new EmbedBuilder()
+        .setColor(gradientColors[i])
+        .setDescription(description)
+        .setImage("https://i.postimg.cc/x8HsNw4q/fixedbulletlines.gif") // ✅ đặt ở đây
+        .setFooter({ text: `Rule ${i + 1} / 6 • SenselessFish` });
+});
 }
 client.on("messageCreate", async (message) => {
     if (message.author.bot) return;
@@ -244,25 +249,25 @@ client.on("messageCreate", async (message) => {
     cooldown.set(message.author.id, now);
 
 // ================= RULE =================
-if (message.content.toLowerCase().startsWith("rule")) { // Kiểm tra từ khóa "rule" trước
-    
-    // 1. Kiểm tra xem có đúng channel không
-    if (message.channel.id !== process.env.RULE_CHANNEL) return;
+if (content.startsWith("rule")) {
 
-    // 2. Kiểm tra quyền (Hãy chắc chắn ADMIN_ROLE trong .env đã chuẩn)
+    if (message.channel.id !== RULE_CHANNEL) return;
+
     if (!hasPermission(message.member)) {
-        return message.reply("❌ Bạn không có quyền dùng lệnh này!").then(m => setTimeout(() => m.delete(), 3000));
+        return message.reply("❌ Bạn không có quyền!").then(m => setTimeout(() => m.delete(), 3000));
     }
 
-    const cmd = message.content.toLowerCase();
-    if (cmd === "rule" || cmd === "rule list") {
+    if (content === "rule" || content === "rule list") {
         try {
             const embeds = buildRuleEmbeds();
+
+            await message.channel.send({ embeds });
+
             await message.delete().catch(() => {});
-            return await message.channel.send({ embeds });
+
         } catch (err) {
-            console.error("Lỗi gửi Rule:", err);
-            message.channel.send("❌ Đã xảy ra lỗi khi gửi Rule, check Console!");
+            console.error(err);
+            message.channel.send("❌ Lỗi gửi rule!");
         }
     }
 }
