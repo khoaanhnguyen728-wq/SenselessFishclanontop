@@ -219,7 +219,7 @@ function buildRuleEmbeds() {
 `
         }
     ];
-const gradientColors = ["#FFFFFF", "#D1E1EC", "#A2C2D9", "#74A4C5", "#4585B1", "#0B3C5D"];
+const gradientColors = ["#FFFFFF", "#D1E1EC", "#A2C2D9", "#74A4C5", "#4585B1", "#0B3C5D", "#091d2b"]; // Từ trắng đến xanh đậm
     const webLink = "https://senselessfishclan.pages.dev"; 
     
     // Sử dụng Emoji Cá gốc của server
