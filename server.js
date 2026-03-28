@@ -208,8 +208,8 @@ function buildRuleEmbeds() {
 \`\`\`           `
         },
         {
-    title: "<a::slf_capoo_bcmischeifbatcat:1479448873226473616>**7. Vi phạm**",
-    content: `
+            title: "<a:slf_capoo_bcmischeifbatcat:1479448873226473616>**7. Vi phạm**",
+            content: `
 \`\`\`
 • STRIKE 1: Cảnh báo 1/3 
 • STRIKE 2: Cảnh báo 2/3 
