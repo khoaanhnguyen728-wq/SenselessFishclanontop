@@ -390,7 +390,6 @@ if (commandName === "blacklist") {
 }
 
 if (commandName === "strike") {
-await interaction.deferReply();
     const target = options.getUser("user");
     const reason = options.getString("reason");
     const proof = options.getAttachment("proof");
@@ -399,8 +398,8 @@ await interaction.deferReply();
     const member = await interaction.guild.members.fetch(interaction.user.id);
 
     // 🔒 CHỈ ADMIN DÙNG
-    if (!member.roles.cache.has(ADMIN_ROLE)) {
-        return interaction.editReply({ content: "❌ Bạn không phải staff" });
+    if (!hasPermission(member)) {
+    return interaction.editReply({ content: "❌ Bạn không phải staff" });
     }
 
     const targetMember = await interaction.guild.members.fetch(target.id);
@@ -428,7 +427,7 @@ await interaction.deferReply();
 
     user.strikes.push({
         reason,
-        proof,
+        proof: proofUrl,
         time: new Date().toLocaleString("vi-VN")
     });
 
@@ -443,16 +442,14 @@ await interaction.deferReply();
 }
 
 if (commandName === "unstrike") {
-await interaction.deferReply();
     const target = options.getUser("user");
     const strikeIndex = options.getInteger("strike") - 1;
 
     const member = await interaction.guild.members.fetch(interaction.user.id);
 
-    if (!member.roles.cache.has(ADMIN_ROLE)) {
-        return interaction.editReply({ content: "❌ Bạn không phải staff" });
+    if (!hasPermission(member)) {
+    return interaction.editReply({ content: "❌ Bạn không phải staff" });
     }
-
     let user = strikes.find(x => x.id === target.id);
 
     if (!user || user.strikes.length === 0) {
@@ -473,7 +470,6 @@ await interaction.deferReply();
 }
 
 if (commandName === "staffstrike") {
-await interaction.deferReply();
     const target = options.getUser("user");
     const reason = options.getString("reason");
     const proof = options.getAttachment("proof");
@@ -947,12 +943,12 @@ app.get("/", (req, res) => res.send("API Running"));
 app.get("/top", (req, res) => res.json(top));
 app.get("/blacklist", (req, res) => res.json(blacklist));
 app.get("/staff", (req, res) => {
-app.get("/strike", (req, res) => {
-    res.json(strikes);
-});
     const roleOrder = ["Founder", "Leader", "Admin", "Mod", "Referee"]; // Rút gọn ví dụ
     const sorted = [...staff].sort((a, b) => roleOrder.indexOf(a.role) - roleOrder.indexOf(b.role));
     res.json(sorted);
+});
+app.get("/strike", (req, res) => {
+    res.json(strikes);
 });
 app.get("/stats", (req, res) => res.json(stats));
 
