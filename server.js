@@ -338,6 +338,7 @@ function canBlacklist(member) {
 
 /* ===== BLACKLIST ===== */
 if (commandName === "blacklist") {
+await interaction.deferReply({ flags: 64 });
     // Không dùng deferReply ở đây nữa vì đã gọi ở dòng 110
     const user = options.getUser("user");
     const reason = options.getString("reason") || "Không có";
