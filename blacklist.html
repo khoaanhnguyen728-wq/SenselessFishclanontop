@@ -24,16 +24,6 @@ body{
   100%{background-position:0% 50%}
 }
 
-#loginBtn:hover{
-  background:#00c3ff;
-  box-shadow:0 0 12px #00eaff;
-}
-
-#logoutBtn:hover{
-  background:#ff0000;
-  box-shadow:0 0 15px red;
-}
-
 /* NAVBAR */
 .navbar{
   position:fixed;
@@ -1122,6 +1112,7 @@ body{
         <a href="mainers.html">Mainers</a>
         <a href="allies.html">Allies</a>
         <a href="blacklist.html">Blacklist</a>
+        <a href="strike.html">Strike</a>
       </div>
     </div>
   </div>
@@ -1239,7 +1230,7 @@ document.addEventListener("click",(e)=>{
 </script>
 <script>
 const CLIENT_ID = "1476208651835408506";
-const REDIRECT_URI = "https://senselessfishclan.pages.dev/about";
+const REDIRECT_URI = "https://senselessfishclan.pages.dev/blacklist";
 let discordUser = null;
 
 // HÀM QUAN TRỌNG: Kiểm tra và hiển thị thông tin người dùng
