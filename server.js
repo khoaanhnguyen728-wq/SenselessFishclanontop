@@ -153,7 +153,7 @@ if (!message) {
             .setDescription(text)
             .setTimestamp();
 
-        await msg.edit({ embeds: [embed] });
+        await message.edit({ embeds: [embed] });
 
     } catch (err) {
         console.log("AOV ERROR:", err);
