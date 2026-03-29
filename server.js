@@ -441,6 +441,36 @@ if (commandName === "strike") {
     return interaction.editReply(`✅ ${target.username} đã bị strike (${user.strikes.length}/3)`);
 }
 
+if (commandName === "unstrike") {
+
+    const target = options.getUser("user");
+    const strikeIndex = options.getInteger("strike") - 1;
+
+    const member = await interaction.guild.members.fetch(interaction.user.id);
+
+    if (!member.roles.cache.has(ADMIN_ROLE)) {
+        return interaction.editReply({ content: "❌ Bạn không phải staff" });
+    }
+
+    let user = strikes.find(x => x.id === target.id);
+
+    if (!user || user.strikes.length === 0) {
+        return interaction.editReply("⚠️ Người này không có strike");
+    }
+
+    if (strikeIndex >= user.strikes.length) {
+        return interaction.editReply("❌ Strike này không tồn tại");
+    }
+
+    const removed = user.strikes.splice(strikeIndex, 1)[0];
+
+    saveStrikes();
+
+    return interaction.editReply(
+        `✅ Đã gỡ Strike ${strikeIndex + 1}\n📌 ${removed.reason}\n📉 Còn: ${user.strikes.length}/${user.staff ? 4 : 3}`
+    );
+}
+
 if (commandName === "staffstrike") {
 
     const target = options.getUser("user");
