@@ -5,6 +5,28 @@ const { REST, Routes, SlashCommandBuilder } = require("discord.js");
 const commands = [
 
 new SlashCommandBuilder()
+.setName("strike")
+.setDescription("Strike member")
+.addUserOption(o =>
+  o.setName("user").setDescription("User").setRequired(true))
+.addStringOption(o =>
+  o.setName("reason").setDescription("Lý do").setRequired(true))
+.addAttachmentOption(o =>
+  o.setName("proof").setDescription("Ảnh bằng chứng").setRequired(true)
+),
+
+new SlashCommandBuilder()
+.setName("staffstrike")
+.setDescription("Strike staff")
+.addUserOption(o =>
+  o.setName("user").setDescription("Staff").setRequired(true))
+.addStringOption(o =>
+  o.setName("reason").setDescription("Lý do").setRequired(true))
+.addAttachmentOption(o =>
+  o.setName("proof").setDescription("Ảnh bằng chứng").setRequired(true)
+),
+
+new SlashCommandBuilder()
   .setName("blacklist")
   .setDescription("Thêm user vào blacklist")
   .addUserOption(o =>
