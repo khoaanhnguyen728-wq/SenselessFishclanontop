@@ -80,6 +80,13 @@ function hasPermission(member) {
     return roles.some(roleId => userRoles.includes(roleId));
 }
 
+async function sendStrikeLog(client, embed) {
+    const channel = await client.channels.fetch(process.env.STRIKE_CHANNEL).catch(() => null);
+    if (!channel) return console.log("❌ Không tìm thấy strike channel");
+
+    channel.send({ embeds: [embed] });
+}
+
 /* ================= DISCORD BOT ================= */
 const client = new Client({
     intents: [
@@ -435,6 +442,20 @@ if (commandName === "strike") {
     });
 
     saveStrikes();
+const embed = new EmbedBuilder()
+    .setColor("Red")
+    .setTitle("🚨 Strike Member")
+    .setThumbnail(target.displayAvatarURL())
+    .addFields(
+        { name: "👤 User", value: `<@${target.id}>`, inline: true },
+        { name: "🛡 Staff", value: `<@${interaction.user.id}>`, inline: true },
+        { name: "📌 Reason", value: reason }
+    )
+    .setImage(proofUrl)
+    .setFooter({ text: `Strike ${user.strikes.length}/3` })
+    .setTimestamp();
+
+sendStrikeLog(client, embed);
 
     // 🚨 AUTO BAN
     if (user.strikes.length >= 3) {
@@ -460,18 +481,29 @@ if (commandName === "unstrike") {
         return interaction.editReply("⚠️ Người này không có strike");
     }
 
-    if (strikeIndex >= user.strikes.length) {
-        return interaction.editReply("❌ Strike này không tồn tại");
-    }
+if (strikeIndex < 0 || strikeIndex >= user.strikes.length) {
+    return interaction.editReply("❌ Strike này không tồn tại");
+}
 
 const removed = user.strikes.splice(strikeIndex, 1)[0];
+const embed = new EmbedBuilder()
+    .setColor("Green")
+    .setTitle("✅ Unstrike")
+    .setThumbnail(target.displayAvatarURL())
+    .addFields(
+        { name: "👤 User", value: `<@${target.id}>`, inline: true },
+        { name: "🛡 Staff", value: `<@${interaction.user.id}>`, inline: true },
+        { name: "🗑 Removed", value: removed.reason }
+    )
+    .setFooter({ text: `Còn lại: ${user.strikes.length}` })
+    .setTimestamp();
+
+sendStrikeLog(client, embed);
 
 // ❗ Xóa user nếu hết strike
 if (user.strikes.length === 0) {
     strikes = strikes.filter(x => x.id !== target.id);
 }
-
-saveStrikes();
 
     saveStrikes();
 
@@ -518,11 +550,25 @@ if (!hasPermission(member)) {
 
     user.strikes.push({
         reason,
-        proof,
+        proof: proof.url,
         time: new Date().toLocaleString("vi-VN")
     });
 
     saveStrikes();
+const embed = new EmbedBuilder()
+    .setColor("Orange")
+    .setTitle("⚠️ Staff Strike")
+    .setThumbnail(target.displayAvatarURL())
+    .addFields(
+        { name: "👤 Staff", value: `<@${target.id}>`, inline: true },
+        { name: "🛡 By", value: `<@${interaction.user.id}>`, inline: true },
+        { name: "📌 Reason", value: reason }
+    )
+    .setImage(proof.url)
+    .setFooter({ text: `Strike ${user.strikes.length}/4` })
+    .setTimestamp();
+
+sendStrikeLog(client, embed);
 
     // 🚨 REMOVE ROLE STAFF
     if (user.strikes.length >= 4) {
