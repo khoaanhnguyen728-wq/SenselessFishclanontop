@@ -482,9 +482,9 @@ if (commandName === "staffstrike") {
     const member = await interaction.guild.members.fetch(interaction.user.id);
 
     // 🔒 CHỈ ADMIN DÙNG
-    if (!member.roles.cache.has(ADMIN_ROLE)) {
-        return interaction.editReply({ content: "❌ Bạn không phải staff" });
-    }
+if (!hasPermission(member)) {
+    return interaction.editReply({ content: "❌ Bạn không phải staff" });
+}
 
     const targetMember = await interaction.guild.members.fetch(target.id);
 
