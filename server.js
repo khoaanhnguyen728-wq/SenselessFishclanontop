@@ -390,7 +390,7 @@ if (commandName === "blacklist") {
 }
 
 if (commandName === "strike") {
-
+interaction.editReply()
     const target = options.getUser("user");
     const reason = options.getString("reason");
     const proof = options.getString("proof");
@@ -442,7 +442,7 @@ if (commandName === "strike") {
 }
 
 if (commandName === "unstrike") {
-
+interaction.editReply()
     const target = options.getUser("user");
     const strikeIndex = options.getInteger("strike") - 1;
 
@@ -472,7 +472,7 @@ if (commandName === "unstrike") {
 }
 
 if (commandName === "staffstrike") {
-
+interaction.editReply()
     const target = options.getUser("user");
     const reason = options.getString("reason");
     const proof = options.getString("proof");
