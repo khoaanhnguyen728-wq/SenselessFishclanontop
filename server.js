@@ -464,7 +464,14 @@ if (commandName === "unstrike") {
         return interaction.editReply("❌ Strike này không tồn tại");
     }
 
-    const removed = user.strikes.splice(strikeIndex, 1)[0];
+const removed = user.strikes.splice(strikeIndex, 1)[0];
+
+// ❗ Xóa user nếu hết strike
+if (user.strikes.length === 0) {
+    strikes = strikes.filter(x => x.id !== target.id);
+}
+
+saveStrikes();
 
     saveStrikes();
 
