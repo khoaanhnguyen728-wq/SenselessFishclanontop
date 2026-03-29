@@ -28,12 +28,14 @@ if (!fs.existsSync("top.json")) fs.writeFileSync("top.json", "{}");
 if (!fs.existsSync("register.json")) fs.writeFileSync("register.json", "[]");
 if (!fs.existsSync("staff.json")) fs.writeFileSync("staff.json", "[]");
 if (!fs.existsSync("mainers.json")) fs.writeFileSync("mainers.json", "[]");
+if (!fs.existsSync("strike.json")) fs.writeFileSync("strike.json", "[]");
 
 let blacklist = JSON.parse(fs.readFileSync("blacklist.json"));
 let top = JSON.parse(fs.readFileSync("top.json"));
 let register = JSON.parse(fs.readFileSync("register.json"));
 let staff = JSON.parse(fs.readFileSync("staff.json"));
 let mainers = JSON.parse(fs.readFileSync("mainers.json"));
+let strikes = JSON.parse(fs.readFileSync("strike.json"));
 
 for (let i = 1; i <= 20; i++) { if (!top[i]) top[i] = null; }
 
@@ -42,6 +44,7 @@ const saveTop = () => fs.writeFileSync("top.json", JSON.stringify(top, null, 2))
 const saveStaff = () => fs.writeFileSync("staff.json", JSON.stringify(staff, null, 2));
 const saveRegister = () => fs.writeFileSync("register.json", JSON.stringify(register, null, 2));
 const saveMainers = () => fs.writeFileSync("mainers.json", JSON.stringify(mainers, null, 2));
+const saveStrikes = () => fs.writeFileSync("strike.json", JSON.stringify(strikes, null, 2));
 
 const ROLE_MAP = {
     "Founder": process.env.ROLE_FOUNDER,
@@ -62,6 +65,7 @@ const AOV_CHANNEL = process.env.AOV_CHANNEL;
 const AOV_MESSAGE = process.env.AOV_MESSAGE;
 const RULE_CHANNEL = process.env.RULE_CHANNEL;
 const ADMIN_ROLE = process.env.ADMIN_ROLE;
+const STAFF_ROLE_ID = process.env.STAFF_ROLE_ID;
 
 function hasPermission(member) {
     if (!process.env.ADMIN_ROLE) return false;
@@ -244,7 +248,7 @@ return rules.map((r, i) => {
         .setColor(gradientColors[i])
         .setDescription(description)
         .setImage("https://i.postimg.cc/x8HsNw4q/fixedbulletlines.gif") // ✅ đặt ở đây
-        .setFooter({ text: `Rule ${i + 1} / 6 • SenselessFish` });
+        .setFooter({ text: `Rule ${i + 1} / 7 • SenselessFish` });
 });
 }
 client.on("messageCreate", async (message) => {
@@ -383,6 +387,110 @@ if (commandName === "blacklist") {
             .setTimestamp();
         logChannel.send({ embeds: [logEmbed] }).catch(() => null);
     }
+}
+
+if (commandName === "strike") {
+
+    const target = options.getUser("user");
+    const reason = options.getString("reason");
+    const proof = options.getString("proof");
+
+    const member = await interaction.guild.members.fetch(interaction.user.id);
+
+    // 🔒 CHỈ ADMIN DÙNG
+    if (!member.roles.cache.has(ADMIN_ROLE)) {
+        return interaction.editReply({ content: "❌ Bạn không phải staff" });
+    }
+
+    const targetMember = await interaction.guild.members.fetch(target.id);
+
+    // ❌ KHÔNG CHO STRIKE STAFF
+    if (targetMember.roles.cache.has(STAFF_ROLE_ID)) {
+        return interaction.editReply({ content: "❌ Dùng /staffstrike cho staff" });
+    }
+
+    let user = strikes.find(x => x.id === target.id);
+
+    if (!user) {
+        user = {
+            id: target.id,
+            name: target.username,
+            staff: false,
+            strikes: []
+        };
+        strikes.push(user);
+    }
+
+    if (user.strikes.length >= 3) {
+        return interaction.editReply("⚠️ Người này đã 3/3 strike");
+    }
+
+    user.strikes.push({
+        reason,
+        proof,
+        time: new Date().toLocaleString("vi-VN")
+    });
+
+    saveStrikes();
+
+    // 🚨 AUTO BAN
+    if (user.strikes.length >= 3) {
+        await targetMember.ban({ reason: "Đủ 3 strike" }).catch(() => {});
+    }
+
+    return interaction.editReply(`✅ ${target.username} đã bị strike (${user.strikes.length}/3)`);
+}
+
+if (commandName === "staffstrike") {
+
+    const target = options.getUser("user");
+    const reason = options.getString("reason");
+    const proof = options.getString("proof");
+
+    const member = await interaction.guild.members.fetch(interaction.user.id);
+
+    // 🔒 CHỈ ADMIN DÙNG
+    if (!member.roles.cache.has(ADMIN_ROLE)) {
+        return interaction.editReply({ content: "❌ Bạn không phải staff" });
+    }
+
+    const targetMember = await interaction.guild.members.fetch(target.id);
+
+    // ❌ CHỈ STRIKE STAFF
+    if (!targetMember.roles.cache.has(STAFF_ROLE_ID)) {
+        return interaction.editReply({ content: "❌ Chỉ dùng cho staff" });
+    }
+
+    let user = strikes.find(x => x.id === target.id);
+
+    if (!user) {
+        user = {
+            id: target.id,
+            name: target.username,
+            staff: true,
+            strikes: []
+        };
+        strikes.push(user);
+    }
+
+    if (user.strikes.length >= 4) {
+        return interaction.editReply("⚠️ Staff này đã 4/4 strike");
+    }
+
+    user.strikes.push({
+        reason,
+        proof,
+        time: new Date().toLocaleString("vi-VN")
+    });
+
+    saveStrikes();
+
+    // 🚨 REMOVE ROLE STAFF
+    if (user.strikes.length >= 4) {
+        await targetMember.roles.remove(STAFF_ROLE_ID).catch(() => {});
+    }
+
+    return interaction.editReply(`🔥 Staff ${target.username} đã bị strike (${user.strikes.length}/4)`);
 }
 
 /* ===== UNBLACKLIST ===== */
@@ -808,6 +916,9 @@ app.get("/", (req, res) => res.send("API Running"));
 app.get("/top", (req, res) => res.json(top));
 app.get("/blacklist", (req, res) => res.json(blacklist));
 app.get("/staff", (req, res) => {
+app.get("/strike", (req, res) => {
+    res.json(strikes);
+});
     const roleOrder = ["Founder", "Leader", "Admin", "Mod", "Referee"]; // Rút gọn ví dụ
     const sorted = [...staff].sort((a, b) => roleOrder.indexOf(a.role) - roleOrder.indexOf(b.role));
     res.json(sorted);
