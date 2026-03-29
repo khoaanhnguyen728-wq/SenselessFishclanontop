@@ -120,7 +120,12 @@ async function updateAOVLeaderboard() {
         const channel = await client.channels.fetch(AOV_CHANNEL).catch(() => null);
         if (!channel) return console.log("❌ Channel không tồn tại");
 
-        const msg = await channel.messages.fetch(AOV_MESSAGE).catch(() => null);
+const message = await channel.messages.fetch(AOV_MESSAGE).catch(() => null);
+
+if (!message) {
+    console.log("❌ Không tìm thấy message AOV");
+    return;
+}
         if (!msg || typeof msg.edit !== "function") {
             return console.log("❌ Message không hợp lệ hoặc không edit được");
         }
@@ -309,10 +314,6 @@ TẠI SENSELESSFISH**
 client.on("interactionCreate", async interaction => {
     try {
 
-        if (interaction.isChatInputCommand()) {
-            await interaction.deferReply({ ephemeral: true });
-        }
-
         if (interaction.isStringSelectMenu() && interaction.customId !== "select_stage") {
             await interaction.deferReply({ ephemeral: true });
         }
@@ -390,6 +391,8 @@ if (commandName === "blacklist") {
 }
 
 if (commandName === "strike") {
+    await interaction.deferReply({ flags: 64 }); // 👈 THÊM Ở ĐÂY
+
     const target = options.getUser("user");
     const reason = options.getString("reason");
     const proof = options.getAttachment("proof");
@@ -442,6 +445,7 @@ if (commandName === "strike") {
 }
 
 if (commandName === "unstrike") {
+    await interaction.deferReply({ flags: 64 });
     const target = options.getUser("user");
     const strikeIndex = options.getInteger("strike") - 1;
 
@@ -470,6 +474,7 @@ if (commandName === "unstrike") {
 }
 
 if (commandName === "staffstrike") {
+    await interaction.deferReply({ flags: 64 });
     const target = options.getUser("user");
     const reason = options.getString("reason");
     const proof = options.getAttachment("proof");
