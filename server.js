@@ -97,7 +97,7 @@ let lastTopData = "";
 let stats = { total: 0, online: 0 };
 const selected = new Map();
 
-client.once("ready", () => {
+client.on("clientReady", () => {
     console.log("Bot online:", client.user.tag);
     setInterval(() => {
     console.log("⏳ Đang update AOV...");
@@ -390,10 +390,11 @@ if (commandName === "blacklist") {
 }
 
 if (commandName === "strike") {
-interaction.editReply()
+await interaction.deferReply();
     const target = options.getUser("user");
     const reason = options.getString("reason");
-    const proof = options.getString("proof");
+    const proof = options.getAttachment("proof");
+    const proofUrl = proof.url;
 
     const member = await interaction.guild.members.fetch(interaction.user.id);
 
@@ -442,7 +443,7 @@ interaction.editReply()
 }
 
 if (commandName === "unstrike") {
-interaction.editReply()
+await interaction.deferReply();
     const target = options.getUser("user");
     const strikeIndex = options.getInteger("strike") - 1;
 
@@ -472,10 +473,10 @@ interaction.editReply()
 }
 
 if (commandName === "staffstrike") {
-interaction.editReply()
+await interaction.deferReply();
     const target = options.getUser("user");
     const reason = options.getString("reason");
-    const proof = options.getString("proof");
+    const proof = options.getAttachment("proof");
 
     const member = await interaction.guild.members.fetch(interaction.user.id);
 
