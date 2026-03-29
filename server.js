@@ -668,7 +668,7 @@ if (commandName === "settop") {
 }
 
 if (commandName === "promote") {
-
+await interaction.deferReply({ flags: 64 });
     const user = options.getUser("user");
     const roleName = options.getString("permission");
 
@@ -732,6 +732,7 @@ if (logChannel) {
     return interaction.editReply(`✅ ${user.username} đã được set role **${roleName}**`);
 }
 if (commandName === "detop") {
+await interaction.deferReply({ flags: 64 });
     const user = options.getUser("user");
 
     let found = false;
@@ -757,6 +758,7 @@ if (commandName === "detop") {
 
 /* ===== DEMOTE ===== */
 if (commandName === "demote") {
+await interaction.deferReply({ flags: 64 });
     const user = options.getUser("user");
 
     const member = interaction.member;
@@ -805,6 +807,7 @@ if (logChannel) {
 
 /* ===== MAINER ===== */
 if (commandName === "mainer") {
+await interaction.deferReply({ flags: 64 });
     const user = options.getUser("user");
 
     mainers = mainers.filter(m => m.id !== user.id);
@@ -823,6 +826,7 @@ if (commandName === "mainer") {
 
 /* ===== DEMAINER ===== */
 if (commandName === "demainer") {
+await interaction.deferReply({ flags: 64 });
     const user = options.getUser("user");
 
     mainers = mainers.filter(m => m.id !== user.id);
@@ -833,6 +837,7 @@ if (commandName === "demainer") {
 
 /* ===== THIDAU ===== */
 if (commandName === "thidau") {
+await interaction.deferReply({ flags: 64 });
 
     const team1 = options.getString("team1");
     const team2 = options.getString("team2");
