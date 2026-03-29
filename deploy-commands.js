@@ -191,10 +191,24 @@ const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
   try {
     console.log("⏳ Đang cập nhật lại các lệnh Slash...");
     
-    await rest.put(
-      Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
-      { body: commands }
-    );
+console.log("📦 Danh sách commands:");
+console.log(commands.map(c => c.name));
+// ❌ Xóa hết command cũ
+await rest.put(
+  Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
+  { body: [] }
+);
+
+console.log("🧹 Đã xóa toàn bộ commands cũ");
+
+// ⏳ delay nhẹ cho chắc
+await new Promise(r => setTimeout(r, 2000));
+
+// ✅ Deploy lại
+await rest.put(
+  Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
+  { body: commands }
+);
 
     console.log("✅ Commands deployed thành công!");
   } catch (error) {
