@@ -133,7 +133,7 @@ if (!message) {
     console.log("❌ Không tìm thấy message AOV");
     return;
 }
-        if (!msg || typeof msg.edit !== "function") {
+        if (!message || typeof message.edit !== "function") {
             return console.log("❌ Message không hợp lệ hoặc không edit được");
         }
 
@@ -321,10 +321,6 @@ TẠI SENSELESSFISH**
 client.on("interactionCreate", async interaction => {
     try {
 
-        if (interaction.isStringSelectMenu() && interaction.customId !== "select_stage") {
-            await interaction.deferReply({ ephemeral: true });
-        }
-
         if (interaction.isChatInputCommand()) {
             const { commandName, options } = interaction;
 
@@ -338,7 +334,7 @@ function canBlacklist(member) {
 
 /* ===== BLACKLIST ===== */
 if (commandName === "blacklist") {
-await interaction.deferReply({ flags: 64 });
+await interaction.deferReply({ ephemeral: true });
     // Không dùng deferReply ở đây nữa vì đã gọi ở dòng 110
     const user = options.getUser("user");
     const reason = options.getString("reason") || "Không có";
@@ -399,7 +395,7 @@ await interaction.deferReply({ flags: 64 });
 }
 
 if (commandName === "strike") {
-    await interaction.deferReply({ flags: 64 }); // 👈 THÊM Ở ĐÂY
+    await interaction.deferReply({ ephemeral: true }); // 👈 THÊM Ở ĐÂY
 
     const target = options.getUser("user");
     const reason = options.getString("reason");
@@ -467,7 +463,7 @@ sendStrikeLog(client, embed);
 }
 
 if (commandName === "unstrike") {
-    await interaction.deferReply({ flags: 64 });
+    await interaction.deferReply({ ephemeral: true });
     const target = options.getUser("user");
     const strikeIndex = options.getInteger("strike") - 1;
 
@@ -514,7 +510,7 @@ if (user.strikes.length === 0) {
 }
 
 if (commandName === "staffstrike") {
-    await interaction.deferReply({ flags: 64 });
+    await interaction.deferReply({ ephemeral: true });
     const target = options.getUser("user");
     const reason = options.getString("reason");
     const proof = options.getAttachment("proof");
@@ -669,7 +665,7 @@ if (commandName === "settop") {
 }
 
 if (commandName === "promote") {
-await interaction.deferReply({ flags: 64 });
+await interaction.deferReply({ ephemeral: true });
     const user = options.getUser("user");
     const roleName = options.getString("permission");
 
@@ -733,7 +729,7 @@ if (logChannel) {
     return interaction.editReply(`✅ ${user.username} đã được set role **${roleName}**`);
 }
 if (commandName === "detop") {
-await interaction.deferReply({ flags: 64 });
+await interaction.deferReply({ ephemeral: true });
     const user = options.getUser("user");
 
     let found = false;
@@ -759,7 +755,7 @@ await interaction.deferReply({ flags: 64 });
 
 /* ===== DEMOTE ===== */
 if (commandName === "demote") {
-await interaction.deferReply({ flags: 64 });
+await interaction.deferReply({ ephemeral: true });
     const user = options.getUser("user");
 
     const member = interaction.member;
@@ -808,7 +804,7 @@ if (logChannel) {
 
 /* ===== MAINER ===== */
 if (commandName === "mainer") {
-await interaction.deferReply({ flags: 64 });
+await interaction.deferReply({ ephemeral: true });
     const user = options.getUser("user");
 
     mainers = mainers.filter(m => m.id !== user.id);
@@ -827,7 +823,7 @@ await interaction.deferReply({ flags: 64 });
 
 /* ===== DEMAINER ===== */
 if (commandName === "demainer") {
-await interaction.deferReply({ flags: 64 });
+await interaction.deferReply({ ephemeral: true });
     const user = options.getUser("user");
 
     mainers = mainers.filter(m => m.id !== user.id);
@@ -838,7 +834,7 @@ await interaction.deferReply({ flags: 64 });
 
 /* ===== THIDAU ===== */
 if (commandName === "thidau") {
-await interaction.deferReply({ flags: 64 });
+await interaction.deferReply({ ephemeral: true });
 
     const team1 = options.getString("team1");
     const team2 = options.getString("team2");
