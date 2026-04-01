@@ -340,9 +340,9 @@ await interaction.deferReply({ ephemeral: true });
     const reason = options.getString("reason") || "Không có";
 
     // Kiểm tra quyền (Sử dụng hàm hasPermission bạn đã viết)
-    if (!hasPermission(interaction.member)) {
-        return interaction.editReply({ content: "❌ Bạn không có quyền thực hiện lệnh này." });
-    }
+if (!hasPermission(interaction.member)) {
+    return interaction.editReply({ content: "❌ Bạn không có quyền thực hiện lệnh này." }); // Thêm return
+}
 
     if (blacklist.some(b => b.id === user.id)) {
         return interaction.editReply({ content: "⚠️ Người dùng đã nằm trong blacklist." });
@@ -405,16 +405,16 @@ if (commandName === "strike") {
     const member = await interaction.guild.members.fetch(interaction.user.id);
 
     // 🔒 CHỈ ADMIN DÙNG
-    if (!hasPermission(member)) {
-    return interaction.editReply({ content: "❌ Bạn không phải staff" });
-    }
+if (!hasPermission(member)) {
+    return interaction.editReply({ content: "❌ Bạn không phải staff" }); // Thêm return
+}
 
     const targetMember = await interaction.guild.members.fetch(target.id);
 
     // ❌ KHÔNG CHO STRIKE STAFF
-    if (targetMember.roles.cache.has(STAFF_ROLE_ID)) {
-        return interaction.editReply({ content: "❌ Dùng /staffstrike cho staff" });
-    }
+if (targetMember.roles.cache.has(STAFF_ROLE_ID)) {
+    return interaction.editReply({ content: "❌ Dùng /staffstrike cho staff" }); // Thêm return
+}
 
     let user = strikes.find(x => x.id === target.id);
 
@@ -691,13 +691,14 @@ await interaction.deferReply({ ephemeral: true });
         return interaction.editReply("❌ Bạn không có quyền dùng lệnh này");
     }
 
-    const target = await interaction.guild.members.fetch(user.id);
+let target = interaction.guild.members.cache.get(user.id);
+if (!target) target = await interaction.guild.members.fetch(user.id);
 
-    const roleId = ROLE_MAP[roleName];
-    if (!roleId) return interaction.editReply("❌ Role không tồn tại");
+const roleId = ROLE_MAP[roleName];
+if (!roleId) return interaction.editReply("❌ Role không tồn tại"); // Thêm return
 
-    const newRole = interaction.guild.roles.cache.get(roleId);
-    if (!newRole) return interaction.editReply("❌ Không tìm thấy role");
+const newRole = interaction.guild.roles.cache.get(roleId);
+if (!newRole) return interaction.editReply("❌ Không tìm thấy role"); // Thêm return
 
     // ❗ Xóa role cũ
     for (let r of Object.values(ROLE_MAP)) {
@@ -743,7 +744,7 @@ if (logChannel) {
     logChannel.send({ embeds: [embed] });
 }
 
-    return interaction.editReply(`✅ ${user.username} đã được set role **${roleName}**`);
+return interaction.editReply(`✅ ${user.username} đã được set role **${roleName}**`);
 }
 if (commandName === "detop") {
 await interaction.deferReply({ ephemeral: true });
@@ -776,9 +777,9 @@ await interaction.deferReply({ ephemeral: true });
     const user = options.getUser("user");
 
     const member = interaction.member;
-    if (!hasPermission(member)) {
-        return interaction.editReply({ content: "❌ Bạn không có quyền dùng lệnh này", ephemeral: true });
-    }
+if (!hasPermission(member)) {
+    return interaction.editReply({ content: "❌ Bạn không có quyền dùng lệnh này", ephemeral: true }); // Thêm return
+}
 
     const logChannel = interaction.guild.channels.cache.get(LOG_CHANNEL); // ✅ THÊM DÒNG NÀY
 
@@ -925,12 +926,13 @@ return interaction.editReply({
             }
         }
 } catch (err) {
-    console.error(err);
+    console.error("LỖI HỆ THỐNG:", err);
+    const errorMsg = { content: "❌ Đã có lỗi xảy ra!", ephemeral: true };
 
-    if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({ content: "❌ Bot bị lỗi!", ephemeral: true });
+    if (interaction.deferred || interaction.replied) {
+        return interaction.editReply(errorMsg).catch(() => {});
     } else {
-        await interaction.editReply({ content: "❌ Bot bị lỗi!" });
+        return interaction.reply(errorMsg).catch(() => {});
     }
 }
 });
