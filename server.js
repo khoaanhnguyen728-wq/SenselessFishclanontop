@@ -3,7 +3,8 @@ const express = require("express");
 const fs = require("fs");
 const cors = require("cors");
 const axios = require("axios");
-
+process.on("unhandledRejection", console.error);
+process.on("uncaughtException", console.error);
 const {
     Client,
     GatewayIntentBits,
