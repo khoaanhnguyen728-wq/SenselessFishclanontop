@@ -104,7 +104,7 @@ let lastTopData = "";
 let stats = { total: 0, online: 0 };
 const selected = new Map();
 
-client.on("clientReady", () => {
+client.once("ready", () => {
     console.log("Bot online:", client.user.tag);
     setInterval(() => {
     console.log("⏳ Đang update AOV...");
@@ -400,7 +400,7 @@ if (commandName === "strike") {
     const target = options.getUser("user");
     const reason = options.getString("reason");
     const proof = options.getAttachment("proof");
-    const proofUrl = proof.url;
+    const proofUrl = proof?.url || null;
 
     const member = await interaction.guild.members.fetch(interaction.user.id);
 
@@ -577,6 +577,7 @@ sendStrikeLog(client, embed);
 
 /* ===== UNBLACKLIST ===== */
 if (commandName === "unblacklist") {
+await interaction.deferReply({ ephemeral: true });
     const user = options.getUser("user");
 
     if (!canBlacklist(interaction.member)) {
@@ -631,21 +632,37 @@ if (commandName === "unblacklist") {
 }
 
             if (commandName === "bxh") {
+                await interaction.deferReply({ ephemeral: true });
                 const sub = options.getSubcommand();
              
                 if (sub === "kill" || sub === "chat") return interaction.editReply({ content: "Tính năng đang phát triển.", ephemeral: true });
             }
 
-            if (commandName === "list") {
-                const type = options.getString("type");
-                let text = "";
-                if (type === "top") Object.keys(top).forEach(i => { if (top[i]) text += `🏆 **TOP ${i}** • ${top[i].name}\n` });
-                if (type === "staff") staff.forEach(s => text += `👑 **${s.username}** • ${s.role}\n`);
-                if (type === "mainers") mainers.forEach(m => text += `🔥 **${m.name}**\n`);
-                return interaction.editReply({ embeds: [new EmbedBuilder().setTitle(`📋 Danh sách ${type}`).setDescription(text || "Không có dữ liệu").setColor(0x00eaff)] });
-            }
+if (commandName === "list") {
+    await interaction.deferReply({ ephemeral: true });
+
+    const type = options.getString("type");
+    let text = "";
+
+    if (type === "top") Object.keys(top).forEach(i => {
+        if (top[i]) text += `🏆 **TOP ${i}** • ${top[i].name}\n`;
+    });
+
+    if (type === "staff") staff.forEach(s => text += `👑 **${s.username}** • ${s.role}\n`);
+    if (type === "mainers") mainers.forEach(m => text += `🔥 **${m.name}**\n`);
+
+    return interaction.editReply({
+        embeds: [
+            new EmbedBuilder()
+                .setTitle(`📋 Danh sách ${type}`)
+                .setDescription(text || "Không có dữ liệu")
+                .setColor(0x00eaff)
+        ]
+    });
+}
 
 if (commandName === "settop") {
+    await interaction.deferReply({ ephemeral: true });
     const user = options.getUser("user");
     const rank = options.getInteger("top");
 
@@ -871,10 +888,10 @@ await interaction.deferReply({ ephemeral: true });
 if (interaction.isStringSelectMenu()) {
     // Select menu xem thông tin trận đấu
     if (interaction.customId === "match_info") {
-        return interaction.editReply({
-            content: `📌 Thông tin: ${interaction.values[0]}`,
-            ephemeral: true
-        });
+return interaction.reply({
+    content: `📌 Thông tin: ${interaction.values[0]}`,
+    ephemeral: true
+});
     }
 
     // Select menu đăng ký stage → mở modal nhập score
@@ -902,10 +919,20 @@ if (interaction.isStringSelectMenu()) {
             if (interaction.customId === "submit_score") {
                 const score = interaction.fields.getTextInputValue("score");
                 const stage = selected.get(interaction.user.id) || "Unknown";
-                return interaction.editReply({ content: `✅ Đã gửi!\nStage: **${stage}**\nScore: **${score}**`, ephemeral: true });
+return interaction.editReply({
+    content: `✅ Đã gửi!\nStage: **${stage}**\nScore: **${score}**`
+});
             }
         }
-    } catch (err) { console.error(err); }
+} catch (err) {
+    console.error(err);
+
+    if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({ content: "❌ Bot bị lỗi!", ephemeral: true });
+    } else {
+        await interaction.editReply({ content: "❌ Bot bị lỗi!" });
+    }
+}
 });
 
 /* ================= WEB API ================= */
