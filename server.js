@@ -712,12 +712,17 @@ if (!newRole) return interaction.editReply("❌ Không tìm thấy role"); // Th
 
 // ❗ Xóa role cũ (trừ role mới)
 for (let r of Object.values(ROLE_MAP)) {
-    if (r === roleId) continue;
+    if (r === roleId) continue; // bỏ qua role mới
 
     let role = interaction.guild.roles.cache.get(r);
-    if (role && target.roles.cache.has(role.id)) {
-        if (role.position < interaction.guild.members.me.roles.highest.position) {
-            await target.roles.remove(role).catch(() => {});
+    if (!role) continue;
+
+    if (target.roles.cache.has(role.id)) {
+        try {
+            await target.roles.remove(role);
+            console.log(`Đã xóa role ${role.name}`);
+        } catch (err) {
+            console.log(`Không xóa được role ${role.name}:`, err.message);
         }
     }
 }
