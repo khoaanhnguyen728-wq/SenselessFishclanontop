@@ -711,15 +711,27 @@ const newRole = interaction.guild.roles.cache.get(roleId);
 if (!newRole) return interaction.editReply("❌ Không tìm thấy role"); // Thêm return
 
     // ❗ Xóa role cũ
-    for (let r of Object.values(ROLE_MAP)) {
-        let role = interaction.guild.roles.cache.get(r);
-        if (role && target.roles.cache.has(role.id)) {
-            await target.roles.remove(role);
+for (let r of Object.values(ROLE_MAP)) {
+    let role = interaction.guild.roles.cache.get(r);
+    if (role && target.roles.cache.has(role.id)) {
+        // Chỉ xóa nếu role thấp hơn bot
+        if (role.position < interaction.guild.members.me.roles.highest.position) {
+            await target.roles.remove(role).catch(err => console.log("Remove role lỗi:", err.message));
+        } else {
+            console.log(`Cannot remove role ${role.name} vì cao hơn bot`);
         }
     }
+}
 
     // ➕ Add role mới
-    await target.roles.add(newRole);
+if (newRole.position >= interaction.guild.members.me.roles.highest.position) {
+    return interaction.editReply("❌ Bot không đủ quyền add role này");
+}
+
+await target.roles.add(newRole).catch(err => {
+    console.log("Add role lỗi:", err.message);
+    return interaction.editReply("❌ Lỗi khi thêm role");
+});
 
     // 💾 Lưu JSON
     staff = staff.filter(s => s.id !== user.id);
