@@ -1048,7 +1048,7 @@ async function loadStaff() {
     const grid = document.getElementById("staffGrid");
 
     try {
-        const res = await fetch("https://senselessfishclanontop-1.onrender.com/staff-realtime?" + Date.now());
+        const res = await fetch("https://senselessfishclanontop.onrender.com/staff-realtime?" + Date.now());
         let data = await res.json();
 
         // ===== map quyền & sort =====
