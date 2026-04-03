@@ -122,28 +122,24 @@ client.once("clientReady", () => {
     }, 10000);
 });
 
-async function updateAOVLeaderboard(customMessage = null) {
-    console.log("🔥 Đang cập nhật AOV Leaderboard...");
-
+async function updateAOVLeaderboard(forceNew = false) {
     try {
         const channel = await client.channels.fetch(AOV_CHANNEL).catch(() => null);
-        if (!channel) return console.log("❌ Không tìm thấy Channel AOV");
+        if (!channel) return null;
 
-        let targetMessage = customMessage;
+        let targetMessage = null;
         
-        // Nếu không có tin nhắn chỉ định, thử fetch từ ID trong env
-        if (!targetMessage && AOV_MESSAGE) {
+        // Chỉ thử fetch nếu không ép buộc tạo mới và có ID trong env
+        if (!forceNew && AOV_MESSAGE) {
             targetMessage = await channel.messages.fetch(AOV_MESSAGE).catch(() => null);
         }
 
         let text = "";
         for (let i = 1; i <= 20; i++) {
             const member = top[i];
-            let medal = "➠";
-            if (i === 1) medal = "👑";
-            else if (i <= 3) medal = "➤";
-
+            let medal = (i === 1) ? "👑" : (i <= 3 ? "➤" : "➠");
             let displayName = member?.id ? `<@${member.id}>` : "Vacant";
+            
             if (i === 1) displayName = `***${displayName}***`;
             else if (i <= 3) displayName = `**${displayName}**`;
 
@@ -154,18 +150,20 @@ async function updateAOVLeaderboard(customMessage = null) {
             .setColor("#00eaff")
             .setTitle("🏆 AOV LEADERBOARD")
             .setDescription(text || "Chưa có dữ liệu")
-            .setTimestamp()
-            .setFooter({ text: "SenselessFish Clan System" });
+            .setTimestamp();
 
-        if (targetMessage && typeof targetMessage.edit === 'function') {
-            await targetMessage.edit({ content: null, embeds: [embed] });
-            return targetMessage.id;
+        // Nếu tìm thấy tin nhắn cũ -> EDIT (Không chat mới)
+        if (targetMessage) {
+            await targetMessage.edit({ embeds: [embed] }).catch(() => null);
+            return true; 
         } else {
+            // Nếu không thấy -> SEND (Tạo mới)
             const sent = await channel.send({ embeds: [embed] });
-            return sent.id;
+            return sent.id; // Trả về ID để bạn add vào env
         }
     } catch (err) {
-        console.error("Lỗi updateAOV:", err);
+        console.error("Lỗi cập nhật AOV:", err);
+        return null;
     }
 }
 function buildRuleEmbeds() {
@@ -309,23 +307,21 @@ TẠI SENSELESSFISH**
 
     // ================= AOV =================
 // ================= AOV COMMAND =================
-    if (message.channel.id === AOV_CHANNEL) {
+if (message.channel.id === AOV_CHANNEL) {
         if (!hasPermission(message.member)) return;
 
         if (content === "aov" || content === "aov list") {
-            // Gửi thông báo đang xử lý
-            const statusMsg = await message.reply("⏳ Đang khởi tạo Leaderboard mới...");
-            
-            // Tạo một tin nhắn embed mới hoàn toàn
-            const newId = await updateAOVLeaderboard(); 
+            // Gọi hàm update
+            const result = await updateAOVLeaderboard();
 
-            if (newId) {
-                await statusMsg.edit(`✅ **Đã tạo/cập nhật thành công!**\n\n📌 ID tin nhắn mới: \`${newId}\` \n👉 Hãy copy ID này dán vào biến **AOV_MESSAGE** trong file \`.env\` của bạn.`);
-            } else {
-                await statusMsg.edit("❌ Có lỗi xảy ra khi tạo BXH.");
+            if (result === true) {
+                // Nếu đã edit thành công vào tin nhắn cũ
+                message.reply("✅ Đã cập nhật bảng xếp hạng!").then(m => setTimeout(() => m.delete(), 5000));
+            } else if (result) {
+                // Nếu phải tạo tin nhắn mới vì ID env trống/sai
+                message.reply(`📌 Đã tạo bảng xếp hạng mới!\nCopy ID này vào \`AOV_MESSAGE\` trong env: \`${result}\``);
             }
             
-            // Xóa lệnh của người dùng cho sạch channel
             message.delete().catch(() => {});
         }
     }
