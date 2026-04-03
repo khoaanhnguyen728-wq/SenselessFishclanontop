@@ -106,7 +106,7 @@ let lastTopData = "";
 let stats = { total: 0, online: 0 };
 const selected = new Map();
 
-client.once("clientReady", () => {
+client.once("ready", () => {
     console.log("Bot online:", client.user.tag);
     setInterval(() => {
     console.log("⏳ Đang update AOV...");
@@ -122,16 +122,17 @@ client.once("clientReady", () => {
     }, 10000);
 });
 
+let aovMessageId = AOV_MESSAGE || null; // lưu ID tin nhắn hiện tại
+
 async function updateAOVLeaderboard(forceNew = false) {
     try {
         const channel = await client.channels.fetch(AOV_CHANNEL).catch(() => null);
         if (!channel) return null;
 
         let targetMessage = null;
-        
-        // Chỉ thử fetch nếu không ép buộc tạo mới và có ID trong env
-        if (!forceNew && AOV_MESSAGE) {
-            targetMessage = await channel.messages.fetch(AOV_MESSAGE).catch(() => null);
+
+        if (aovMessageId && !forceNew) {
+            targetMessage = await channel.messages.fetch(aovMessageId).catch(() => null);
         }
 
         let text = "";
@@ -152,20 +153,21 @@ async function updateAOVLeaderboard(forceNew = false) {
             .setDescription(text || "Chưa có dữ liệu")
             .setTimestamp();
 
-        // Nếu tìm thấy tin nhắn cũ -> EDIT (Không chat mới)
         if (targetMessage) {
             await targetMessage.edit({ embeds: [embed] }).catch(() => null);
-            return true; 
         } else {
-            // Nếu không thấy -> SEND (Tạo mới)
             const sent = await channel.send({ embeds: [embed] });
-            return sent.id; // Trả về ID để bạn add vào env
+            aovMessageId = sent.id; // lưu ID để lần sau edit
+            console.log("📌 Đã tạo tin nhắn AOV mới, lưu ID:", aovMessageId);
         }
+
+        return true;
     } catch (err) {
         console.error("Lỗi cập nhật AOV:", err);
         return null;
     }
 }
+
 function buildRuleEmbeds() {
     const rules = [
         {
