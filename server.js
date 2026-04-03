@@ -710,38 +710,42 @@ if (!roleId) return interaction.editReply("❌ Role không tồn tại"); // Th�
 const newRole = interaction.guild.roles.cache.get(roleId);
 if (!newRole) return interaction.editReply("❌ Không tìm thấy role"); // Thêm return
 
-    // ❗ Xóa role cũ
+// ❗ Xóa role cũ (trừ role mới)
 for (let r of Object.values(ROLE_MAP)) {
+    if (r === roleId) continue;
+
     let role = interaction.guild.roles.cache.get(r);
     if (role && target.roles.cache.has(role.id)) {
-        // Chỉ xóa nếu role thấp hơn bot
         if (role.position < interaction.guild.members.me.roles.highest.position) {
-            await target.roles.remove(role).catch(err => console.log("Remove role lỗi:", err.message));
-        } else {
-            console.log(`Cannot remove role ${role.name} vì cao hơn bot`);
+            await target.roles.remove(role).catch(() => {});
         }
     }
 }
 
-    // ➕ Add role mới
+// ➕ Add role mới
+if (!newRole) return interaction.editReply("❌ Role không tồn tại");
+
 if (newRole.position >= interaction.guild.members.me.roles.highest.position) {
     return interaction.editReply("❌ Bot không đủ quyền add role này");
 }
 
-await target.roles.add(newRole).catch(err => {
-    console.log("Add role lỗi:", err.message);
-    return interaction.editReply("❌ Lỗi khi thêm role");
-});
+try {
+    await target.roles.add(newRole);
+    console.log(`Đã add role ${newRole.name} cho ${target.user.username}`);
+} catch (err) {
+    console.log("Add role lỗi:", err);
+    return interaction.editReply("❌ Không thể add role");
+}
 
-    // 💾 Lưu JSON
-    staff = staff.filter(s => s.id !== user.id);
-    staff.push({
-        id: user.id,
-        username: user.username,
-        role: roleName,
-        avatar: user.displayAvatarURL({ extension: "png" })
-    });
-    saveStaff();
+// 💾 Lưu JSON
+staff = staff.filter(s => s.id !== user.id);
+staff.push({
+    id: user.id,
+    username: user.username,
+    role: roleName,
+    avatar: user.displayAvatarURL({ extension: "png" })
+});
+saveStaff();
 
     // 📜 LOG
 const logChannel = interaction.guild.channels.cache.get(LOG_CHANNEL);
