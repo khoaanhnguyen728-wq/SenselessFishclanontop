@@ -3,6 +3,7 @@ const express = require("express");
 const fs = require("fs");
 const cors = require("cors");
 const axios = require("axios");
+console.log("ENV TOKEN:", process.env.TOKEN);
 process.on("unhandledRejection", console.error);
 process.on("uncaughtException", console.error);
 const {
@@ -105,7 +106,7 @@ let lastTopData = "";
 let stats = { total: 0, online: 0 };
 const selected = new Map();
 
-client.once("ready", () => {
+client.once("clientReady", () => {
     console.log("Bot online:", client.user.tag);
     setInterval(() => {
     console.log("⏳ Đang update AOV...");
@@ -121,34 +122,28 @@ client.once("ready", () => {
     }, 10000);
 });
 
-async function updateAOVLeaderboard() {
-    console.log("🔥 chạy function AOV");
+async function updateAOVLeaderboard(customMessage = null) {
+    console.log("🔥 Đang cập nhật AOV Leaderboard...");
 
     try {
         const channel = await client.channels.fetch(AOV_CHANNEL).catch(() => null);
-        if (!channel) return console.log("❌ Channel không tồn tại");
+        if (!channel) return console.log("❌ Không tìm thấy Channel AOV");
 
-const message = await channel.messages.fetch(AOV_MESSAGE).catch(() => null);
-
-if (!message) {
-    console.log("❌ Không tìm thấy message AOV");
-    return;
-}
-        if (!message || typeof message.edit !== "function") {
-            return console.log("❌ Message không hợp lệ hoặc không edit được");
+        let targetMessage = customMessage;
+        
+        // Nếu không có tin nhắn chỉ định, thử fetch từ ID trong env
+        if (!targetMessage && AOV_MESSAGE) {
+            targetMessage = await channel.messages.fetch(AOV_MESSAGE).catch(() => null);
         }
 
         let text = "";
-
         for (let i = 1; i <= 20; i++) {
             const member = top[i];
-
             let medal = "➠";
             if (i === 1) medal = "👑";
             else if (i <= 3) medal = "➤";
 
             let displayName = member?.id ? `<@${member.id}>` : "Vacant";
-
             if (i === 1) displayName = `***${displayName}***`;
             else if (i <= 3) displayName = `**${displayName}**`;
 
@@ -158,13 +153,19 @@ if (!message) {
         const embed = new EmbedBuilder()
             .setColor("#00eaff")
             .setTitle("🏆 AOV LEADERBOARD")
-            .setDescription(text)
-            .setTimestamp();
+            .setDescription(text || "Chưa có dữ liệu")
+            .setTimestamp()
+            .setFooter({ text: "SenselessFish Clan System" });
 
-        await message.edit({ embeds: [embed] });
-
+        if (targetMessage && typeof targetMessage.edit === 'function') {
+            await targetMessage.edit({ content: null, embeds: [embed] });
+            return targetMessage.id;
+        } else {
+            const sent = await channel.send({ embeds: [embed] });
+            return sent.id;
+        }
     } catch (err) {
-        console.log("AOV ERROR:", err);
+        console.error("Lỗi updateAOV:", err);
     }
 }
 function buildRuleEmbeds() {
@@ -307,15 +308,25 @@ TẠI SENSELESSFISH**
 }
 
     // ================= AOV =================
+// ================= AOV COMMAND =================
     if (message.channel.id === AOV_CHANNEL) {
-        if (!hasPermission(message.member)) return; // Đồng bộ check quyền
+        if (!hasPermission(message.member)) return;
 
         if (content === "aov" || content === "aov list") {
-            await updateAOVLeaderboard();
+            // Gửi thông báo đang xử lý
+            const statusMsg = await message.reply("⏳ Đang khởi tạo Leaderboard mới...");
+            
+            // Tạo một tin nhắn embed mới hoàn toàn
+            const newId = await updateAOVLeaderboard(); 
+
+            if (newId) {
+                await statusMsg.edit(`✅ **Đã tạo/cập nhật thành công!**\n\n📌 ID tin nhắn mới: \`${newId}\` \n👉 Hãy copy ID này dán vào biến **AOV_MESSAGE** trong file \`.env\` của bạn.`);
+            } else {
+                await statusMsg.edit("❌ Có lỗi xảy ra khi tạo BXH.");
+            }
+            
+            // Xóa lệnh của người dùng cho sạch channel
             message.delete().catch(() => {});
-            return message.reply("✅ Đã cập nhật leaderboard!").then(m => {
-                setTimeout(() => m.delete(), 3000); // Tự xóa thông báo sau 3s cho sạch
-            });
         }
     }
 });
@@ -1043,5 +1054,8 @@ app.get("/strike", (req, res) => {
 app.get("/stats", (req, res) => res.json(stats));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("🌐 Port:", PORT));
+
+app.listen(PORT, "0.0.0.0", () => {
+    console.log("Server chạy port " + PORT);
+});
 client.login(process.env.TOKEN);
