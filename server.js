@@ -124,23 +124,31 @@ client.once("ready", () => {
 
 let aovMessageId = AOV_MESSAGE || null; // lưu ID tin nhắn hiện tại
 
-async function updateAOVLeaderboard(forceNew = false) {
+async function updateAOVLeaderboard() {
+    console.log("🔥 chạy function AOV");
+
     try {
         const channel = await client.channels.fetch(AOV_CHANNEL).catch(() => null);
-        if (!channel) return null;
+        if (!channel) return console.log("❌ Channel không tồn tại");
 
-        let targetMessage = null;
-
-        if (aovMessageId && !forceNew) {
-            targetMessage = await channel.messages.fetch(aovMessageId).catch(() => null);
-        }
+        const message = await channel.messages.fetch(AOV_MESSAGE).catch(() => null);
+        if (!message) return console.log("❌ Không tìm thấy message leaderboard");
+        
+        // 🔥 LẤY DATA TỪ API
+        const res = await axios.get("https://senselessfishclanontop.onrender.com/top");
+        const apiTop = res.data;
 
         let text = "";
+
         for (let i = 1; i <= 20; i++) {
-            const member = top[i];
-            let medal = (i === 1) ? "👑" : (i <= 3 ? "➤" : "➠");
+            const member = apiTop[i];
+
+            let medal = "➠";
+            if (i === 1) medal = "👑";
+            else if (i <= 3) medal = "➤";
+
             let displayName = member?.id ? `<@${member.id}>` : "Vacant";
-            
+
             if (i === 1) displayName = `***${displayName}***`;
             else if (i <= 3) displayName = `**${displayName}**`;
 
@@ -150,21 +158,13 @@ async function updateAOVLeaderboard(forceNew = false) {
         const embed = new EmbedBuilder()
             .setColor("#00eaff")
             .setTitle("🏆 AOV LEADERBOARD")
-            .setDescription(text || "Chưa có dữ liệu")
+            .setDescription(text)
             .setTimestamp();
 
-        if (targetMessage) {
-            await targetMessage.edit({ embeds: [embed] }).catch(() => null);
-        } else {
-            const sent = await channel.send({ embeds: [embed] });
-            aovMessageId = sent.id; // lưu ID để lần sau edit
-            console.log("📌 Đã tạo tin nhắn AOV mới, lưu ID:", aovMessageId);
-        }
+        await message.edit({ embeds: [embed] });
 
-        return true;
     } catch (err) {
-        console.error("Lỗi cập nhật AOV:", err);
-        return null;
+        console.log("AOV ERROR:", err.message);
     }
 }
 
