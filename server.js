@@ -691,19 +691,47 @@ if (commandName === "list") {
 
 if (commandName === "settop") {
     await interaction.deferReply({ ephemeral: true });
+
     const user = options.getUser("user");
     const rank = options.getInteger("top");
 
-    top[rank] = {
+    if (rank < 1 || rank > 20) {
+        return interaction.editReply("❌ Rank phải từ 1 → 20");
+    }
+
+    // 🔥 1. XÓA user khỏi BXH nếu đã tồn tại
+    for (let i = 1; i <= 20; i++) {
+        if (top[i]?.id === user.id) {
+            top[i] = null;
+        }
+    }
+
+    // 🔥 2. DỒN BXH lại (loại bỏ null để tránh lỗ hổng)
+    let newTop = [];
+    for (let i = 1; i <= 20; i++) {
+        if (top[i]) newTop.push(top[i]);
+    }
+
+    // 🔥 3. CHÈN user vào đúng vị trí
+    newTop.splice(rank - 1, 0, {
         id: user.id,
         name: user.username,
         avatar: user.displayAvatarURL({ extension: "png" }),
         profile: `https://discord.com/users/${user.id}`
-    };
+    });
+
+    // 🔥 4. CẮT lại 20 người
+    newTop = newTop.slice(0, 20);
+
+    // 🔥 5. GÁN LẠI về dạng top[1..20]
+    top = {};
+    newTop.forEach((u, index) => {
+        top[index + 1] = u;
+    });
 
     saveTop();
 
-    // 🔥 AUTO UPDATE
+    // 🔥 AUTO UPDATE BXH
     await updateAOVLeaderboard();
 
     return interaction.editReply(`✅ ${user.username} vào TOP ${rank}`);
