@@ -131,8 +131,19 @@ async function updateAOVLeaderboard() {
         const channel = await client.channels.fetch(AOV_CHANNEL).catch(() => null);
         if (!channel) return console.log("❌ Channel không tồn tại");
 
-        const message = await channel.messages.fetch(AOV_MESSAGE).catch(() => null);
-        if (!message) return console.log("❌ Không tìm thấy message leaderboard");
+let message;
+
+try {
+    message = await channel.messages.fetch(AOV_MESSAGE);
+} catch (err) {
+    console.log("❌ Không fetch được message:", err.message);
+    return;
+}
+
+if (!message || typeof message.edit !== "function") {
+    console.log("❌ Message không hợp lệ");
+    return;
+}
         
         // 🔥 LẤY DATA TỪ API
         const res = await axios.get("https://senselessfishclanontop.onrender.com/top");
