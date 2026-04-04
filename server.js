@@ -122,47 +122,40 @@ client.once("ready", () => {
     }, 10000);
 });
 
-let aovMessageId = AOV_MESSAGE || null; // lưu ID tin nhắn hiện tại
+let aovMessageId = null; // lưu tạm (có thể lưu file nếu muốn)
 
 async function updateAOVLeaderboard() {
-    console.log("🔥 chạy function AOV");
-
     try {
         const channel = await client.channels.fetch(AOV_CHANNEL).catch(() => null);
         if (!channel) return console.log("❌ Channel không tồn tại");
-        
-if (!channel.isTextBased()) {
-    console.log("❌ Channel không phải text channel");
-    return;
-}
 
-let message;
+        if (!channel.isTextBased()) {
+            return console.log("❌ Channel không phải text");
+        }
 
-try {
-    message = await channel.messages.fetch(AOV_MESSAGE);
-} catch (err) {
-    console.log("❌ Không fetch được message:", err.message);
-    return;
-}
+        let message = null;
 
-if (!message || typeof message.edit !== "function") {
-    console.log("❌ Message không hợp lệ");
-    return;
-}
-        
-        // 🔥 LẤY DATA TỪ API
-        const res = await axios.get("https://senselessfishclanontop.onrender.com/top");
-        const apiTop = res.data;
+        // 🔥 nếu có ID → fetch
+        if (aovMessageId) {
+            message = await channel.messages.fetch(aovMessageId).catch(() => null);
+        }
 
+        // 🔥 LẤY DATA API
+        let apiTop = {};
+        try {
+            const res = await axios.get("https://senselessfishclanontop.onrender.com/top");
+            apiTop = res.data;
+        } catch (err) {
+            console.log("❌ Lỗi API:", err.message);
+            return;
+        }
+
+        // 🔥 BUILD BXH
         let text = "";
-
         for (let i = 1; i <= 20; i++) {
             const member = apiTop[i];
 
-            let medal = "➠";
-            if (i === 1) medal = "👑";
-            else if (i <= 3) medal = "➤";
-
+            let medal = (i === 1) ? "👑" : (i <= 3 ? "➤" : "➠");
             let displayName = member?.id ? `<@${member.id}>` : "Vacant";
 
             if (i === 1) displayName = `***${displayName}***`;
@@ -174,13 +167,22 @@ if (!message || typeof message.edit !== "function") {
         const embed = new EmbedBuilder()
             .setColor("#00eaff")
             .setTitle("🏆 AOV LEADERBOARD")
-            .setDescription(text)
+            .setDescription(text || "Chưa có dữ liệu")
             .setTimestamp();
 
-        await message.edit({ embeds: [embed] });
+        // ✅ nếu đã có message → EDIT
+        if (message && typeof message.edit === "function") {
+            await message.edit({ embeds: [embed] });
+        } else {
+            // ✅ nếu chưa có → TẠO MỚI
+            const sent = await channel.send({ embeds: [embed] });
+            aovMessageId = sent.id;
+
+            console.log("📌 Đã tạo BXH mới, ID:", aovMessageId);
+        }
 
     } catch (err) {
-        console.log("AOV ERROR:", err.message);
+        console.error("Lỗi cập nhật AOV:", err);
     }
 }
 
