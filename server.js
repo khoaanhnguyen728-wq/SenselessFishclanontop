@@ -130,6 +130,11 @@ async function updateAOVLeaderboard() {
     try {
         const channel = await client.channels.fetch(AOV_CHANNEL).catch(() => null);
         if (!channel) return console.log("❌ Channel không tồn tại");
+        
+if (!channel.isTextBased()) {
+    console.log("❌ Channel không phải text channel");
+    return;
+}
 
 let message;
 
