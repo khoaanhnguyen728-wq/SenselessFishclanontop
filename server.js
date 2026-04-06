@@ -4,8 +4,6 @@ const fs = require("fs");
 const cors = require("cors");
 const axios = require("axios");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-
-// Khởi tạo với cấu hình ép phiên bản v1
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const aiModel = genAI.getGenerativeModel({ 
     model: "gemini-1.5-flash" 
@@ -308,18 +306,29 @@ client.on("messageCreate", async (message) => {
 if (message.channel.id === process.env.AI_CHANNEL) {
         try {
             await message.channel.sendTyping();
-            
-            // Gọi AI bằng phương thức chuẩn
-            const result = await aiModel.generateContent({
-                contents: [{ role: 'user', parts: [{ text: message.content }] }]
-            });
-            
-            const response = result.response;
+
+            // CÁCH GỌI MỚI: Thử ép dùng model qua API v1beta trực tiếp
+            const model = genAI.getGenerativeModel({ 
+                model: "gemini-1.5-flash",
+            }, { apiVersion: 'v1beta' }); // Ép phiên bản API ở đây
+
+            const result = await model.generateContent(message.content);
+            const response = await result.response;
             const text = response.text();
+
+            if (!text) throw new Error("AI trả về rỗng");
+            
             return message.reply(text);
+
         } catch (err) {
-            console.error("❌ LOI AI CHI TIET:", err); 
-            return message.reply(`Lỗi kết nối AI: ${err.message}`); 
+            console.error("❌ LOI AI CHI TIET:", err);
+            
+            // Nếu vẫn lỗi 404, thử phương án dự phòng cuối cùng:
+            if (err.message.includes("404")) {
+                return message.reply("Lỗi 404: Model này chưa được kích hoạt cho Key của bạn. Bạn hãy vào Google AI Studio, chọn 'Gemini 1.5 Flash' và nhắn thử 1 câu ở đó để kích hoạt nhé!");
+            }
+            
+            return message.reply(`Lỗi kết nối AI: ${err.message}`);
         }
     }
 // ================= RULE =================
