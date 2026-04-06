@@ -317,7 +317,25 @@ return rules.map((r, i) => {
 client.on("messageCreate", async (message) => {
     if (message.author.bot) return;
     const content = message.content.toLowerCase();
+    
+if (message.content === "!panel") {
+    const embed = new EmbedBuilder()
+        .setTitle("🎫 AI SUPPORT PANEL")
+        .setDescription("Bấm nút bên dưới để tạo ticket hỗ trợ")
+        .setColor("#00eaff");
 
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId("create_ai_ticket")
+            .setLabel("🎫 Tạo Ticket")
+            .setStyle(ButtonStyle.Primary)
+    );
+
+    await message.channel.send({
+        embeds: [embed],
+        components: [row]
+    });
+}
     // ================= RULE =================
     if (content.startsWith("rule")) {
         // SỬA TẠI ĐÂY: Thêm process.env.
@@ -406,7 +424,38 @@ const result = await aiModel.generateContent(promptWithLanguageLock);
 });
 client.on("interactionCreate", async interaction => {
     try {
+        // ================= TICKET BUTTON =================
+        if (interaction.isButton() && interaction.customId === 'create_ai_ticket') {
+            await interaction.deferReply({ ephemeral: true });
 
+            const ticketChannel = await interaction.guild.channels.create({
+                name: `ai-ticket-${interaction.user.username}`,
+                type: ChannelType.GuildText,
+                permissionOverwrites: [
+                    { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
+                    { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel] }
+                ]
+            });
+
+            const embed = new EmbedBuilder()
+                .setTitle("🎫 AI SUPPORT TICKET")
+                .setDescription(`Xin chào <@${interaction.user.id}>\n\nHãy nhập câu hỏi, AI sẽ trả lời bạn.`)
+                .setColor("#00eaff");
+
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId("close_ticket")
+                    .setLabel("🔒 Đóng Ticket")
+                    .setStyle(ButtonStyle.Danger)
+            );
+
+            await ticketChannel.send({ embeds: [embed], components: [row] });
+
+            await interaction.editReply({
+                content: `✅ Ticket đã được tạo: ${ticketChannel}`,
+                ephemeral: true
+            });
+        }
         if (interaction.isChatInputCommand()) {
             const { commandName, options } = interaction;
 
@@ -1052,56 +1101,30 @@ return interaction.reply({
 
         if (interaction.isModalSubmit()) {
             await interaction.deferReply({ ephemeral: true });
+
             if (interaction.customId === "submit_score") {
                 const score = interaction.fields.getTextInputValue("score");
                 const stage = selected.get(interaction.user.id) || "Unknown";
-return interaction.editReply({
-    content: `✅ Đã gửi!\nStage: **${stage}**\nScore: **${score}**`
-});
-            }
-        }
 
-        if (interaction.isButton()) {
-            if (interaction.customId === 'create_ai_ticket') {
-                await interaction.deferReply({ ephemeral: true });
-                
-                const ticketChannel = await interaction.guild.channels.create({
-                    name: `ai-ticket-${interaction.user.username}`,
-                    type: ChannelType.GuildText,
-                    parent: process.env.TICKET_CATEGORY_ID,
-                    permissionOverwrites: [
-                        { 
-                            id: interaction.guild.id, 
-                            deny: [PermissionsBitField.Flags.ViewChannel] 
-                        },
-                        { 
-                            id: interaction.user.id, 
-                            allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] 
-                        },
-                        { 
-                            id: process.env.STAFF_ROLE_ID, 
-                            allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] 
-                        }
-                    ],
+                // ✅ PHẢI đóng ngoặc đúng
+                return interaction.editReply({
+                    content: `✅ Đã gửi!\nStage: **${stage}**\nScore: **${score}**`
                 });
-
-                await ticketChannel.send(`Chào mừng <@${interaction.user.id}>! AI đã sẵn sàng hỗ trợ bạn.`);
-                return interaction.editReply({ content: `✅ Ticket của bạn đã sẵn sàng: <#${ticketChannel.id}>` });
             }
         }
-        
-} catch (err) {
-    console.error("LỖI HỆ THỐNG:", err);
-    const errorMsg = { content: "❌ Đã có lỗi xảy ra!", ephemeral: true };
 
-    if (interaction.deferred || interaction.replied) {
-        return interaction.editReply(errorMsg).catch(() => {});
-    } else {
-        return interaction.reply(errorMsg).catch(() => {});
+        // Các interaction khác (button, slash, v.v.) viết tiếp ở đây
+    } catch (err) {
+        console.error("LỖI HỆ THỐNG INTERACTION:", err);
+
+        const errorMsg = { content: "❌ Đã có lỗi xảy ra!", ephemeral: true };
+        if (interaction.deferred || interaction.replied) {
+            interaction.editReply(errorMsg).catch(() => {});
+        } else {
+            interaction.reply(errorMsg).catch(() => {});
+        }
     }
-}
 });
-
 /* ================= WEB API ================= */
 /* ================= STAFF + ROLE COLOR ================= */
 app.get("/staff-realtime", async (req, res) => {
