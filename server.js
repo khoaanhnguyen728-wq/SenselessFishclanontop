@@ -325,18 +325,36 @@ client.on("messageCreate", async (message) => {
     if (now - last < 5000) return;
     cooldown.set(message.author.id, now);
 
-if (message.channel.id === process.env.AI_CHANNEL) {
+client.on('messageCreate', async (message) => {
+    if (message.author.bot || message.channel.id !== process.env.AI_CHANNEL) return;
+
     try {
         await message.channel.sendTyping();
-        // Gọi Gemma 4 trả lời
+
         const result = await aiModel.generateContent(message.content);
         const response = await result.response;
-        return message.reply(response.text());
+        const text = response.text();
+
+        // Nếu nội dung quá dài (trên 2000 ký tự), Discord sẽ chặn.
+        // Đoạn này giúp chia nhỏ tin nhắn để gửi:
+        if (text.length > 2000) {
+            const chunks = text.match(/[\s\S]{1,2000}/g);
+            for (const chunk of chunks) {
+                await message.reply(chunk);
+            }
+        } else {
+            await message.reply(text);
+        }
+
     } catch (err) {
-        console.error("❌ LOI AI:", err);
-        return message.reply(`Lỗi kết nối Gemma 4: ${err.message}`);
+        console.error("❌ LỖI AI:", err);
+        // Nếu lỗi do bộ lọc của Google dù đã chỉnh BLOCK_NONE
+        if (err.message.includes("SAFETY")) {
+            return message.reply("Nội dung này bị bộ lọc hệ thống chặn, bạn thử yêu cầu khác nhé!");
+        }
+        return message.reply("Gemma 4 đang bận xử lý, bạn đợi xíu rồi thử lại nha!");
     }
-}
+});
 // ================= RULE =================
 if (content.startsWith("rule")) {
 
