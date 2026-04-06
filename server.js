@@ -306,12 +306,11 @@ if (message.channel.id === process.env.AI_CHANNEL) {
             const response = await result.response;
             return message.reply(response.text());
         } catch (err) {
-            // Thay đổi dòng này để xem lỗi thật là gì
-            console.error("LOI AI CHI TIET:", err); 
-            return message.reply(`Lỗi rồi: ${err.message}`); 
+            console.error("❌ LOI AI CHI TIET:", err); 
+            // Bot sẽ chat thẳng lỗi tiếng Anh lên Discord để bạn thấy
+            return message.reply(`Hệ thống gặp lỗi: ${err.message}`); 
         }
     }
-
 // ================= RULE =================
 if (content.startsWith("rule")) {
 
