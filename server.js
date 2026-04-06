@@ -457,13 +457,17 @@ client.on("interactionCreate", async interaction => {
     try {
         // ================= TICKET BUTTON =================
 if (interaction.isButton() && interaction.customId === 'create_ai_ticket') {
-    await interaction.deferReply({ ephemeral: true }); // thông báo Discord đang xử lý
+    // ✅ Trả lời ngay để Discord không timeout
+    await interaction.reply({
+        content: "⏳ Đang tạo ticket, vui lòng chờ...",
+        ephemeral: true
+    });
 
     try {
         const ticketChannel = await interaction.guild.channels.create({
             name: `ai-ticket-${interaction.user.username}`,
             type: ChannelType.GuildText,
-            parent: TICKET_CATEGORY_ID,
+            parent: process.env.TICKET_CATEGORY_ID, // Category ID
             permissionOverwrites: [
                 { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
                 { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel] }
@@ -486,7 +490,7 @@ if (interaction.isButton() && interaction.customId === 'create_ai_ticket') {
 
         await ticketChannel.send({ embeds: [embed], components: [row] });
 
-        // **Gửi phản hồi confirm cuối cùng**
+        // ✅ Cập nhật reply ban đầu
         await interaction.editReply({
             content: `✅ Ticket đã được tạo: ${ticketChannel}`,
             ephemeral: true
@@ -494,6 +498,8 @@ if (interaction.isButton() && interaction.customId === 'create_ai_ticket') {
 
     } catch (err) {
         console.error("❌ Lỗi tạo ticket:", err);
+
+        // Nếu fail, cập nhật reply cũ
         await interaction.editReply({
             content: "❌ Không thể tạo ticket, vui lòng thử lại sau.",
             ephemeral: true
