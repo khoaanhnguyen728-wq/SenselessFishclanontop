@@ -317,6 +317,37 @@ return rules.map((r, i) => {
 client.on("messageCreate", async (message) => {
     if (message.author.bot) return;
     const content = message.content.toLowerCase();
+
+    if (selected.has(message.channel.id)) {
+        const ticketOwner = selected.get(message.channel.id).userId;
+        if (message.author.id !== ticketOwner) return; // chỉ phản hồi người tạo ticket
+
+        try {
+            await message.channel.sendTyping();
+
+            const prompt = `${message.content} (Lưu ý: Luôn trả lời bằng tiếng Việt)`;
+            const result = await aiModel.generateContent(prompt);
+            const text = result.response.text();
+
+            if (!text || text.trim().length === 0) {
+                return message.reply("Gemma 4 không phản hồi, thử lại nhé!");
+            }
+
+            // Nếu quá dài → chia chunk
+            if (text.length > 2000) {
+                const chunks = text.match(/[\s\S]{1,2000}/g);
+                for (const chunk of chunks) {
+                    await message.channel.send(chunk);
+                }
+            } else {
+                await message.reply(text);
+            }
+
+        } catch (err) {
+            console.error("❌ LỖI AI:", err);
+            return message.reply("Hệ thống AI trục trặc, thử lại sau!");
+        }
+    }
     
 if (message.content === "!panel") {
     const embed = new EmbedBuilder()
@@ -436,6 +467,7 @@ client.on("interactionCreate", async interaction => {
                     { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel] }
                 ]
             });
+            selected.set(ticketChannel.id, { userId: interaction.user.id });
 
             const embed = new EmbedBuilder()
                 .setTitle("🎫 AI SUPPORT TICKET")
