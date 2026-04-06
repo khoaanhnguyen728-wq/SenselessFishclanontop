@@ -43,7 +43,9 @@ const {
     StringSelectMenuBuilder,
     ModalBuilder,
     TextInputBuilder,
-    TextInputStyle
+    TextInputStyle,
+    ChannelType,
+    PermissionsBitField
 } = require("discord.js");
 
 const app = express();
@@ -95,6 +97,7 @@ const AOV_MESSAGE = process.env.AOV_MESSAGE;
 const RULE_CHANNEL = process.env.RULE_CHANNEL;
 const ADMIN_ROLE = process.env.ADMIN_ROLE;
 const STAFF_ROLE_ID = process.env.STAFF_ROLE_ID;
+const TICKET_CATEGORY_ID = process.env.TICKET_CATEGORY_ID;
 
 function hasPermission(member) {
     if (!process.env.ADMIN_ROLE) return false;
@@ -313,8 +316,6 @@ return rules.map((r, i) => {
 
 client.on("messageCreate", async (message) => {
     if (message.author.bot) return;
-
-    // PHẢI CÓ DÒNG NÀY ĐỂ CÁC LỆNH RULE/AOV HOẠT ĐỘNG
     const content = message.content.toLowerCase();
 
     // ================= RULE =================
@@ -1059,6 +1060,36 @@ return interaction.editReply({
 });
             }
         }
+
+        if (interaction.isButton()) {
+            if (interaction.customId === 'create_ai_ticket') {
+                await interaction.deferReply({ ephemeral: true });
+                
+                const ticketChannel = await interaction.guild.channels.create({
+                    name: `ai-ticket-${interaction.user.username}`,
+                    type: ChannelType.GuildText,
+                    parent: process.env.TICKET_CATEGORY_ID,
+                    permissionOverwrites: [
+                        { 
+                            id: interaction.guild.id, 
+                            deny: [PermissionsBitField.Flags.ViewChannel] 
+                        },
+                        { 
+                            id: interaction.user.id, 
+                            allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] 
+                        },
+                        { 
+                            id: process.env.STAFF_ROLE_ID, 
+                            allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] 
+                        }
+                    ],
+                });
+
+                await ticketChannel.send(`Chào mừng <@${interaction.user.id}>! AI đã sẵn sàng hỗ trợ bạn.`);
+                return interaction.editReply({ content: `✅ Ticket của bạn đã sẵn sàng: <#${ticketChannel.id}>` });
+            }
+        }
+        
 } catch (err) {
     console.error("LỖI HỆ THỐNG:", err);
     const errorMsg = { content: "❌ Đã có lỗi xảy ra!", ephemeral: true };
