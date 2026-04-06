@@ -6,9 +6,7 @@ const axios = require("axios");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const aiModel = genAI.getGenerativeModel({ 
-    model: "gemini-1.5-flash" 
-}, { 
-    apiVersion: 'v1' // Ép dùng v1 thay vì v1beta đang bị lỗi 404
+    model: "gemma-4-26b-a4b-it" 
 });
 const AI_CHANNEL = process.env.AI_CHANNEL;
 console.log("ENV TOKEN:", process.env.TOKEN);
@@ -304,33 +302,17 @@ client.on("messageCreate", async (message) => {
     cooldown.set(message.author.id, now);
 
 if (message.channel.id === process.env.AI_CHANNEL) {
-        try {
-            await message.channel.sendTyping();
-
-            // CÁCH GỌI MỚI: Thử ép dùng model qua API v1beta trực tiếp
-            const model = genAI.getGenerativeModel({ 
-                model: "gemini-1.5-flash",
-            }, { apiVersion: 'v1beta' }); // Ép phiên bản API ở đây
-
-            const result = await model.generateContent(message.content);
-            const response = await result.response;
-            const text = response.text();
-
-            if (!text) throw new Error("AI trả về rỗng");
-            
-            return message.reply(text);
-
-        } catch (err) {
-            console.error("❌ LOI AI CHI TIET:", err);
-            
-            // Nếu vẫn lỗi 404, thử phương án dự phòng cuối cùng:
-            if (err.message.includes("404")) {
-                return message.reply("Lỗi 404: Model này chưa được kích hoạt cho Key của bạn. Bạn hãy vào Google AI Studio, chọn 'Gemini 1.5 Flash' và nhắn thử 1 câu ở đó để kích hoạt nhé!");
-            }
-            
-            return message.reply(`Lỗi kết nối AI: ${err.message}`);
-        }
+    try {
+        await message.channel.sendTyping();
+        // Gọi Gemma 4 trả lời
+        const result = await aiModel.generateContent(message.content);
+        const response = await result.response;
+        return message.reply(response.text());
+    } catch (err) {
+        console.error("❌ LOI AI:", err);
+        return message.reply(`Lỗi kết nối Gemma 4: ${err.message}`);
     }
+}
 // ================= RULE =================
 if (content.startsWith("rule")) {
 
