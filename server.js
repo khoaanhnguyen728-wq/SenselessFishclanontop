@@ -90,6 +90,8 @@ const ROLE_MAP = {
     "Tryout host": process.env.ROLE_TRYOUT,
     "Training host": process.env.ROLE_TRAIN
 };
+const ticketCooldown = new Map(); // map userId → lastClickTimestamp
+const TICKET_COOLDOWN = 5000; // 5 giây
 const cooldown = new Map();
 const LOG_CHANNEL = process.env.LOG_CHANNEL;
 const AOV_CHANNEL = process.env.AOV_CHANNEL;
@@ -456,6 +458,30 @@ const result = await aiModel.generateContent(promptWithLanguageLock);
 client.on("interactionCreate", async interaction => {
     try {
         // ================= TICKET BUTTON =================
+// ================= TICKET CLOSE BUTTON =================
+if (interaction.isButton() && interaction.customId === "close_ticket") {
+    const userId = interaction.user.id;
+    const now = Date.now();
+    const lastClick = ticketCooldown.get(userId) || 0;
+
+    if (now - lastClick < TICKET_COOLDOWN) {
+        return interaction.reply({ content: `⚠️ Vui lòng đợi ${Math.ceil((TICKET_COOLDOWN - (now - lastClick))/1000)} giây trước khi đóng ticket lại.`, ephemeral: true });
+    }
+
+    ticketCooldown.set(userId, now);
+
+    try {
+        await interaction.deferUpdate(); // tránh "This interaction failed"
+        await interaction.channel.delete();
+        selected.delete(interaction.channel.id);
+    } catch (err) {
+        console.error("❌ Lỗi khi đóng ticket:", err);
+        if (!interaction.replied) {
+            await interaction.reply({ content: "❌ Không thể đóng ticket!", ephemeral: true });
+        }
+    }
+}
+
 if (interaction.isButton() && interaction.customId === 'create_ai_ticket') {
     // ✅ Trả lời ngay để Discord không timeout
     await interaction.reply({
