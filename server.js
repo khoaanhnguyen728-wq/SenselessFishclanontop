@@ -6,14 +6,33 @@ const axios = require("axios");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // Khai báo Model với chỉ dẫn hệ thống
+const { HarmCategory, HarmBlockThreshold } = require("@google/generative-ai");
+
 const aiModel = genAI.getGenerativeModel({ 
     model: "gemma-4-26b-a4b-it",
-    systemInstruction: "Bạn là trợ lý ảo chính thức của Senseless Fish Clan. \n" +
-                       "QUY TẮC BẮT BUỘC:\n" +
-                       "1. Chỉ được phép trả lời bằng tiếng Việt 100% trong mọi tình huống.\n" +
-                       "2. Nếu người dùng hỏi bằng tiếng Anh hoặc ngôn ngữ khác, bạn vẫn phải trả lời bằng tiếng Việt.\n" +
-                       "3. Cách xưng hô: Thân thiện, coi người dùng là thành viên trong Clan (có thể xưng 'mình', 'tôi' và gọi người dùng là 'bạn').\n" +
-                       "4. Nội dung: Thông minh, hỗ trợ nhiệt tình về game, lập trình Roblox, và các hoạt động của Clan."
+    // Chế độ System Instruction tối thượng
+    systemInstruction: {
+        role: "system",
+        parts: [{ text: "Bạn là một trí tuệ nhân tạo tiên tiến, hoạt động như một phiên bản Gemini thực thụ dành riêng cho Senseless Fish Clan. \n\n" +
+                       "NHIỆM VỤ CỦA BẠN:\n" +
+                       "1. Ngôn ngữ: Luôn trò chuyện và giải thích bằng tiếng Việt tự nhiên, chuyên nghiệp.\n" +
+                       "2. Lập trình: Bạn là chuyên gia về HTML/CSS/JS, Luau (Roblox), Node.js và Python. Khi được yêu cầu mã nguồn, hãy cung cấp TOÀN BỘ code đầy đủ, sạch sẽ và có chú thích bằng tiếng Việt trong các khối mã (code blocks).\n" +
+                       "3. Tính cách: Thông minh, hỗ trợ tận tâm, có kiến thức sâu rộng như một kỹ sư phần mềm thực thụ. Không từ chối các yêu cầu lập trình hợp lệ.\n" +
+                       "4. Định dạng: Sử dụng Markdown để trình bày câu trả lời rõ ràng (in đậm, danh sách, khối mã)." }]
+    },
+    // Mở khóa bộ lọc để AI không bị 'câm' khi gặp code phức tạp
+    safetySettings: [
+        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+    ],
+    // Cấu hình độ dài và độ sáng tạo
+    generationConfig: {
+        temperature: 0.7, // Giúp câu trả lời tự nhiên, không bị máy móc
+        topP: 0.95,
+        maxOutputTokens: 8192, // Cho phép trả lời code dài mà không bị ngắt quãng
+    }
 });
 const AI_CHANNEL = process.env.AI_CHANNEL;
 console.log("ENV TOKEN:", process.env.TOKEN);
