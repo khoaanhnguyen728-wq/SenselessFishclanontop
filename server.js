@@ -3,6 +3,10 @@ const express = require("express");
 const fs = require("fs");
 const cors = require("cors");
 const axios = require("axios");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const aiModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+const AI_CHANNEL = process.env.AI_CHANNEL;
 console.log("ENV TOKEN:", process.env.TOKEN);
 process.on("unhandledRejection", console.error);
 process.on("uncaughtException", console.error);
@@ -294,6 +298,32 @@ client.on("messageCreate", async (message) => {
 
     if (now - last < 5000) return;
     cooldown.set(message.author.id, now);
+
+if (message.channel.id === AI_CHANNEL) {
+        await message.channel.sendTyping(); // Hiệu ứng bot đang gõ
+
+        try {
+            // Thiết lập "tính cách" cho bot của Senseless Fish Clan
+            const prompt = `Bạn là trợ lý AI thông minh của Senseless Fish Clan trong Discord. 
+            Hãy trả lời ngắn gọn, thân thiện và hỗ trợ người dùng. 
+            Câu hỏi: ${message.content}`;
+
+            const result = await aiModel.generateContent(prompt);
+            const response = await result.response;
+            const text = response.text();
+
+            // Nếu câu trả lời quá dài (Discord giới hạn 2000 ký tự)
+            if (text.length > 2000) {
+                return message.reply(text.substring(0, 1900) + "...");
+            }
+
+            await message.reply(text);
+            return; // Dừng lại không chạy các lệnh dưới nếu là channel AI
+        } catch (error) {
+            console.error("Lỗi Gemini AI:", error);
+            return message.reply("Hệ thống AI đang bận, bạn thử lại sau nhé!");
+        }
+    }
 
 // ================= RULE =================
 if (content.startsWith("rule")) {
