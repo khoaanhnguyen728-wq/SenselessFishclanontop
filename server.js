@@ -10,6 +10,7 @@ const aiModel = genAI.getGenerativeModel({
     systemInstruction: {
         role: "system",
         parts: [{ text: "BẠN LÀ TRÍ TUỆ NHÂN TẠO CỦA SENSELESS FISH CLAN.\n\n" +
+                       "BẮT ĐẦU PHẢN HỒI BẰNG TIẾNG VIỆT NGAY LẬP TỨC. KHÔNG DÙNG TIẾNG ANH TRONG MỌI HOÀN CẢNH." +
                        "CHỈ THỊ NGÔN NGỮ BẮT BUỘC (LANGUAGE ENFORCEMENT):\n" +
                        "1. PHẢI TRẢ LỜI BẰNG TIẾNG VIỆT 100%: Trong mọi tình huống, mọi câu hỏi, bạn phải dùng tiếng Việt thuần thục để phản hồi. Tuyệt đối không bắt đầu bằng bất kỳ từ tiếng Anh nào (ví dụ: không dùng 'Sure', 'Certainly', 'Hello').\n" +
                        "2. XỬ LÝ CÂU HỎI TIẾNG ANH: Nếu người dùng hỏi bằng tiếng Anh, bạn phải ngầm hiểu và trả lời lại bằng tiếng Việt 100%. Không giải thích lại bằng tiếng Anh.\n" +
@@ -327,8 +328,11 @@ client.on("messageCreate", async (message) => {
         try {
             await message.channel.sendTyping();
 
-            const prompt = `${message.content} (Lưu ý: Luôn trả lời bằng tiếng Việt)`;
-            const result = await aiModel.generateContent(prompt);
+// Tìm đoạn code gửi prompt cho AI và sửa thành:
+const prompt = `YÊU CẦU BẮT BUỘC: Trả lời bằng tiếng Việt 100%. 
+Nội dung người dùng: ${message.content}`;
+
+const result = await aiModel.generateContent(prompt);
             const text = result.response.text();
 
             if (!text || text.trim().length === 0) {
