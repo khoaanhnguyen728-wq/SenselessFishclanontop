@@ -27,7 +27,7 @@ parts: [{ text: "BẠN LÀ MỘT TRÍ TUỆ NHÂN TẠO ĐA NGÔN NGỮ SIÊU VI
         { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
     ],
     generationConfig: {
-        temperature: 0.8, // Giảm xuống 0.8 để AI bớt 'ngáo' khi chuyển đổi ngôn ngữ
+        temperature: 0.6, // Giảm xuống 0.8 để AI bớt 'ngáo' khi chuyển đổi ngôn ngữ
         topP: 1,
         maxOutputTokens: 8192, // Khuyên dùng 8192 để tránh bị timeout trên Render
     }
