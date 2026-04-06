@@ -5,7 +5,7 @@ const cors = require("cors");
 const axios = require("axios");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const aiModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+const aiModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 const AI_CHANNEL = process.env.AI_CHANNEL;
 console.log("ENV TOKEN:", process.env.TOKEN);
 process.on("unhandledRejection", console.error);
