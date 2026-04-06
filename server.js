@@ -313,51 +313,59 @@ return rules.map((r, i) => {
         .setFooter({ text: `Rule ${i + 1} / 7 • SenselessFish` });
 });
 }
+
 client.on("messageCreate", async (message) => {
-    if (message.author.bot) return;
-
-    const content = message.content.toLowerCase();
-
-    // ⏳ cooldown chung 5s
-    const now = Date.now();
-    const last = cooldown.get(message.author.id) || 0;
-
-    if (now - last < 5000) return;
-    cooldown.set(message.author.id, now);
-
-    // Chỉ trả lời trong đúng channel và không trả lời bot khác
+    // 1. Lọc nhanh: Bỏ qua bot và chỉ xử lý trong đúng channel AI
     if (message.author.bot || message.channel.id !== process.env.AI_CHANNEL) return;
 
+    // 2. Kiểm tra Cooldown (5 giây)
+    const now = Date.now();
+    const lastUsage = cooldown.get(message.author.id) || 0;
+    const cooldownTime = 5000;
+
+    if (now - lastUsage < cooldownTime) {
+        const timeLeft = ((cooldownTime - (now - lastUsage)) / 1000).toFixed(1);
+        // Tùy chọn: Nhắn tin báo cooldown hoặc chỉ return im lặng
+        return; 
+    }
+    cooldown.set(message.author.id, now);
+
     try {
+        // 3. Hiệu ứng đang soạn tin nhắn
         await message.channel.sendTyping();
 
-        // Thiết lập thời gian chờ thủ công để không bị treo
+        // 4. Gọi Gemma 4 xử lý
         const result = await aiModel.generateContent(message.content);
         const response = await result.response;
         const text = response.text();
 
-        if (!text || text.length === 0) {
-            return message.reply("Gemma 4 không tìm thấy câu trả lời phù hợp, bạn thử lại nhé!");
+        // 5. Kiểm tra nếu AI không trả về chữ nào
+        if (!text || text.trim().length === 0) {
+            return message.reply("Gemma 4 đang suy nghĩ nhưng chưa ra câu trả lời, bạn thử hỏi lại nhé!");
         }
 
-        // Chia nhỏ tin nhắn nếu dài hơn 2000 ký tự (Lỗi phổ biến nhất làm bot mất hút)
+        // 6. Xử lý chia nhỏ tin nhắn (Discord giới hạn 2000 ký tự)
         if (text.length > 2000) {
             const chunks = text.match(/[\s\S]{1,2000}/g);
             for (const chunk of chunks) {
+                // Gửi từng đoạn một cách liên tục
                 await message.channel.send(chunk);
             }
         } else {
+            // Nếu ngắn thì reply trực tiếp cho đẹp
             await message.reply(text);
         }
 
     } catch (err) {
-        console.error("❌ LỖI RỒI:", err);
+        console.error("❌ LỖI AI:", err);
         
-        if (err.message.includes("finishReason: SAFETY")) {
-            return message.reply("⚠️ Nội dung này bị bộ lọc Google chặn (dù đã tắt lọc). Hãy thử hỏi cách khác nhẹ nhàng hơn nhé!");
+        // Xử lý lỗi an toàn của Google
+        if (err.message.includes("SAFETY")) {
+            return message.reply("⚠️ Nội dung này bị bộ lọc an toàn của Google chặn. Hãy thử nội dung khác lành mạnh hơn nhé!");
         }
         
-        return message.reply("Hệ thống đang quá tải hoặc yêu cầu quá phức tạp, mình không xử lý kịp rồi!");
+        // Lỗi do model quá tải hoặc API key
+        return message.reply("Hệ thống Gemma 4 đang gặp chút trục trặc, mình sẽ quay lại sớm thôi!");
     }
 });
 // ================= RULE =================
