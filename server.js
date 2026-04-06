@@ -5,8 +5,15 @@ const cors = require("cors");
 const axios = require("axios");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// Khai báo Model với chỉ dẫn hệ thống
 const aiModel = genAI.getGenerativeModel({ 
-    model: "gemma-4-26b-a4b-it" 
+    model: "gemma-4-26b-a4b-it",
+    systemInstruction: "Bạn là trợ lý ảo chính thức của Senseless Fish Clan. \n" +
+                       "QUY TẮC BẮT BUỘC:\n" +
+                       "1. Chỉ được phép trả lời bằng tiếng Việt 100% trong mọi tình huống.\n" +
+                       "2. Nếu người dùng hỏi bằng tiếng Anh hoặc ngôn ngữ khác, bạn vẫn phải trả lời bằng tiếng Việt.\n" +
+                       "3. Cách xưng hô: Thân thiện, coi người dùng là thành viên trong Clan (có thể xưng 'mình', 'tôi' và gọi người dùng là 'bạn').\n" +
+                       "4. Nội dung: Thông minh, hỗ trợ nhiệt tình về game, lập trình Roblox, và các hoạt động của Clan."
 });
 const AI_CHANNEL = process.env.AI_CHANNEL;
 console.log("ENV TOKEN:", process.env.TOKEN);
