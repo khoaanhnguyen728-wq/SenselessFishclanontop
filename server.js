@@ -315,92 +315,45 @@ return rules.map((r, i) => {
 }
 
 client.on("messageCreate", async (message) => {
-    // 1. Lọc nhanh: Bỏ qua bot và chỉ xử lý trong đúng channel AI
-    if (message.author.bot || message.channel.id !== process.env.AI_CHANNEL) return;
+    if (message.author.bot) return;
 
-    // 2. Kiểm tra Cooldown (5 giây)
-    const now = Date.now();
-    const lastUsage = cooldown.get(message.author.id) || 0;
-    const cooldownTime = 5000;
+    // PHẢI CÓ DÒNG NÀY ĐỂ CÁC LỆNH RULE/AOV HOẠT ĐỘNG
+    const content = message.content.toLowerCase();
 
-    if (now - lastUsage < cooldownTime) {
-        const timeLeft = ((cooldownTime - (now - lastUsage)) / 1000).toFixed(1);
-        // Tùy chọn: Nhắn tin báo cooldown hoặc chỉ return im lặng
-        return; 
-    }
-    cooldown.set(message.author.id, now);
+    // ================= RULE =================
+    if (content.startsWith("rule")) {
+        // SỬA TẠI ĐÂY: Thêm process.env.
+        if (message.channel.id !== process.env.RULE_CHANNEL) return;
 
-    try {
-        // 3. Hiệu ứng đang soạn tin nhắn
-        await message.channel.sendTyping();
-
-        // 4. Gọi Gemma 4 xử lý
-        const result = await aiModel.generateContent(message.content);
-        const response = await result.response;
-        const text = response.text();
-
-        // 5. Kiểm tra nếu AI không trả về chữ nào
-        if (!text || text.trim().length === 0) {
-            return message.reply("Gemma 4 đang suy nghĩ nhưng chưa ra câu trả lời, bạn thử hỏi lại nhé!");
+        if (!hasPermission(message.member)) {
+            return message.reply("❌ Bạn không có quyền!").then(m => setTimeout(() => m.delete(), 3000));
         }
 
-        // 6. Xử lý chia nhỏ tin nhắn (Discord giới hạn 2000 ký tự)
-        if (text.length > 2000) {
-            const chunks = text.match(/[\s\S]{1,2000}/g);
-            for (const chunk of chunks) {
-                // Gửi từng đoạn một cách liên tục
-                await message.channel.send(chunk);
-            }
-        } else {
-            // Nếu ngắn thì reply trực tiếp cho đẹp
-            await message.reply(text);
-        }
+        if (content === "rule" || content === "rule list") {
+            try {
+                const embeds = buildRuleEmbeds();
 
-    } catch (err) {
-        console.error("❌ LỖI AI:", err);
-        
-        // Xử lý lỗi an toàn của Google
-        if (err.message.includes("SAFETY")) {
-            return message.reply("⚠️ Nội dung này bị bộ lọc an toàn của Google chặn. Hãy thử nội dung khác lành mạnh hơn nhé!");
-        }
-        
-        // Lỗi do model quá tải hoặc API key
-        return message.reply("Hệ thống Gemma 4 đang gặp chút trục trặc, mình sẽ quay lại sớm thôi!");
-    }
-});
-// ================= RULE =================
-if (content.startsWith("rule")) {
-
-    if (message.channel.id !== RULE_CHANNEL) return;
-
-    if (!hasPermission(message.member)) {
-        return message.reply("❌ Bạn không có quyền!").then(m => setTimeout(() => m.delete(), 3000));
-    }
-
-    if (content === "rule" || content === "rule list") {
-        try {
-            const embeds = buildRuleEmbeds();
-
-            await message.channel.send({ embeds });
-            await message.channel.send(`
+                await message.channel.send({ embeds });
+                await message.channel.send(`
 # 💖 CẢM ƠN BẠN ĐÃ ĐỌC RULE
 
 **CHÚC BẠN CÓ TRẢI NGHIỆM TỐT  
 TẠI SENSELESSFISH**
 `);
 
-            await message.delete().catch(() => {});
+                await message.delete().catch(() => {});
+                return; // SỬA TẠI ĐÂY: Thêm return để kết thúc lệnh
 
-        } catch (err) {
-            console.error(err);
-            message.channel.send("❌ Lỗi gửi rule!");
+            } catch (err) {
+                console.error(err);
+                message.channel.send("❌ Lỗi gửi rule!");
+            }
         }
     }
-}
 
-    // ================= AOV =================
-// ================= AOV COMMAND =================
-if (message.channel.id === AOV_CHANNEL) {
+    // ================= AOV COMMAND =================
+    // SỬA TẠI ĐÂY: Thêm process.env.
+    if (message.channel.id === process.env.AOV_CHANNEL) {
         if (!hasPermission(message.member)) return;
 
         if (content === "aov" || content === "aov list") {
@@ -408,16 +361,49 @@ if (message.channel.id === AOV_CHANNEL) {
             const result = await updateAOVLeaderboard();
 
             if (result === true) {
-                // Nếu đã edit thành công vào tin nhắn cũ
                 message.reply("✅ Đã cập nhật bảng xếp hạng!").then(m => setTimeout(() => m.delete(), 5000));
             } else if (result) {
-                // Nếu phải tạo tin nhắn mới vì ID env trống/sai
                 message.reply(`📌 Đã tạo bảng xếp hạng mới!\nCopy ID này vào \`AOV_MESSAGE\` trong env: \`${result}\``);
             }
             
-            message.delete().catch(() => {});
+            await message.delete().catch(() => {});
+            return; // SỬA TẠI ĐÂY: Thêm return để kết thúc lệnh
         }
     }
+if (message.channel.id === process.env.AI_CHANNEL) {
+        // Kiểm tra Cooldown
+        const now = Date.now();
+        const lastUsage = cooldown.get(message.author.id) || 0;
+        if (now - lastUsage < 5000) return;
+        cooldown.set(message.author.id, now);
+
+        try {
+            await message.channel.sendTyping();
+            const result = await aiModel.generateContent(message.content);
+            const response = await result.response;
+            const text = response.text();
+
+            if (!text || text.trim().length === 0) {
+                return message.reply("Gemma 4 không phản hồi, thử lại nhé!");
+            }
+
+            if (text.length > 2000) {
+                const chunks = text.match(/[\s\S]{1,2000}/g);
+                for (const chunk of chunks) {
+                    await message.channel.send(chunk);
+                }
+            } else {
+                await message.reply(text);
+            }
+        } catch (err) {
+            console.error("❌ LỖI AI:", err);
+            if (err.message.includes("SAFETY")) {
+                return message.reply("⚠️ Nội dung bị bộ lọc chặn.");
+            }
+            return message.reply("Hệ thống trục trặc, thử lại sau!");
+        }
+    }
+});
 client.on("interactionCreate", async interaction => {
     try {
 
