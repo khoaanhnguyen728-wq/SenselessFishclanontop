@@ -29,7 +29,7 @@ const aiModel = genAI.getGenerativeModel({
     generationConfig: {
         temperature: 0.9, // Tăng độ sáng tạo và linh hoạt cho câu trả lời
         topP: 1,
-        maxOutputTokens: 8192, // Cho phép viết code và giải toán siêu dài
+        maxOutputTokens: 2048, // Cho phép viết code và giải toán siêu dài
     }
 });
 const AI_CHANNEL = process.env.AI_CHANNEL;
@@ -325,34 +325,39 @@ client.on("messageCreate", async (message) => {
     if (now - last < 5000) return;
     cooldown.set(message.author.id, now);
 
-client.on('messageCreate', async (message) => {
+    // Chỉ trả lời trong đúng channel và không trả lời bot khác
     if (message.author.bot || message.channel.id !== process.env.AI_CHANNEL) return;
 
     try {
         await message.channel.sendTyping();
 
+        // Thiết lập thời gian chờ thủ công để không bị treo
         const result = await aiModel.generateContent(message.content);
         const response = await result.response;
         const text = response.text();
 
-        // Nếu nội dung quá dài (trên 2000 ký tự), Discord sẽ chặn.
-        // Đoạn này giúp chia nhỏ tin nhắn để gửi:
+        if (!text || text.length === 0) {
+            return message.reply("Gemma 4 không tìm thấy câu trả lời phù hợp, bạn thử lại nhé!");
+        }
+
+        // Chia nhỏ tin nhắn nếu dài hơn 2000 ký tự (Lỗi phổ biến nhất làm bot mất hút)
         if (text.length > 2000) {
             const chunks = text.match(/[\s\S]{1,2000}/g);
             for (const chunk of chunks) {
-                await message.reply(chunk);
+                await message.channel.send(chunk);
             }
         } else {
             await message.reply(text);
         }
 
     } catch (err) {
-        console.error("❌ LỖI AI:", err);
-        // Nếu lỗi do bộ lọc của Google dù đã chỉnh BLOCK_NONE
-        if (err.message.includes("SAFETY")) {
-            return message.reply("Nội dung này bị bộ lọc hệ thống chặn, bạn thử yêu cầu khác nhé!");
+        console.error("❌ LỖI RỒI:", err);
+        
+        if (err.message.includes("finishReason: SAFETY")) {
+            return message.reply("⚠️ Nội dung này bị bộ lọc Google chặn (dù đã tắt lọc). Hãy thử hỏi cách khác nhẹ nhàng hơn nhé!");
         }
-        return message.reply("Gemma 4 đang bận xử lý, bạn đợi xíu rồi thử lại nha!");
+        
+        return message.reply("Hệ thống đang quá tải hoặc yêu cầu quá phức tạp, mình không xử lý kịp rồi!");
     }
 });
 // ================= RULE =================
@@ -405,7 +410,6 @@ if (message.channel.id === AOV_CHANNEL) {
             message.delete().catch(() => {});
         }
     }
-});
 client.on("interactionCreate", async interaction => {
     try {
 
