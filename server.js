@@ -456,38 +456,50 @@ const result = await aiModel.generateContent(promptWithLanguageLock);
 client.on("interactionCreate", async interaction => {
     try {
         // ================= TICKET BUTTON =================
-        if (interaction.isButton() && interaction.customId === 'create_ai_ticket') {
-            await interaction.deferReply({ ephemeral: true });
+if (interaction.isButton() && interaction.customId === 'create_ai_ticket') {
+    await interaction.deferReply({ ephemeral: true }); // thông báo Discord đang xử lý
 
-            const ticketChannel = await interaction.guild.channels.create({
-                name: `ai-ticket-${interaction.user.username}`,
-                type: ChannelType.GuildText,
-                permissionOverwrites: [
-                    { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-                    { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel] }
-                ]
-            });
-            selected.set(ticketChannel.id, { userId: interaction.user.id });
+    try {
+        const ticketChannel = await interaction.guild.channels.create({
+            name: `ai-ticket-${interaction.user.username}`,
+            type: ChannelType.GuildText,
+            parent: TICKET_CATEGORY_ID,
+            permissionOverwrites: [
+                { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
+                { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel] }
+            ]
+        });
 
-            const embed = new EmbedBuilder()
-                .setTitle("🎫 AI SUPPORT TICKET")
-                .setDescription(`Xin chào <@${interaction.user.id}>\n\nHãy nhập câu hỏi, AI sẽ trả lời bạn.`)
-                .setColor("#00eaff");
+        selected.set(ticketChannel.id, { userId: interaction.user.id });
 
-            const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setCustomId("close_ticket")
-                    .setLabel("🔒 Đóng Ticket")
-                    .setStyle(ButtonStyle.Danger)
-            );
+        const embed = new EmbedBuilder()
+            .setTitle("🎫 AI SUPPORT TICKET")
+            .setDescription(`Xin chào <@${interaction.user.id}>\n\nHãy nhập câu hỏi, AI sẽ trả lời bạn.`)
+            .setColor("#00eaff");
 
-            await ticketChannel.send({ embeds: [embed], components: [row] });
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId("close_ticket")
+                .setLabel("🔒 Đóng Ticket")
+                .setStyle(ButtonStyle.Danger)
+        );
 
-            await interaction.editReply({
-                content: `✅ Ticket đã được tạo: ${ticketChannel}`,
-                ephemeral: true
-            });
-        }
+        await ticketChannel.send({ embeds: [embed], components: [row] });
+
+        // **Gửi phản hồi confirm cuối cùng**
+        await interaction.editReply({
+            content: `✅ Ticket đã được tạo: ${ticketChannel}`,
+            ephemeral: true
+        });
+
+    } catch (err) {
+        console.error("❌ Lỗi tạo ticket:", err);
+        await interaction.editReply({
+            content: "❌ Không thể tạo ticket, vui lòng thử lại sau.",
+            ephemeral: true
+        });
+    }
+}
         if (interaction.isChatInputCommand()) {
             const { commandName, options } = interaction;
 
