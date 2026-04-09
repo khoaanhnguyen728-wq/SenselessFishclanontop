@@ -10,15 +10,16 @@ new SlashCommandBuilder()
 o.setName("user").setDescription("User").setRequired(true)
 )
 .addIntegerOption(o =>
-o.setName("strike")
-.setDescription("Chọn strike cần gỡ")
-.setRequired(true)
-.addChoices(
-{ name: "Strike 1", value: 1 },
-{ name: "Strike 2", value: 2 },
-{ name: "Strike 3", value: 3 },
-{ name: "Strike 4", value: 4 }    
-)),
+  o.setName("strike")
+    .setDescription("Chọn strike cần gỡ")
+    .setRequired(true)
+    .addChoices(
+      { name: "Strike 1", value: 1 },
+      { name: "Strike 2", value: 2 },
+      { name: "Strike 3", value: 3 },
+      { name: "Strike 4", value: 4 }
+    )
+),
 
 new SlashCommandBuilder()
 .setName("strike")
