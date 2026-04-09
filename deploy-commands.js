@@ -114,7 +114,7 @@ o.setName("user")
 .setRequired(true)
 ),
   
-  new SlashCommandBuilder()
+new SlashCommandBuilder()
 .setName("promote")
 .setDescription("Add staff")
 .addUserOption(o=>
@@ -190,7 +190,7 @@ const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
 (async () => {
   try {
     console.log("⏳ Đang cập nhật lại các lệnh Slash...");
-    
+
 console.log("📦 Danh sách commands:");
 console.log(commands.map(c => c.name));
 // ❌ Xóa hết command cũ
