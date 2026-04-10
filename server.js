@@ -30,6 +30,22 @@ const aiModel = genAI.getGenerativeModel({
         maxOutputTokens: 8192, // Lưu ý: Nên để 2048 để tránh Render bị quá tải (Timeout) khi bot viết dài
     }
 });
+// ===== COIN =====
+if (!fs.existsSync("coins.json")) fs.writeFileSync("coins.json", "{}");
+let coins = JSON.parse(fs.readFileSync("coins.json"));
+
+const saveCoins = () => fs.writeFileSync("coins.json", JSON.stringify(coins, null, 2));
+
+function getCoins(userId) {
+    if (!coins[userId]) coins[userId] = 1000;
+    return coins[userId];
+}
+
+function addCoins(userId, amount) {
+    if (!coins[userId]) coins[userId] = 1000;
+    coins[userId] += amount;
+    saveCoins();
+}
 const AI_CHANNEL = process.env.AI_CHANNEL;
 console.log("ENV TOKEN:", process.env.TOKEN);
 process.on("unhandledRejection", console.error);
@@ -463,6 +479,109 @@ client.on("interactionCreate", async interaction => {
     try {
         // ================= TICKET BUTTON =================
 // ================= TICKET CLOSE BUTTON =================
+if (!interaction.isChatInputCommand()) return;
+
+const { commandName, options } = interaction;
+
+// ===== COIN =====
+if (commandName === "coin") {
+    const userId = interaction.user.id;
+    return interaction.reply(`💰 Bạn có: **${getCoins(userId)} coin**`);
+}
+
+// ===== TÀI XỈU =====
+if (commandName === "taixiu") {
+    const bet = options.getInteger("bet");
+    const userId = interaction.user.id;
+
+    if (getCoins(userId) < bet) {
+        return interaction.reply({ content: "❌ Không đủ coin", ephemeral: true });
+    }
+
+    const { 
+        EmbedBuilder, 
+        ActionRowBuilder, 
+        ButtonBuilder, 
+        ButtonStyle 
+    } = require("discord.js");
+
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId("tai")
+            .setLabel("🔥 TÀI")
+            .setStyle(ButtonStyle.Danger),
+
+        new ButtonBuilder()
+            .setCustomId("xiu")
+            .setLabel("❄️ XỈU")
+            .setStyle(ButtonStyle.Primary)
+    );
+
+    const embed = new EmbedBuilder()
+        .setTitle("🎲 TÀI XỈU")
+        .setDescription(`💰 Cược: **${bet} coin**\n\n👉 Chọn Tài hoặc Xỉu`)
+        .setColor("Yellow");
+
+    const msg = await interaction.reply({ embeds: [embed], components: [row] });
+
+    const collector = msg.createMessageComponentCollector({ time: 15000 });
+
+    collector.on("collect", async (btn) => {
+        if (btn.user.id !== userId) {
+            return btn.reply({ content: "❌ Không phải lượt của bạn", ephemeral: true });
+        }
+
+        const choice = btn.customId;
+
+        await btn.update({
+            embeds: [new EmbedBuilder().setDescription("🎲 Đang lắc...")],
+            components: []
+        });
+
+        await new Promise(r => setTimeout(r, 1500));
+
+        const dice1 = Math.floor(Math.random() * 6) + 1;
+        const dice2 = Math.floor(Math.random() * 6) + 1;
+        const dice3 = Math.floor(Math.random() * 6) + 1;
+
+        const total = dice1 + dice2 + dice3;
+        const result = total >= 11 ? "tai" : "xiu";
+
+        const win = result === choice;
+        const reward = win ? bet : -bet;
+
+        addCoins(userId, reward);
+
+        const diceEmoji = ["⚀","⚁","⚂","⚃","⚄","⚅"];
+
+        const resultEmbed = new EmbedBuilder()
+            .setTitle("🎲 KẾT QUẢ")
+            .setColor(win ? "Green" : "Red")
+            .setDescription(`
+🎲 ${diceEmoji[dice1-1]} ${diceEmoji[dice2-1]} ${diceEmoji[dice3-1]}
+
+👉 Tổng: **${total}**
+👉 Kết quả: **${result.toUpperCase()}**
+
+${win ? "🎉 THẮNG!" : "💀 THUA!"}
+
+💰 ${win ? "+" : ""}${reward}
+💳 Tổng: ${getCoins(userId)}
+            `);
+
+        await btn.editReply({ embeds: [resultEmbed] });
+        collector.stop();
+    });
+
+    collector.on("end", (_, reason) => {
+        if (reason === "time") {
+            interaction.editReply({
+                content: "⏳ Hết thời gian",
+                components: []
+            });
+        }
+    });
+}
 if (interaction.isButton() && interaction.customId === "close_ticket") {
     const userId = interaction.user.id;
     const now = Date.now();
