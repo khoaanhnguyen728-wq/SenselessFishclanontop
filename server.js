@@ -202,7 +202,7 @@ async function updateAOVLeaderboard() {
         // 🔥 BUILD BXH
         let text = "";
         for (let i = 1; i <= 20; i++) {
-            const member = apiTop[i];
+            const member = apiTop[i] || {};
 
             let medal = (i === 1) ? "👑" : (i <= 3 ? "➤" : "➠");
             let displayName = member?.id ? `<@${member.id}>` : "Vacant";
@@ -436,14 +436,16 @@ TẠI SENSELESSFISH**
             }
             
             await message.delete().catch(() => {});
-            return; // SỬA TẠI ĐÂY: Thêm return để kết thúc lệnh
+            return true;
         }
     }
 if (message.channel.id === process.env.AI_CHANNEL) {
         // Kiểm tra Cooldown
         const now = Date.now();
         const lastUsage = cooldown.get(message.author.id) || 0;
-        if (now - lastUsage < 5000) return;
+if (now - lastUsage < 5000) {
+    return message.reply("⏳ Đợi 5 giây");
+}
         cooldown.set(message.author.id, now);
 
         try {
@@ -477,195 +479,10 @@ const result = await aiModel.generateContent(promptWithLanguageLock);
 });
 client.on("interactionCreate", async interaction => {
     try {
-        // ================= TICKET BUTTON =================
-// ================= TICKET CLOSE BUTTON =================
-if (!interaction.isChatInputCommand()) return;
 
-const { commandName, options } = interaction;
+    if (interaction.isChatInputCommand()) {
 
-// ===== COIN =====
-if (commandName === "coin") {
-    const userId = interaction.user.id;
-    return interaction.reply(`💰 Bạn có: **${getCoins(userId)} coin**`);
-}
-
-// ===== TÀI XỈU =====
-if (commandName === "taixiu") {
-    const bet = options.getInteger("bet");
-    const userId = interaction.user.id;
-
-    if (getCoins(userId) < bet) {
-        return interaction.reply({ content: "❌ Không đủ coin", ephemeral: true });
-    }
-
-    const { 
-        EmbedBuilder, 
-        ActionRowBuilder, 
-        ButtonBuilder, 
-        ButtonStyle 
-    } = require("discord.js");
-
-    const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-            .setCustomId("tai")
-            .setLabel("🔥 TÀI")
-            .setStyle(ButtonStyle.Danger),
-
-        new ButtonBuilder()
-            .setCustomId("xiu")
-            .setLabel("❄️ XỈU")
-            .setStyle(ButtonStyle.Primary)
-    );
-
-    const embed = new EmbedBuilder()
-        .setTitle("🎲 TÀI XỈU")
-        .setDescription(`💰 Cược: **${bet} coin**\n\n👉 Chọn Tài hoặc Xỉu`)
-        .setColor("Yellow");
-
-    const msg = await interaction.reply({ embeds: [embed], components: [row] });
-
-    const collector = msg.createMessageComponentCollector({ time: 15000 });
-
-    collector.on("collect", async (btn) => {
-        if (btn.user.id !== userId) {
-            return btn.reply({ content: "❌ Không phải lượt của bạn", ephemeral: true });
-        }
-
-        const choice = btn.customId;
-
-        await btn.update({
-            embeds: [new EmbedBuilder().setDescription("🎲 Đang lắc...")],
-            components: []
-        });
-
-        await new Promise(r => setTimeout(r, 1500));
-
-        const dice1 = Math.floor(Math.random() * 6) + 1;
-        const dice2 = Math.floor(Math.random() * 6) + 1;
-        const dice3 = Math.floor(Math.random() * 6) + 1;
-
-        const total = dice1 + dice2 + dice3;
-        const result = total >= 11 ? "tai" : "xiu";
-
-        const win = result === choice;
-        const reward = win ? bet : -bet;
-
-        addCoins(userId, reward);
-
-        const diceEmoji = ["⚀","⚁","⚂","⚃","⚄","⚅"];
-
-        const resultEmbed = new EmbedBuilder()
-            .setTitle("🎲 KẾT QUẢ")
-            .setColor(win ? "Green" : "Red")
-            .setDescription(`
-🎲 ${diceEmoji[dice1-1]} ${diceEmoji[dice2-1]} ${diceEmoji[dice3-1]}
-
-👉 Tổng: **${total}**
-👉 Kết quả: **${result.toUpperCase()}**
-
-${win ? "🎉 THẮNG!" : "💀 THUA!"}
-
-💰 ${win ? "+" : ""}${reward}
-💳 Tổng: ${getCoins(userId)}
-            `);
-
-        await btn.editReply({ embeds: [resultEmbed] });
-        collector.stop();
-    });
-
-    collector.on("end", (_, reason) => {
-        if (reason === "time") {
-            interaction.editReply({
-                content: "⏳ Hết thời gian",
-                components: []
-            });
-        }
-    });
-}
-if (interaction.isButton() && interaction.customId === "close_ticket") {
-    const userId = interaction.user.id;
-    const now = Date.now();
-    const lastClick = ticketCooldown.get(userId) || 0;
-
-    if (now - lastClick < TICKET_COOLDOWN) {
-        return interaction.reply({ content: `⚠️ Vui lòng đợi ${Math.ceil((TICKET_COOLDOWN - (now - lastClick))/1000)} giây trước khi đóng ticket lại.`, ephemeral: true });
-    }
-
-    ticketCooldown.set(userId, now);
-
-    try {
-        await interaction.deferUpdate(); // tránh "This interaction failed"
-        await interaction.channel.delete();
-        selected.delete(interaction.channel.id);
-    } catch (err) {
-        console.error("❌ Lỗi khi đóng ticket:", err);
-        if (!interaction.replied) {
-            await interaction.reply({ content: "❌ Không thể đóng ticket!", ephemeral: true });
-        }
-    }
-}
-
-if (interaction.isButton() && interaction.customId === 'create_ai_ticket') {
-    // ✅ Trả lời ngay để Discord không timeout
-    await interaction.reply({
-        content: "⏳ Đang tạo ticket, vui lòng chờ...",
-        ephemeral: true
-    });
-
-    try {
-        const ticketChannel = await interaction.guild.channels.create({
-            name: `ai-ticket-${interaction.user.username}`,
-            type: ChannelType.GuildText,
-            parent: process.env.TICKET_CATEGORY_ID, // Category ID
-            permissionOverwrites: [
-                { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-                { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel] }
-            ]
-        });
-
-        selected.set(ticketChannel.id, { userId: interaction.user.id });
-
-        const embed = new EmbedBuilder()
-            .setTitle("🎫 AI SUPPORT TICKET")
-            .setDescription(`Xin chào <@${interaction.user.id}>\n\nHãy nhập câu hỏi, AI sẽ trả lời bạn.`)
-            .setColor("#00eaff");
-
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId("close_ticket")
-                .setLabel("🔒 Đóng Ticket")
-                .setStyle(ButtonStyle.Danger)
-        );
-
-        await ticketChannel.send({ embeds: [embed], components: [row] });
-
-        // ✅ Cập nhật reply ban đầu
-        await interaction.editReply({
-            content: `✅ Ticket đã được tạo: ${ticketChannel}`,
-            ephemeral: true
-        });
-
-    } catch (err) {
-        console.error("❌ Lỗi tạo ticket:", err);
-
-        // Nếu fail, cập nhật reply cũ
-        await interaction.editReply({
-            content: "❌ Không thể tạo ticket, vui lòng thử lại sau.",
-            ephemeral: true
-        });
-    }
-}
-        if (interaction.isChatInputCommand()) {
-            const { commandName, options } = interaction;
-
-/* ===== CAN BLACKLIST FUNCTION ===== */
-function canBlacklist(member) {
-    // Thay thế bằng quyền admin hoặc role kiểm soát
-    if (!process.env.ADMIN_ROLE) return false;
-    const roles = process.env.ADMIN_ROLE.split(",").map(r => r.trim());
-    return member.roles.cache.some(r => roles.includes(r.id));
-}
-
+        const { commandName, options } = interaction;
 /* ===== BLACKLIST ===== */
 if (commandName === "blacklist") {
 await interaction.deferReply({ ephemeral: true });
@@ -706,7 +523,7 @@ if (!hasPermission(interaction.member)) {
 
     // 4. Các tác vụ chạy ngầm (Không bắt user đợi)
     // Ban người dùng
-    interaction.guild.members.ban(user.id, { reason: `Blacklist: ${reason}` })
+await interaction.guild.members.ban(user.id, { reason: `Blacklist: ${reason}` })
         .then(() => console.log(`Đã ban ${user.tag}`))
         .catch(err => console.log("Lỗi ban:", err.message));
 
@@ -762,9 +579,10 @@ if (targetMember.roles.cache.has(STAFF_ROLE_ID)) {
         strikes.push(user);
     }
 
-    if (user.strikes.length >= 3) {
-        return interaction.editReply("⚠️ Người này đã 3/3 strike");
-    }
+if (!user) {
+    user = { id: target.id, name: target.username, staff: false, strikes: [] };
+    strikes.push(user);
+}
 
     user.strikes.push({
         reason,
@@ -895,7 +713,7 @@ const embed = new EmbedBuilder()
         { name: "🛡 By", value: `<@${interaction.user.id}>`, inline: true },
         { name: "📌 Reason", value: reason }
     )
-    .setImage(proof.url)
+.setImage(proof?.url)
     .setFooter({ text: `Strike ${user.strikes.length}/4` })
     .setTimestamp();
 
@@ -1048,7 +866,7 @@ await interaction.deferReply({ ephemeral: true });
     const user = options.getUser("user");
     const roleName = options.getString("permission");
 
-    const member = interaction.member;
+const member = await interaction.guild.members.fetch(interaction.user.id);
     if (!hasPermission(member)) {
         return interaction.editReply("❌ Bạn không có quyền dùng lệnh này");
     }
@@ -1159,7 +977,7 @@ if (commandName === "demote") {
 await interaction.deferReply({ ephemeral: true });
     const user = options.getUser("user");
 
-    const member = interaction.member;
+const member = await interaction.guild.members.fetch(interaction.user.id);
 if (!hasPermission(member)) {
     return interaction.editReply({ content: "❌ Bạn không có quyền dùng lệnh này", ephemeral: true }); // Thêm return
 }
@@ -1298,21 +1116,185 @@ return interaction.reply({
     }
 }
 
-        if (interaction.isModalSubmit()) {
-            await interaction.deferReply({ ephemeral: true });
+if (interaction.isModalSubmit()) {
+    if (interaction.customId === "submit_score") {
+        const score = interaction.fields.getTextInputValue("score");
+        const stage = selected.get(interaction.user.id) || "Unknown";
 
-            if (interaction.customId === "submit_score") {
-                const score = interaction.fields.getTextInputValue("score");
-                const stage = selected.get(interaction.user.id) || "Unknown";
+        return interaction.reply({
+            content: `✅ Đã gửi!\nStage: **${stage}**\nScore: **${score}**`,
+            ephemeral: true
+        });
+    }
+}
 
-                // ✅ PHẢI đóng ngoặc đúng
-                return interaction.editReply({
-                    content: `✅ Đã gửi!\nStage: **${stage}**\nScore: **${score}**`
-                });
-            }
+
+        // ===== COIN =====
+        if (commandName === "coin") {
+            const userId = interaction.user.id;
+            return interaction.reply(`💰 Bạn có: **${getCoins(userId)} coin**`);
         }
 
-        // Các interaction khác (button, slash, v.v.) viết tiếp ở đây
+        // ===== TÀI XỈU =====
+        if (commandName === "taixiu") {
+
+            const embed = new EmbedBuilder()
+                .setTitle("🎲 TÀI XỈU")
+                .setDescription("👉 Chọn Tài hoặc Xỉu\n💰 Sau đó nhập tiền")
+                .setColor("Yellow");
+
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId("tai")
+                    .setLabel("🔥 TÀI")
+                    .setStyle(ButtonStyle.Danger),
+
+                new ButtonBuilder()
+                    .setCustomId("xiu")
+                    .setLabel("❄️ XỈU")
+                    .setStyle(ButtonStyle.Primary)
+            );
+
+            return interaction.reply({ embeds: [embed], components: [row] });
+        }
+
+if (interaction.isButton()) {
+    // 🎲 TÀI XỈU
+    if (interaction.customId === "tai" || interaction.customId === "xiu") {
+
+        const modal = new ModalBuilder()
+            .setCustomId(`bet_${interaction.customId}`)
+            .setTitle("Nhập tiền cược");
+
+        const input = new TextInputBuilder()
+            .setCustomId("money")
+            .setLabel("Số tiền cược")
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true);
+
+        modal.addComponents(new ActionRowBuilder().addComponents(input));
+
+        return interaction.showModal(modal);
+    }
+if (interaction.customId === "close_ticket") {
+    return interaction.channel.delete().catch(() => {});
+}
+
+    // 🎫 TICKET (PHẢI Ở ĐÂY)
+if (interaction.customId === "create_ai_ticket") {
+
+    await interaction.deferReply({ ephemeral: true });
+
+    try {
+        const ticketChannel = await interaction.guild.channels.create({
+            name: `ai-ticket-${interaction.user.username}`,
+            type: ChannelType.GuildText,
+            parent: process.env.TICKET_CATEGORY_ID,
+            permissionOverwrites: [
+                { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
+                { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel] }
+            ]
+        });
+
+        selected.set(ticketChannel.id, { userId: interaction.user.id });
+
+        const embed = new EmbedBuilder()
+            .setTitle("🎫 AI SUPPORT TICKET")
+            .setDescription(`Xin chào <@${interaction.user.id}>`)
+            .setColor("#00eaff");
+
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId("close_ticket")
+                .setLabel("🔒 Đóng Ticket")
+                .setStyle(ButtonStyle.Danger)
+        );
+
+        await ticketChannel.send({ embeds: [embed], components: [row] });
+
+        return interaction.editReply({
+            content: `✅ Ticket: ${ticketChannel}`
+        });
+
+    } catch (err) {
+        console.error(err);
+        return interaction.editReply("❌ Lỗi tạo ticket");
+    }
+}
+
+    // ===== MODAL =====
+    if (interaction.isModalSubmit()) {
+
+        // 🎲 TÀI XỈU
+        if (interaction.customId.startsWith("bet_")) {
+
+            const userId = interaction.user.id;
+            const choice = interaction.customId.split("_")[1];
+            const money = parseInt(interaction.fields.getTextInputValue("money"));
+
+            if (isNaN(money) || money <= 0) {
+                return interaction.reply({ content: "❌ Tiền không hợp lệ", ephemeral: true });
+            }
+
+            if (getCoins(userId) < money) {
+                return interaction.reply({ content: "❌ Không đủ coin", ephemeral: true });
+            }
+
+await interaction.deferReply();
+
+const msg = await interaction.editReply({
+    content: "🎲 Đang lắc..."
+});
+
+            for (let i = 0; i < 10; i++) {
+                const a = Math.floor(Math.random()*6)+1;
+                const b = Math.floor(Math.random()*6)+1;
+                const c = Math.floor(Math.random()*6)+1;
+
+                await msg.edit({
+                    content: `
+🎲 ĐANG LẮC...
+
+   ${a}   ${b}   ${c}
+   ${b}   ${c}   ${a}
+   ${c}   ${a}   ${b}
+`
+                });
+
+                await new Promise(r => setTimeout(r, 500));
+            }
+
+            const d1 = Math.floor(Math.random()*6)+1;
+            const d2 = Math.floor(Math.random()*6)+1;
+            const d3 = Math.floor(Math.random()*6)+1;
+
+            const total = d1 + d2 + d3;
+            const result = total >= 11 ? "tai" : "xiu";
+
+            const win = result === choice;
+            const reward = win ? money : -money;
+
+            addCoins(userId, reward);
+
+            const embed = new EmbedBuilder()
+                .setTitle("🎲 KẾT QUẢ")
+                .setColor(win ? "Green" : "Red")
+                .setDescription(`
+🎲 ${d1} - ${d2} - ${d3}
+
+👉 Tổng: **${total}**
+👉 Kết quả: **${result.toUpperCase()}**
+
+${win ? "🎉 THẮNG!" : "💀 THUA!"}
+
+💰 ${win ? "+" : ""}${reward}
+💳 Tổng: ${getCoins(userId)}
+                `);
+
+            return msg.edit({ content: "", embeds: [embed] });
+        }
+    }
+}
     } catch (err) {
         console.error("LỖI HỆ THỐNG INTERACTION:", err);
 
@@ -1324,6 +1306,15 @@ return interaction.reply({
         }
     }
 });
+
+/* ===== CAN BLACKLIST FUNCTION ===== */
+function canBlacklist(member) {
+    if (!process.env.ADMIN_ROLE) return false;
+
+    const roles = process.env.ADMIN_ROLE.split(",").map(r => r.trim());
+    return member.roles.cache.some(r => roles.includes(r.id));
+}
+
 /* ================= WEB API ================= */
 /* ================= STAFF + ROLE COLOR ================= */
 app.get("/staff-realtime", async (req, res) => {
@@ -1416,7 +1407,17 @@ app.post("/register", async (req, res) => {
     }
 });
 app.get("/", (req, res) => res.send("API Running"));
-app.get("/top", (req, res) => res.json(top));
+app.get("/top", (req, res) => {
+    for (let i = 1; i <= 20; i++) {
+        if (!top[i]) {
+            top[i] = {
+                id: null,
+                name: "Vacant"
+            };
+        }
+    }
+    res.json(top);
+});
 app.get("/blacklist", (req, res) => res.json(blacklist));
 app.get("/staff", (req, res) => {
     const roleOrder = ["Founder", "Leader", "Admin", "Mod", "Referee"]; // Rút gọn ví dụ
