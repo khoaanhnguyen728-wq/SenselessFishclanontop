@@ -372,6 +372,7 @@ const result = await aiModel.generateContent(prompt);
     }
     
 if (message.content === "!panel") {
+    if (!hasPermission(message.member)) return;
     const embed = new EmbedBuilder()
         .setTitle("🎫 AI SUPPORT PANEL")
         .setDescription("Bấm nút bên dưới để tạo ticket hỗ trợ")
@@ -480,664 +481,551 @@ const result = await aiModel.generateContent(promptWithLanguageLock);
 client.on("interactionCreate", async interaction => {
     try {
 
+    // ===== SLASH COMMANDS =====
     if (interaction.isChatInputCommand()) {
-
         const { commandName, options } = interaction;
-/* ===== BLACKLIST ===== */
-if (commandName === "blacklist") {
-await interaction.deferReply({ ephemeral: true });
-    // Không dùng deferReply ở đây nữa vì đã gọi ở dòng 110
-    const user = options.getUser("user");
-    const reason = options.getString("reason") || "Không có";
 
-    // Kiểm tra quyền (Sử dụng hàm hasPermission bạn đã viết)
-if (!hasPermission(interaction.member)) {
-    return interaction.editReply({ content: "❌ Bạn không có quyền thực hiện lệnh này." }); // Thêm return
-}
+        /* ===== BLACKLIST ===== */
+        if (commandName === "blacklist") {
+            await interaction.deferReply({ ephemeral: true });
 
-    if (blacklist.some(b => b.id === user.id)) {
-        return interaction.editReply({ content: "⚠️ Người dùng đã nằm trong blacklist." });
-    }
+            const user = options.getUser("user");
+            const reason = options.getString("reason") || "Không có";
 
-    // 1. Cập nhật dữ liệu ngay
-    blacklist.push({
-        id: user.id,
-        name: user.username,
-        reason,
-        time: new Date().toLocaleString("vi-VN")
-    });
-    saveBlacklist();
-
-    // 2. Chuẩn bị Embed
-    const embed = new EmbedBuilder()
-        .setTitle("🚫 BLACKLIST THÀNH CÔNG")
-        .setColor("#ff0000")
-        .addFields(
-            { name: "User", value: `<@${user.id}> (${user.tag})`, inline: true },
-            { name: "Lý do", value: reason, inline: true }
-        )
-        .setTimestamp();
-
-    // 3. Phản hồi ngay lập tức bằng editReply
-    await interaction.editReply({ embeds: [embed] });
-
-    // 4. Các tác vụ chạy ngầm (Không bắt user đợi)
-    // Ban người dùng
-await interaction.guild.members.ban(user.id, { reason: `Blacklist: ${reason}` })
-        .then(() => console.log(`Đã ban ${user.tag}`))
-        .catch(err => console.log("Lỗi ban:", err.message));
-
-    // Gửi log
-    const logChannel = interaction.guild.channels.cache.get(process.env.BLACKLIST_LOG_CHANNEL);
-    if (logChannel) {
-        const logEmbed = new EmbedBuilder()
-            .setTitle("🚫 BLACKLIST LOG")
-            .setColor("#ff0000")
-            .setThumbnail(user.displayAvatarURL())
-            .addFields(
-                { name: "User", value: `<@${user.id}>`, inline: true },
-                { name: "Người thực hiện", value: `<@${interaction.user.id}>`, inline: true },
-                { name: "Lý do", value: reason }
-            )
-            .setFooter({ text: `ID: ${user.id}` })
-            .setTimestamp();
-        logChannel.send({ embeds: [logEmbed] }).catch(() => null);
-    }
-}
-
-if (commandName === "strike") {
-    await interaction.deferReply({ ephemeral: true }); // 👈 THÊM Ở ĐÂY
-
-    const target = options.getUser("user");
-    const reason = options.getString("reason");
-    const proof = options.getAttachment("proof");
-    const proofUrl = proof?.url || null;
-
-    const member = await interaction.guild.members.fetch(interaction.user.id);
-
-    // 🔒 CHỈ ADMIN DÙNG
-if (!hasPermission(member)) {
-    return interaction.editReply({ content: "❌ Bạn không phải staff" }); // Thêm return
-}
-
-    const targetMember = await interaction.guild.members.fetch(target.id);
-
-    // ❌ KHÔNG CHO STRIKE STAFF
-if (targetMember.roles.cache.has(STAFF_ROLE_ID)) {
-    return interaction.editReply({ content: "❌ Dùng /staffstrike cho staff" }); // Thêm return
-}
-
-    let user = strikes.find(x => x.id === target.id);
-
-    if (!user) {
-        user = {
-            id: target.id,
-            name: target.username,
-            staff: false,
-            strikes: []
-        };
-        strikes.push(user);
-    }
-
-if (!user) {
-    user = { id: target.id, name: target.username, staff: false, strikes: [] };
-    strikes.push(user);
-}
-
-    user.strikes.push({
-        reason,
-        proof: proofUrl,
-        time: new Date().toLocaleString("vi-VN")
-    });
-
-    saveStrikes();
-const embed = new EmbedBuilder()
-    .setColor("Red")
-    .setTitle("🚨 Strike Member")
-    .setThumbnail(target.displayAvatarURL())
-    .addFields(
-        { name: "👤 User", value: `<@${target.id}>`, inline: true },
-        { name: "🛡 Staff", value: `<@${interaction.user.id}>`, inline: true },
-        { name: "📌 Reason", value: reason }
-    )
-    .setImage(proofUrl)
-    .setFooter({ text: `Strike ${user.strikes.length}/3` })
-    .setTimestamp();
-
-sendStrikeLog(client, embed);
-
-    // 🚨 AUTO BAN
-    if (user.strikes.length >= 3) {
-        await targetMember.ban({ reason: "Đủ 3 strike" }).catch(() => {});
-    }
-
-    return interaction.editReply(`✅ ${target.username} đã bị strike (${user.strikes.length}/3)`);
-}
-
-if (commandName === "unstrike") {
-    await interaction.deferReply({ ephemeral: true });
-    const target = options.getUser("user");
-    const strikeIndex = options.getInteger("strike") - 1;
-
-    const member = await interaction.guild.members.fetch(interaction.user.id);
-
-    if (!hasPermission(member)) {
-    return interaction.editReply({ content: "❌ Bạn không phải staff" });
-    }
-    let user = strikes.find(x => x.id === target.id);
-
-    if (!user || user.strikes.length === 0) {
-        return interaction.editReply("⚠️ Người này không có strike");
-    }
-
-if (strikeIndex < 0 || strikeIndex >= user.strikes.length) {
-    return interaction.editReply("❌ Strike này không tồn tại");
-}
-
-const removed = user.strikes.splice(strikeIndex, 1)[0];
-const embed = new EmbedBuilder()
-    .setColor("Green")
-    .setTitle("✅ Unstrike")
-    .setThumbnail(target.displayAvatarURL())
-    .addFields(
-        { name: "👤 User", value: `<@${target.id}>`, inline: true },
-        { name: "🛡 Staff", value: `<@${interaction.user.id}>`, inline: true },
-        { name: "🗑 Removed", value: removed.reason }
-    )
-    .setFooter({ text: `Còn lại: ${user.strikes.length}` })
-    .setTimestamp();
-
-sendStrikeLog(client, embed);
-
-// ❗ Xóa user nếu hết strike
-if (user.strikes.length === 0) {
-    strikes = strikes.filter(x => x.id !== target.id);
-}
-
-    saveStrikes();
-
-    return interaction.editReply(
-        `✅ Đã gỡ Strike ${strikeIndex + 1}\n📌 ${removed.reason}\n📉 Còn: ${user.strikes.length}/${user.staff ? 4 : 3}`
-    );
-}
-
-if (commandName === "staffstrike") {
-    await interaction.deferReply({ ephemeral: true });
-    const target = options.getUser("user");
-    const reason = options.getString("reason");
-    const proof = options.getAttachment("proof");
-
-    const member = await interaction.guild.members.fetch(interaction.user.id);
-
-    // 🔒 CHỈ ADMIN DÙNG
-if (!hasPermission(member)) {
-    return interaction.editReply({ content: "❌ Bạn không phải staff" });
-}
-
-    const targetMember = await interaction.guild.members.fetch(target.id);
-
-    // ❌ CHỈ STRIKE STAFF
-    if (!targetMember.roles.cache.has(STAFF_ROLE_ID)) {
-        return interaction.editReply({ content: "❌ Chỉ dùng cho staff" });
-    }
-
-    let user = strikes.find(x => x.id === target.id);
-
-    if (!user) {
-        user = {
-            id: target.id,
-            name: target.username,
-            staff: true,
-            strikes: []
-        };
-        strikes.push(user);
-    }
-
-    if (user.strikes.length >= 4) {
-        return interaction.editReply("⚠️ Staff này đã 4/4 strike");
-    }
-
-    user.strikes.push({
-        reason,
-        proof: proof.url,
-        time: new Date().toLocaleString("vi-VN")
-    });
-
-    saveStrikes();
-const embed = new EmbedBuilder()
-    .setColor("Orange")
-    .setTitle("⚠️ Staff Strike")
-    .setThumbnail(target.displayAvatarURL())
-    .addFields(
-        { name: "👤 Staff", value: `<@${target.id}>`, inline: true },
-        { name: "🛡 By", value: `<@${interaction.user.id}>`, inline: true },
-        { name: "📌 Reason", value: reason }
-    )
-.setImage(proof?.url)
-    .setFooter({ text: `Strike ${user.strikes.length}/4` })
-    .setTimestamp();
-
-sendStrikeLog(client, embed);
-
-    // 🚨 REMOVE ROLE STAFF
-    if (user.strikes.length >= 4) {
-        await targetMember.roles.remove(STAFF_ROLE_ID).catch(() => {});
-    }
-
-    return interaction.editReply(`🔥 Staff ${target.username} đã bị strike (${user.strikes.length}/4)`);
-}
-
-/* ===== UNBLACKLIST ===== */
-if (commandName === "unblacklist") {
-await interaction.deferReply({ ephemeral: true });
-    const user = options.getUser("user");
-
-    if (!canBlacklist(interaction.member)) {
-        return interaction.editReply({ content: "❌ Bạn không có quyền unblacklist." });
-    }
-
-    if (!blacklist.some(b => b.id === user.id)) {
-        return interaction.editReply({ content: "⚠️ Người dùng không nằm trong blacklist." });
-    }
-
-    // Xóa khỏi cache
-    blacklist = blacklist.filter(b => b.id !== user.id);
-
-    try {
-        await fs.promises.writeFile("./blacklist.json", JSON.stringify(blacklist, null, 2));
-    } catch(err) {
-        console.error("Lỗi ghi blacklist.json:", err.message);
-    }
-
-    // Thử unban trực tiếp bằng user ID
-    try {
-        await interaction.guild.members.unban(user.id);
-    } catch(err) {
-        console.log("Unban lỗi (có thể user chưa bị ban hoặc đã rời):", err.message);
-    }
-
-    const embed = new EmbedBuilder()
-        .setTitle("✅ UNBLACKLIST THÀNH CÔNG")
-        .setColor("#00ffcc")
-        .addFields(
-            { name: "User", value: `${user.tag}`, inline: true }
-        )
-        .setTimestamp();
-
-    // Gửi log
-    const logChannel = interaction.guild.channels.cache.get(process.env.BLACKLIST_LOG_CHANNEL);
-    if (logChannel) {
-        const logEmbed = new EmbedBuilder()
-            .setTitle("✅ UNBLACKLIST LOG")
-            .setColor("#00ffcc")
-            .setThumbnail(user.displayAvatarURL({ dynamic: true }))
-            .addFields(
-                { name: "User", value: `${user.tag}`, inline: true },
-                { name: "Người thực hiện", value: `<@${interaction.user.id}>`, inline: true }
-            )
-            .setFooter({ text: `ID: ${user.id}` })
-            .setTimestamp();
-        logChannel.send({ embeds: [logEmbed] }).catch(console.log);
-    }
-
-    return interaction.editReply({ embeds: [embed] });
-}
-
-            if (commandName === "bxh") {
-                await interaction.deferReply({ ephemeral: true });
-                const sub = options.getSubcommand();
-             
-                if (sub === "kill" || sub === "chat") return interaction.editReply({ content: "Tính năng đang phát triển.", ephemeral: true });
+            if (!hasPermission(interaction.member)) {
+                return interaction.editReply({ content: "❌ Bạn không có quyền thực hiện lệnh này." });
             }
 
-if (commandName === "list") {
-    await interaction.deferReply({ ephemeral: true });
+            if (blacklist.some(b => b.id === user.id)) {
+                return interaction.editReply({ content: "⚠️ Người dùng đã nằm trong blacklist." });
+            }
 
-    const type = options.getString("type");
-    let text = "";
+            blacklist.push({
+                id: user.id,
+                name: user.username,
+                reason,
+                time: new Date().toLocaleString("vi-VN")
+            });
+            saveBlacklist();
 
-    if (type === "top") Object.keys(top).forEach(i => {
-        if (top[i]) text += `🏆 **TOP ${i}** • ${top[i].name}\n`;
-    });
-
-    if (type === "staff") staff.forEach(s => text += `👑 **${s.username}** • ${s.role}\n`);
-    if (type === "mainers") mainers.forEach(m => text += `🔥 **${m.name}**\n`);
-
-    return interaction.editReply({
-        embeds: [
-            new EmbedBuilder()
-                .setTitle(`📋 Danh sách ${type}`)
-                .setDescription(text || "Không có dữ liệu")
-                .setColor(0x00eaff)
-        ]
-    });
-}
-
-if (commandName === "settop") {
-    await interaction.deferReply({ ephemeral: true });
-
-    const user = options.getUser("user");
-    const rank = options.getInteger("top");
-
-    if (rank < 1 || rank > 20) {
-        return interaction.editReply("❌ Rank phải từ 1 → 20");
-    }
-
-    // 🔥 1. XÓA user khỏi BXH nếu đã tồn tại
-    for (let i = 1; i <= 20; i++) {
-        if (top[i]?.id === user.id) {
-            top[i] = null;
-        }
-    }
-
-    // 🔥 2. DỒN BXH lại (loại bỏ null để tránh lỗ hổng)
-    let newTop = [];
-    for (let i = 1; i <= 20; i++) {
-        if (top[i]) newTop.push(top[i]);
-    }
-
-    // 🔥 3. CHÈN user vào đúng vị trí
-    newTop.splice(rank - 1, 0, {
-        id: user.id,
-        name: user.username,
-        avatar: user.displayAvatarURL({ extension: "png" }),
-        profile: `https://discord.com/users/${user.id}`
-    });
-
-    // 🔥 4. CẮT lại 20 người
-    newTop = newTop.slice(0, 20);
-
-    // 🔥 5. GÁN LẠI về dạng top[1..20]
-    top = {};
-    newTop.forEach((u, index) => {
-        top[index + 1] = u;
-    });
-
-    saveTop();
-
-    // 🔥 AUTO UPDATE BXH
-    await updateAOVLeaderboard();
-
-    return interaction.editReply(`✅ ${user.username} vào TOP ${rank}`);
-}
-
-if (commandName === "promote") {
-await interaction.deferReply({ ephemeral: true });
-    const user = options.getUser("user");
-    const roleName = options.getString("permission");
-
-const member = await interaction.guild.members.fetch(interaction.user.id);
-    if (!hasPermission(member)) {
-        return interaction.editReply("❌ Bạn không có quyền dùng lệnh này");
-    }
-
-let target = interaction.guild.members.cache.get(user.id);
-if (!target) target = await interaction.guild.members.fetch(user.id);
-
-const roleId = ROLE_MAP[roleName];
-if (!roleId) return interaction.editReply("❌ Role không tồn tại"); // Thêm return
-
-const newRole = interaction.guild.roles.cache.get(roleId);
-if (!newRole) return interaction.editReply("❌ Không tìm thấy role"); // Thêm return
-
-// ❗ Xóa role cũ (trừ role mới)
-for (let r of Object.values(ROLE_MAP)) {
-    if (r === roleId) continue; // bỏ qua role mới
-
-    let role = interaction.guild.roles.cache.get(r);
-    if (!role) continue;
-
-    if (target.roles.cache.has(role.id)) {
-        try {
-            await target.roles.remove(role);
-            console.log(`Đã xóa role ${role.name}`);
-        } catch (err) {
-            console.log(`Không xóa được role ${role.name}:`, err.message);
-        }
-    }
-}
-
-// ➕ Add role mới
-if (!newRole) return interaction.editReply("❌ Role không tồn tại");
-
-if (newRole.position >= interaction.guild.members.me.roles.highest.position) {
-    return interaction.editReply("❌ Bot không đủ quyền add role này");
-}
-
-try {
-    await target.roles.add(newRole);
-    console.log(`Đã add role ${newRole.name} cho ${target.user.username}`);
-} catch (err) {
-    console.log("Add role lỗi:", err);
-    return interaction.editReply("❌ Không thể add role");
-}
-
-// 💾 Lưu JSON
-staff = staff.filter(s => s.id !== user.id);
-staff.push({
-    id: user.id,
-    username: user.username,
-    role: roleName,
-    avatar: user.displayAvatarURL({ extension: "png" })
-});
-saveStaff();
-
-    // 📜 LOG
-const logChannel = interaction.guild.channels.cache.get(LOG_CHANNEL);
-
-if (logChannel) {
-    const embed = new EmbedBuilder()
-        .setColor("#00ffcc")
-        .setTitle("📢 ROLE UPDATE")
-        .setThumbnail(user.displayAvatarURL({ dynamic: true }))
-        .addFields(
-            { name: " User", value: `<@${user.id}>`, inline: true },
-            { name: " Role", value: roleName, inline: true },
-            { name: " Action", value: "Promote", inline: true },
-            { name: " By", value: `<@${interaction.user.id}>`, inline: true }
-        )
-        .setFooter({
-            text: `ID: ${user.id}`,
-            iconURL: interaction.user.displayAvatarURL()
-        })
-        .setTimestamp();
-
-    logChannel.send({ embeds: [embed] });
-}
-
-return interaction.editReply(`✅ ${user.username} đã được set role **${roleName}**`);
-}
-if (commandName === "detop") {
-await interaction.deferReply({ ephemeral: true });
-    const user = options.getUser("user");
-
-    let found = false;
-
-    for (let i in top) {
-        if (top[i] && top[i].id === user.id) {
-            top[i] = null;
-            found = true;
-        }
-    }
-
-    if (found) {
-        saveTop();
-
-        // 🔥 AUTO UPDATE
-        await updateAOVLeaderboard();
-
-        return interaction.editReply(`🗑️ Đã xóa ${user.username} khỏi TOP`);
-    }
-
-    return interaction.editReply("❌ User không có trong TOP");
-}
-
-/* ===== DEMOTE ===== */
-if (commandName === "demote") {
-await interaction.deferReply({ ephemeral: true });
-    const user = options.getUser("user");
-
-const member = await interaction.guild.members.fetch(interaction.user.id);
-if (!hasPermission(member)) {
-    return interaction.editReply({ content: "❌ Bạn không có quyền dùng lệnh này", ephemeral: true }); // Thêm return
-}
-
-    const logChannel = interaction.guild.channels.cache.get(LOG_CHANNEL); // ✅ THÊM DÒNG NÀY
-
-    const target = await interaction.guild.members.fetch(user.id);
-
-    // ❗ Xóa role staff
-    for (let r of Object.values(ROLE_MAP)) {
-        let role = interaction.guild.roles.cache.get(r);
-        if (role && target.roles.cache.has(role.id)) {
-            await target.roles.remove(role);
-        }
-    }
-
-    // 💾 Xóa JSON
-    staff = staff.filter(s => s.id !== user.id);
-    saveStaff();
-
-    // 📜 LOG
-if (logChannel) {
-    const embed = new EmbedBuilder()
-        .setColor("#ff4d4d")
-        .setTitle("📢 ROLE REMOVED")
-        .setThumbnail(user.displayAvatarURL({ dynamic: true }))
-        .addFields(
-            { name: " User", value: `<@${user.id}>`, inline: true },
-            { name: " Action", value: "Demote", inline: true },
-            { name: " By", value: `<@${interaction.user.id}>`, inline: true }
-        )
-        .setFooter({
-            text: `ID: ${user.id}`,
-            iconURL: interaction.user.displayAvatarURL()
-        })
-        .setTimestamp();
-
-    logChannel.send({ embeds: [embed] });
-}
-
-    return interaction.editReply(`❌ Đã gỡ toàn bộ role của ${user.username}`);
-}
-
-/* ===== MAINER ===== */
-if (commandName === "mainer") {
-await interaction.deferReply({ ephemeral: true });
-    const user = options.getUser("user");
-
-    mainers = mainers.filter(m => m.id !== user.id);
-
-    mainers.push({
-        id: user.id,
-        name: user.username,
-        avatar: user.displayAvatarURL({ extension: "png" }),
-        profile: `https://discord.com/users/${user.id}`
-    });
-
-    saveMainers();
-
-    return interaction.editReply(`✅ ${user.username} đã vào Mainers`);
-}
-
-/* ===== DEMAINER ===== */
-if (commandName === "demainer") {
-await interaction.deferReply({ ephemeral: true });
-    const user = options.getUser("user");
-
-    mainers = mainers.filter(m => m.id !== user.id);
-    saveMainers();
-
-    return interaction.editReply(`❌ ${user.username} đã bị xóa khỏi Mainers`);
-}
-
-/* ===== THIDAU ===== */
-if (commandName === "thidau") {
-await interaction.deferReply({ ephemeral: true });
-
-    const team1 = options.getString("team1");
-    const team2 = options.getString("team2");
-    const time = options.getString("time");
-    const ref = options.getString("ref");
-
-    const embed = new EmbedBuilder()
-        .setTitle("🏆 THÔNG BÁO THI ĐẤU")
-        .setColor(0x00eaff)
-        .addFields(
-            { name: "⚔️ Trận đấu", value: `${team1} VS ${team2}` },
-            { name: "⏰ Thời gian", value: time, inline: true },
-            { name: "🏁 Referee", value: ref, inline: true }
-        );
-
-    const dropdown = new StringSelectMenuBuilder()
-        .setCustomId("match_info")
-        .setPlaceholder("Xem thông tin")
-        .addOptions([
-            { label: team1, value: team1 },
-            { label: team2, value: team2 },
-            { label: ref, value: ref }
-        ]);
-
-    const row = new ActionRowBuilder().addComponents(dropdown);
-
-    return interaction.editReply({
-        embeds: [embed],
-        components: [row]
-    });
-}
-        }
-
-if (interaction.isStringSelectMenu()) {
-    // Select menu xem thông tin trận đấu
-    if (interaction.customId === "match_info") {
-return interaction.reply({
-    content: `📌 Thông tin: ${interaction.values[0]}`,
-    ephemeral: true
-});
-    }
-
-    // Select menu đăng ký stage → mở modal nhập score
-    if (interaction.customId === "select_stage") {
-        selected.set(interaction.user.id, interaction.values[0]);
-        const modal = new ModalBuilder()
-            .setCustomId("submit_score")
-            .setTitle("Nhập Score")
-            .addComponents(
-                new ActionRowBuilder().addComponents(
-                    new TextInputBuilder()
-                        .setCustomId("score")
-                        .setLabel("Score")
-                        .setStyle(TextInputStyle.Short)
-                        .setRequired(true)
+            const embed = new EmbedBuilder()
+                .setTitle("🚫 BLACKLIST THÀNH CÔNG")
+                .setColor("#ff0000")
+                .addFields(
+                    { name: "User", value: `<@${user.id}> (${user.tag})`, inline: true },
+                    { name: "Lý do", value: reason, inline: true }
                 )
+                .setTimestamp();
+
+            await interaction.editReply({ embeds: [embed] });
+
+            // Các tác vụ chạy ngầm
+            await interaction.guild.members.ban(user.id, { reason: `Blacklist: ${reason}` })
+                .then(() => console.log(`Đã ban ${user.tag}`))
+                .catch(err => console.log("Lỗi ban:", err.message));
+
+            const logChannel = interaction.guild.channels.cache.get(process.env.BLACKLIST_LOG_CHANNEL);
+            if (logChannel) {
+                const logEmbed = new EmbedBuilder()
+                    .setTitle("🚫 BLACKLIST LOG")
+                    .setColor("#ff0000")
+                    .setThumbnail(user.displayAvatarURL())
+                    .addFields(
+                        { name: "User", value: `<@${user.id}>`, inline: true },
+                        { name: "Người thực hiện", value: `<@${interaction.user.id}>`, inline: true },
+                        { name: "Lý do", value: reason }
+                    )
+                    .setFooter({ text: `ID: ${user.id}` })
+                    .setTimestamp();
+                logChannel.send({ embeds: [logEmbed] }).catch(() => null);
+            }
+        }
+
+        /* ===== UNBLACKLIST ===== */
+        else if (commandName === "unblacklist") {
+            await interaction.deferReply({ ephemeral: true });
+
+            const user = options.getUser("user");
+
+            if (!hasPermission(interaction.member)) {
+                return interaction.editReply({ content: "❌ Bạn không có quyền unblacklist." });
+            }
+
+            if (!blacklist.some(b => b.id === user.id)) {
+                return interaction.editReply({ content: "⚠️ Người dùng không nằm trong blacklist." });
+            }
+
+            blacklist = blacklist.filter(b => b.id !== user.id);
+
+            try {
+                await fs.promises.writeFile("./blacklist.json", JSON.stringify(blacklist, null, 2));
+            } catch(err) {
+                console.error("Lỗi ghi blacklist.json:", err.message);
+            }
+
+            try {
+                await interaction.guild.members.unban(user.id);
+            } catch(err) {
+                console.log("Unban lỗi (có thể user chưa bị ban hoặc đã rời):", err.message);
+            }
+
+            const embed = new EmbedBuilder()
+                .setTitle("✅ UNBLACKLIST THÀNH CÔNG")
+                .setColor("#00ffcc")
+                .addFields({ name: "User", value: `${user.tag}`, inline: true })
+                .setTimestamp();
+
+            const logChannel = interaction.guild.channels.cache.get(process.env.BLACKLIST_LOG_CHANNEL);
+            if (logChannel) {
+                const logEmbed = new EmbedBuilder()
+                    .setTitle("✅ UNBLACKLIST LOG")
+                    .setColor("#00ffcc")
+                    .setThumbnail(user.displayAvatarURL({ dynamic: true }))
+                    .addFields(
+                        { name: "User", value: `${user.tag}`, inline: true },
+                        { name: "Người thực hiện", value: `<@${interaction.user.id}>`, inline: true }
+                    )
+                    .setFooter({ text: `ID: ${user.id}` })
+                    .setTimestamp();
+                logChannel.send({ embeds: [logEmbed] }).catch(console.log);
+            }
+
+            return interaction.editReply({ embeds: [embed] });
+        }
+
+        /* ===== STRIKE ===== */
+        else if (commandName === "strike") {
+            await interaction.deferReply({ ephemeral: true });
+
+            const target = options.getUser("user");
+            const reason = options.getString("reason");
+            const proof = options.getAttachment("proof");
+            const proofUrl = proof?.url || null;
+
+            const member = await interaction.guild.members.fetch(interaction.user.id);
+
+            if (!hasPermission(member)) {
+                return interaction.editReply({ content: "❌ Bạn không phải staff" });
+            }
+
+            const targetMember = await interaction.guild.members.fetch(target.id);
+
+            if (targetMember.roles.cache.has(STAFF_ROLE_ID)) {
+                return interaction.editReply({ content: "❌ Dùng /staffstrike cho staff" });
+            }
+
+            let user = strikes.find(x => x.id === target.id);
+
+            if (!user) {
+                user = { id: target.id, name: target.username, staff: false, strikes: [] };
+                strikes.push(user);
+            }
+
+            user.strikes.push({ reason, proof: proofUrl, time: new Date().toLocaleString("vi-VN") });
+            saveStrikes();
+
+            const embed = new EmbedBuilder()
+                .setColor("Red")
+                .setTitle("🚨 Strike Member")
+                .setThumbnail(target.displayAvatarURL())
+                .addFields(
+                    { name: "👤 User", value: `<@${target.id}>`, inline: true },
+                    { name: "🛡 Staff", value: `<@${interaction.user.id}>`, inline: true },
+                    { name: "📌 Reason", value: reason }
+                )
+                .setImage(proofUrl)
+                .setFooter({ text: `Strike ${user.strikes.length}/3` })
+                .setTimestamp();
+
+            sendStrikeLog(client, embed);
+
+            if (user.strikes.length >= 3) {
+                await targetMember.ban({ reason: "Đủ 3 strike" }).catch(() => {});
+            }
+
+            return interaction.editReply(`✅ ${target.username} đã bị strike (${user.strikes.length}/3)`);
+        }
+
+        /* ===== UNSTRIKE ===== */
+        else if (commandName === "unstrike") {
+            await interaction.deferReply({ ephemeral: true });
+
+            const target = options.getUser("user");
+            const strikeIndex = options.getInteger("strike") - 1;
+
+            const member = await interaction.guild.members.fetch(interaction.user.id);
+
+            if (!hasPermission(member)) {
+                return interaction.editReply({ content: "❌ Bạn không phải staff" });
+            }
+
+            let user = strikes.find(x => x.id === target.id);
+
+            if (!user || user.strikes.length === 0) {
+                return interaction.editReply("⚠️ Người này không có strike");
+            }
+
+            if (strikeIndex < 0 || strikeIndex >= user.strikes.length) {
+                return interaction.editReply("❌ Strike này không tồn tại");
+            }
+
+            const removed = user.strikes.splice(strikeIndex, 1)[0];
+
+            // Xóa user khỏi mảng nếu hết strike
+            if (user.strikes.length === 0) {
+                strikes = strikes.filter(x => x.id !== target.id);
+            }
+
+            saveStrikes();
+
+            const embed = new EmbedBuilder()
+                .setColor("Green")
+                .setTitle("✅ Unstrike")
+                .setThumbnail(target.displayAvatarURL())
+                .addFields(
+                    { name: "👤 User", value: `<@${target.id}>`, inline: true },
+                    { name: "🛡 Staff", value: `<@${interaction.user.id}>`, inline: true },
+                    { name: "🗑 Removed", value: removed.reason }
+                )
+                .setFooter({ text: `Còn lại: ${user.strikes.length}` })
+                .setTimestamp();
+
+            sendStrikeLog(client, embed);
+
+            return interaction.editReply(
+                `✅ Đã gỡ Strike ${strikeIndex + 1}\n📌 ${removed.reason}\n📉 Còn: ${user.strikes.length}/${user.staff ? 4 : 3}`
             );
+        }
 
-        return interaction.showModal(modal);
-    }
-}
+        /* ===== STAFFSTRIKE ===== */
+        else if (commandName === "staffstrike") {
+            await interaction.deferReply({ ephemeral: true });
 
-if (interaction.isModalSubmit()) {
-    if (interaction.customId === "submit_score") {
-        const score = interaction.fields.getTextInputValue("score");
-        const stage = selected.get(interaction.user.id) || "Unknown";
+            const target = options.getUser("user");
+            const reason = options.getString("reason");
+            const proof = options.getAttachment("proof");
 
-        return interaction.reply({
-            content: `✅ Đã gửi!\nStage: **${stage}**\nScore: **${score}**`,
-            ephemeral: true
-        });
-    }
-}
+            const member = await interaction.guild.members.fetch(interaction.user.id);
 
+            if (!hasPermission(member)) {
+                return interaction.editReply({ content: "❌ Bạn không phải staff" });
+            }
 
-        // ===== COIN =====
-        if (commandName === "coin") {
+            const targetMember = await interaction.guild.members.fetch(target.id);
+
+            if (!targetMember.roles.cache.has(STAFF_ROLE_ID)) {
+                return interaction.editReply({ content: "❌ Chỉ dùng cho staff" });
+            }
+
+            let user = strikes.find(x => x.id === target.id);
+
+            if (!user) {
+                user = { id: target.id, name: target.username, staff: true, strikes: [] };
+                strikes.push(user);
+            }
+
+            if (user.strikes.length >= 4) {
+                return interaction.editReply("⚠️ Staff này đã 4/4 strike");
+            }
+
+            user.strikes.push({ reason, proof: proof?.url, time: new Date().toLocaleString("vi-VN") });
+            saveStrikes();
+
+            const embed = new EmbedBuilder()
+                .setColor("Orange")
+                .setTitle("⚠️ Staff Strike")
+                .setThumbnail(target.displayAvatarURL())
+                .addFields(
+                    { name: "👤 Staff", value: `<@${target.id}>`, inline: true },
+                    { name: "🛡 By", value: `<@${interaction.user.id}>`, inline: true },
+                    { name: "📌 Reason", value: reason }
+                )
+                .setImage(proof?.url)
+                .setFooter({ text: `Strike ${user.strikes.length}/4` })
+                .setTimestamp();
+
+            sendStrikeLog(client, embed);
+
+            if (user.strikes.length >= 4) {
+                await targetMember.roles.remove(STAFF_ROLE_ID).catch(() => {});
+            }
+
+            return interaction.editReply(`🔥 Staff ${target.username} đã bị strike (${user.strikes.length}/4)`);
+        }
+
+        /* ===== BXH ===== */
+        else if (commandName === "bxh") {
+            await interaction.deferReply({ ephemeral: true });
+            const sub = options.getSubcommand();
+            if (sub === "kill" || sub === "chat") {
+                return interaction.editReply({ content: "Tính năng đang phát triển.", ephemeral: true });
+            }
+        }
+
+        /* ===== LIST ===== */
+        else if (commandName === "list") {
+            await interaction.deferReply({ ephemeral: true });
+
+            const type = options.getString("type");
+            let text = "";
+
+            if (type === "top") Object.keys(top).forEach(i => {
+                if (top[i]) text += `🏆 **TOP ${i}** • ${top[i].name}\n`;
+            });
+            if (type === "staff") staff.forEach(s => text += `👑 **${s.username}** • ${s.role}\n`);
+            if (type === "mainers") mainers.forEach(m => text += `🔥 **${m.name}**\n`);
+
+            return interaction.editReply({
+                embeds: [
+                    new EmbedBuilder()
+                        .setTitle(`📋 Danh sách ${type}`)
+                        .setDescription(text || "Không có dữ liệu")
+                        .setColor(0x00eaff)
+                ]
+            });
+        }
+
+        /* ===== SETTOP ===== */
+        else if (commandName === "settop") {
+            await interaction.deferReply({ ephemeral: true });
+
+            const user = options.getUser("user");
+            const rank = options.getInteger("top");
+
+            if (rank < 1 || rank > 20) {
+                return interaction.editReply("❌ Rank phải từ 1 → 20");
+            }
+
+            for (let i = 1; i <= 20; i++) {
+                if (top[i]?.id === user.id) top[i] = null;
+            }
+
+            let newTop = [];
+            for (let i = 1; i <= 20; i++) {
+                if (top[i]) newTop.push(top[i]);
+            }
+
+            newTop.splice(rank - 1, 0, {
+                id: user.id,
+                name: user.username,
+                avatar: user.displayAvatarURL({ extension: "png" }),
+                profile: `https://discord.com/users/${user.id}`
+            });
+
+            newTop = newTop.slice(0, 20);
+            top = {};
+            newTop.forEach((u, index) => { top[index + 1] = u; });
+
+            saveTop();
+            await updateAOVLeaderboard();
+
+            return interaction.editReply(`✅ ${user.username} vào TOP ${rank}`);
+        }
+
+        /* ===== DETOP ===== */
+        else if (commandName === "detop") {
+            await interaction.deferReply({ ephemeral: true });
+
+            const user = options.getUser("user");
+            let found = false;
+
+            for (let i in top) {
+                if (top[i] && top[i].id === user.id) {
+                    top[i] = null;
+                    found = true;
+                }
+            }
+
+            if (found) {
+                saveTop();
+                await updateAOVLeaderboard();
+                return interaction.editReply(`🗑️ Đã xóa ${user.username} khỏi TOP`);
+            }
+
+            return interaction.editReply("❌ User không có trong TOP");
+        }
+
+        /* ===== PROMOTE ===== */
+        else if (commandName === "promote") {
+            await interaction.deferReply({ ephemeral: true });
+
+            const user = options.getUser("user");
+            const roleName = options.getString("permission");
+
+            const member = await interaction.guild.members.fetch(interaction.user.id);
+            if (!hasPermission(member)) {
+                return interaction.editReply("❌ Bạn không có quyền dùng lệnh này");
+            }
+
+            let target = interaction.guild.members.cache.get(user.id);
+            if (!target) target = await interaction.guild.members.fetch(user.id);
+
+            const roleId = ROLE_MAP[roleName];
+            if (!roleId) return interaction.editReply("❌ Role không tồn tại");
+
+            const newRole = interaction.guild.roles.cache.get(roleId);
+            if (!newRole) return interaction.editReply("❌ Không tìm thấy role");
+
+            for (let r of Object.values(ROLE_MAP)) {
+                if (r === roleId) continue;
+                let role = interaction.guild.roles.cache.get(r);
+                if (!role) continue;
+                if (target.roles.cache.has(role.id)) {
+                    try {
+                        await target.roles.remove(role);
+                        console.log(`Đã xóa role ${role.name}`);
+                    } catch (err) {
+                        console.log(`Không xóa được role ${role.name}:`, err.message);
+                    }
+                }
+            }
+
+            if (newRole.position >= interaction.guild.members.me.roles.highest.position) {
+                return interaction.editReply("❌ Bot không đủ quyền add role này");
+            }
+
+            try {
+                await target.roles.add(newRole);
+                console.log(`Đã add role ${newRole.name} cho ${target.user.username}`);
+            } catch (err) {
+                console.log("Add role lỗi:", err);
+                return interaction.editReply("❌ Không thể add role");
+            }
+
+            staff = staff.filter(s => s.id !== user.id);
+            staff.push({ id: user.id, username: user.username, role: roleName, avatar: user.displayAvatarURL({ extension: "png" }) });
+            saveStaff();
+
+            const logChannel = interaction.guild.channels.cache.get(LOG_CHANNEL);
+            if (logChannel) {
+                const embed = new EmbedBuilder()
+                    .setColor("#00ffcc")
+                    .setTitle("📢 ROLE UPDATE")
+                    .setThumbnail(user.displayAvatarURL({ dynamic: true }))
+                    .addFields(
+                        { name: " User", value: `<@${user.id}>`, inline: true },
+                        { name: " Role", value: roleName, inline: true },
+                        { name: " Action", value: "Promote", inline: true },
+                        { name: " By", value: `<@${interaction.user.id}>`, inline: true }
+                    )
+                    .setFooter({ text: `ID: ${user.id}`, iconURL: interaction.user.displayAvatarURL() })
+                    .setTimestamp();
+                logChannel.send({ embeds: [embed] });
+            }
+
+            return interaction.editReply(`✅ ${user.username} đã được set role **${roleName}**`);
+        }
+
+        /* ===== DEMOTE ===== */
+        else if (commandName === "demote") {
+            await interaction.deferReply({ ephemeral: true });
+
+            const user = options.getUser("user");
+
+            const member = await interaction.guild.members.fetch(interaction.user.id);
+            if (!hasPermission(member)) {
+                return interaction.editReply({ content: "❌ Bạn không có quyền dùng lệnh này" });
+            }
+
+            const logChannel = interaction.guild.channels.cache.get(LOG_CHANNEL);
+            const target = await interaction.guild.members.fetch(user.id);
+
+            for (let r of Object.values(ROLE_MAP)) {
+                let role = interaction.guild.roles.cache.get(r);
+                if (role && target.roles.cache.has(role.id)) {
+                    await target.roles.remove(role);
+                }
+            }
+
+            staff = staff.filter(s => s.id !== user.id);
+            saveStaff();
+
+            if (logChannel) {
+                const embed = new EmbedBuilder()
+                    .setColor("#ff4d4d")
+                    .setTitle("📢 ROLE REMOVED")
+                    .setThumbnail(user.displayAvatarURL({ dynamic: true }))
+                    .addFields(
+                        { name: " User", value: `<@${user.id}>`, inline: true },
+                        { name: " Action", value: "Demote", inline: true },
+                        { name: " By", value: `<@${interaction.user.id}>`, inline: true }
+                    )
+                    .setFooter({ text: `ID: ${user.id}`, iconURL: interaction.user.displayAvatarURL() })
+                    .setTimestamp();
+                logChannel.send({ embeds: [embed] });
+            }
+
+            return interaction.editReply(`❌ Đã gỡ toàn bộ role của ${user.username}`);
+        }
+
+        /* ===== MAINER ===== */
+        else if (commandName === "mainer") {
+            await interaction.deferReply({ ephemeral: true });
+
+            const user = options.getUser("user");
+            mainers = mainers.filter(m => m.id !== user.id);
+            mainers.push({
+                id: user.id,
+                name: user.username,
+                avatar: user.displayAvatarURL({ extension: "png" }),
+                profile: `https://discord.com/users/${user.id}`
+            });
+            saveMainers();
+
+            return interaction.editReply(`✅ ${user.username} đã vào Mainers`);
+        }
+
+        /* ===== DEMAINER ===== */
+        else if (commandName === "demainer") {
+            await interaction.deferReply({ ephemeral: true });
+
+            const user = options.getUser("user");
+            mainers = mainers.filter(m => m.id !== user.id);
+            saveMainers();
+
+            return interaction.editReply(`❌ ${user.username} đã bị xóa khỏi Mainers`);
+        }
+
+        /* ===== THIDAU ===== */
+        else if (commandName === "thidau") {
+            await interaction.deferReply({ ephemeral: true });
+
+            const team1 = options.getString("team1");
+            const team2 = options.getString("team2");
+            const time = options.getString("time");
+            const ref = options.getString("ref");
+
+            const embed = new EmbedBuilder()
+                .setTitle("🏆 THÔNG BÁO THI ĐẤU")
+                .setColor(0x00eaff)
+                .addFields(
+                    { name: "⚔️ Trận đấu", value: `${team1} VS ${team2}` },
+                    { name: "⏰ Thời gian", value: time, inline: true },
+                    { name: "🏁 Referee", value: ref, inline: true }
+                );
+
+            const dropdown = new StringSelectMenuBuilder()
+                .setCustomId("match_info")
+                .setPlaceholder("Xem thông tin")
+                .addOptions([
+                    { label: team1, value: team1 },
+                    { label: team2, value: team2 },
+                    { label: ref, value: ref }
+                ]);
+
+            const row = new ActionRowBuilder().addComponents(dropdown);
+
+            return interaction.editReply({ embeds: [embed], components: [row] });
+        }
+
+        /* ===== COIN ===== */
+        else if (commandName === "coin") {
             const userId = interaction.user.id;
             return interaction.reply(`💰 Bạn có: **${getCoins(userId)} coin**`);
         }
 
-        // ===== TÀI XỈU =====
-        if (commandName === "taixiu") {
-
+        /* ===== TÀI XỈU ===== */
+        else if (commandName === "taixiu") {
             const embed = new EmbedBuilder()
                 .setTitle("🎲 TÀI XỈU")
                 .setDescription("👉 Chọn Tài hoặc Xỉu\n💰 Sau đó nhập tiền")
@@ -1148,7 +1036,6 @@ if (interaction.isModalSubmit()) {
                     .setCustomId("tai")
                     .setLabel("🔥 TÀI")
                     .setStyle(ButtonStyle.Danger),
-
                 new ButtonBuilder()
                     .setCustomId("xiu")
                     .setLabel("❄️ XỈU")
@@ -1158,76 +1045,116 @@ if (interaction.isModalSubmit()) {
             return interaction.reply({ embeds: [embed], components: [row] });
         }
 
-if (interaction.isButton()) {
-    // 🎲 TÀI XỈU
-    if (interaction.customId === "tai" || interaction.customId === "xiu") {
+    } // end isChatInputCommand
 
-        const modal = new ModalBuilder()
-            .setCustomId(`bet_${interaction.customId}`)
-            .setTitle("Nhập tiền cược");
+    // ===== BUTTON INTERACTIONS =====
+    else if (interaction.isButton()) {
 
-        const input = new TextInputBuilder()
-            .setCustomId("money")
-            .setLabel("Số tiền cược")
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
+        // 🎲 TÀI XỈU: mở modal nhập tiền
+        if (interaction.customId === "tai" || interaction.customId === "xiu") {
+            const modal = new ModalBuilder()
+                .setCustomId(`bet_${interaction.customId}`)
+                .setTitle("Nhập tiền cược");
 
-        modal.addComponents(new ActionRowBuilder().addComponents(input));
+            const input = new TextInputBuilder()
+                .setCustomId("money")
+                .setLabel("Số tiền cược")
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true);
 
-        return interaction.showModal(modal);
+            modal.addComponents(new ActionRowBuilder().addComponents(input));
+            return interaction.showModal(modal);
+        }
+
+        // 🔒 ĐÓNG TICKET
+        if (interaction.customId === "close_ticket") {
+            return interaction.channel.delete().catch(() => {});
+        }
+
+        // 🎫 TẠO TICKET
+        if (interaction.customId === "create_ai_ticket") {
+            await interaction.deferReply({ ephemeral: true });
+
+            try {
+                const ticketChannel = await interaction.guild.channels.create({
+                    name: `ai-ticket-${interaction.user.username}`,
+                    type: ChannelType.GuildText,
+                    parent: process.env.TICKET_CATEGORY_ID,
+                    permissionOverwrites: [
+                        { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
+                        { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel] }
+                    ]
+                });
+
+                selected.set(ticketChannel.id, { userId: interaction.user.id });
+
+                const embed = new EmbedBuilder()
+                    .setTitle("🎫 AI SUPPORT TICKET")
+                    .setDescription(`Xin chào <@${interaction.user.id}>`)
+                    .setColor("#00eaff");
+
+                const row = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId("close_ticket")
+                        .setLabel("🔒 Đóng Ticket")
+                        .setStyle(ButtonStyle.Danger)
+                );
+
+                await ticketChannel.send({ embeds: [embed], components: [row] });
+                return interaction.editReply({ content: `✅ Ticket: ${ticketChannel}` });
+
+            } catch (err) {
+                console.error(err);
+                return interaction.editReply("❌ Lỗi tạo ticket");
+            }
+        }
     }
-if (interaction.customId === "close_ticket") {
-    return interaction.channel.delete().catch(() => {});
-}
 
-    // 🎫 TICKET (PHẢI Ở ĐÂY)
-if (interaction.customId === "create_ai_ticket") {
+    // ===== SELECT MENU INTERACTIONS =====
+    else if (interaction.isStringSelectMenu()) {
 
-    await interaction.deferReply({ ephemeral: true });
+        // Select menu xem thông tin trận đấu
+        if (interaction.customId === "match_info") {
+            return interaction.reply({ content: `📌 Thông tin: ${interaction.values[0]}`, ephemeral: true });
+        }
 
-    try {
-        const ticketChannel = await interaction.guild.channels.create({
-            name: `ai-ticket-${interaction.user.username}`,
-            type: ChannelType.GuildText,
-            parent: process.env.TICKET_CATEGORY_ID,
-            permissionOverwrites: [
-                { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-                { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel] }
-            ]
-        });
+        // Select menu đăng ký stage → mở modal nhập score
+        if (interaction.customId === "select_stage") {
+            selected.set(interaction.user.id, interaction.values[0]);
 
-        selected.set(ticketChannel.id, { userId: interaction.user.id });
+            const modal = new ModalBuilder()
+                .setCustomId("submit_score")
+                .setTitle("Nhập Score")
+                .addComponents(
+                    new ActionRowBuilder().addComponents(
+                        new TextInputBuilder()
+                            .setCustomId("score")
+                            .setLabel("Score")
+                            .setStyle(TextInputStyle.Short)
+                            .setRequired(true)
+                    )
+                );
 
-        const embed = new EmbedBuilder()
-            .setTitle("🎫 AI SUPPORT TICKET")
-            .setDescription(`Xin chào <@${interaction.user.id}>`)
-            .setColor("#00eaff");
-
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId("close_ticket")
-                .setLabel("🔒 Đóng Ticket")
-                .setStyle(ButtonStyle.Danger)
-        );
-
-        await ticketChannel.send({ embeds: [embed], components: [row] });
-
-        return interaction.editReply({
-            content: `✅ Ticket: ${ticketChannel}`
-        });
-
-    } catch (err) {
-        console.error(err);
-        return interaction.editReply("❌ Lỗi tạo ticket");
+            return interaction.showModal(modal);
+        }
     }
-}
 
-    // ===== MODAL =====
-    if (interaction.isModalSubmit()) {
+    // ===== MODAL SUBMIT INTERACTIONS =====
+    else if (interaction.isModalSubmit()) {
 
-        // 🎲 TÀI XỈU
+        // Modal nhập score đăng ký
+        if (interaction.customId === "submit_score") {
+            const score = interaction.fields.getTextInputValue("score");
+            const stage = selected.get(interaction.user.id) || "Unknown";
+
+            return interaction.reply({
+                content: `✅ Đã gửi!\nStage: **${stage}**\nScore: **${score}**`,
+                ephemeral: true
+            });
+        }
+
+        // Modal tài xỉu
         if (interaction.customId.startsWith("bet_")) {
-
             const userId = interaction.user.id;
             const choice = interaction.customId.split("_")[1];
             const money = parseInt(interaction.fields.getTextInputValue("money"));
@@ -1240,29 +1167,21 @@ if (interaction.customId === "create_ai_ticket") {
                 return interaction.reply({ content: "❌ Không đủ coin", ephemeral: true });
             }
 
-await interaction.deferReply();
+            await interaction.deferReply();
 
-const msg = await interaction.editReply({
-    content: "🎲 Đang lắc..."
-});
+            const msg = await interaction.editReply({ content: "🎲 Đang lắc..." });
 
-            for (let i = 0; i < 10; i++) {
-                const a = Math.floor(Math.random()*6)+1;
-                const b = Math.floor(Math.random()*6)+1;
-                const c = Math.floor(Math.random()*6)+1;
+for (let i = 0; i < 4; i++) { // Chỉ lắc 4 lần
+    const a = Math.floor(Math.random()*6)+1;
+    const b = Math.floor(Math.random()*6)+1;
+    const c = Math.floor(Math.random()*6)+1;
 
-                await msg.edit({
-                    content: `
-🎲 ĐANG LẮC...
+    await msg.edit({
+        content: `🎲 ĐANG LẮC...\n\n   ${a}   ${b}   ${c}\n   ${b}   ${c}   ${a}\n   ${c}   ${a}   ${b}`
+    });
 
-   ${a}   ${b}   ${c}
-   ${b}   ${c}   ${a}
-   ${c}   ${a}   ${b}
-`
-                });
-
-                await new Promise(r => setTimeout(r, 500));
-            }
+    await new Promise(r => setTimeout(r, 1000)); // Chờ 1 giây mỗi lần lắc
+}
 
             const d1 = Math.floor(Math.random()*6)+1;
             const d2 = Math.floor(Math.random()*6)+1;
@@ -1270,7 +1189,6 @@ const msg = await interaction.editReply({
 
             const total = d1 + d2 + d3;
             const result = total >= 11 ? "tai" : "xiu";
-
             const win = result === choice;
             const reward = win ? money : -money;
 
@@ -1279,22 +1197,19 @@ const msg = await interaction.editReply({
             const embed = new EmbedBuilder()
                 .setTitle("🎲 KẾT QUẢ")
                 .setColor(win ? "Green" : "Red")
-                .setDescription(`
-🎲 ${d1} - ${d2} - ${d3}
-
-👉 Tổng: **${total}**
-👉 Kết quả: **${result.toUpperCase()}**
-
-${win ? "🎉 THẮNG!" : "💀 THUA!"}
-
-💰 ${win ? "+" : ""}${reward}
-💳 Tổng: ${getCoins(userId)}
-                `);
+                .setDescription(
+                    `🎲 ${d1} - ${d2} - ${d3}\n\n` +
+                    `👉 Tổng: **${total}**\n` +
+                    `👉 Kết quả: **${result.toUpperCase()}**\n\n` +
+                    `${win ? "🎉 THẮNG!" : "💀 THUA!"}\n\n` +
+                    `💰 ${win ? "+" : ""}${reward}\n` +
+                    `💳 Tổng: ${getCoins(userId)}`
+                );
 
             return msg.edit({ content: "", embeds: [embed] });
         }
     }
-}
+
     } catch (err) {
         console.error("LỖI HỆ THỐNG INTERACTION:", err);
 
@@ -1307,16 +1222,7 @@ ${win ? "🎉 THẮNG!" : "💀 THUA!"}
     }
 });
 
-/* ===== CAN BLACKLIST FUNCTION ===== */
-function canBlacklist(member) {
-    if (!process.env.ADMIN_ROLE) return false;
-
-    const roles = process.env.ADMIN_ROLE.split(",").map(r => r.trim());
-    return member.roles.cache.some(r => roles.includes(r.id));
-}
-
-/* ================= WEB API ================= */
-/* ================= STAFF + ROLE COLOR ================= */
+/* ================ STAFF + ROLE COLOR ================= */
 app.get("/staff-realtime", async (req, res) => {
     try {
         const guild = await client.guilds.fetch(process.env.GUILD_ID);
