@@ -3,23 +3,9 @@ const { REST, Routes, SlashCommandBuilder } = require("discord.js");
 
 const commands = [
 
-  new SlashCommandBuilder()
-    .setName("taixiu")
-    .setDescription("Chơi tài xỉu")
-    .addStringOption(o =>
-  o.setName("choice")
-    .setDescription("Chọn tài hoặc xỉu")
-    .setRequired(true)
-    .addChoices(
-      { name: "Tài", value: "tai" },
-      { name: "Xỉu", value: "xiu" }
-    )
-)
-    .addIntegerOption(o =>
-      o.setName("bet")
-        .setDescription("Số coin cược")
-        .setRequired(true)
-    ),
+new SlashCommandBuilder()
+  .setName("taixiu")
+  .setDescription("Chơi tài xỉu"),
 
   new SlashCommandBuilder()
     .setName("coin")
