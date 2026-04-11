@@ -37,15 +37,17 @@ let coins = JSON.parse(fs.readFileSync("coins.json"));
 const saveCoins = () => fs.writeFileSync("coins.json", JSON.stringify(coins, null, 2));
 
 function getCoins(userId) {
-    // Kiểm tra nếu giá trị là undefined (chưa có trong file) mới đặt là 1000
-    if (coins[userId] === undefined) {
+    if (!coins[userId]) {
         coins[userId] = 1000;
         saveCoins();
     }
     return coins[userId];
 }
-
-const dailyCooldown = new Map(); // userId → lastDailyTimestamp
+function addCoins(userId, amount) {
+    if (coins[userId] === undefined) coins[userId] = 1000;
+    coins[userId] += amount;
+    saveCoins();
+}
 
 // Biến lưu trữ cooldown cho lệnh Daily
 const AI_CHANNEL = process.env.AI_CHANNEL;
@@ -120,6 +122,7 @@ const ROLE_MAP = {
     "Tryout host": process.env.ROLE_TRYOUT,
     "Training host": process.env.ROLE_TRAIN
 };
+const dailyCooldown = new Map();
 const ticketCooldown = new Map(); // map userId → lastClickTimestamp
 const TICKET_COOLDOWN = 5000; // 5 giây
 const cooldown = new Map();
@@ -163,6 +166,12 @@ client.once("ready", () => {
     console.log(`✅ DISCORD: Bot đã kết nối thành công với tên ${client.user.tag}`);
     setInterval(() => {
     console.log("⏳ Đang update AOV...");
+    console.log("🔥 BOT STARTED");
+    console.log("🤖 BOT TAG:", client.user.tag);
+    console.log("🆔 CLIENT ID:", client.user.id);
+    console.log("⚙️ PROCESS ID:", process.pid);
+    console.log("🌍 ENV:", process.env.NODE_ENV || "unknown");
+    console.log("RUNNING ON:", process.env.HOSTNAME || "local");
     updateAOVLeaderboard().catch(console.error);
 }, 10000);
     setInterval(() => {
@@ -484,6 +493,9 @@ const result = await aiModel.generateContent(promptWithLanguageLock);
 });
 client.on("interactionCreate", async interaction => {
     try {
+console.log("📩 INTERACTION:", interaction.commandName || interaction.customId);
+console.log("👤 USER:", interaction.user.tag);
+console.log("📍 GUILD:", interaction.guildId);
 
     // ===== SLASH COMMANDS =====
     if (interaction.isChatInputCommand()) {
@@ -702,45 +714,68 @@ client.on("interactionCreate", async interaction => {
             );
         }
 // --- LỆNH DAILY ---
-    if (commandName === 'daily') {
-        await interaction.deferReply();
-        const dailyCooldown = new Map(); // Bạn nên khai báo Map này ở đầu file (dưới các biến require)
-        const lastDaily = dailyCooldown.get(userId) || 0;
-        const now = Date.now();
-        if (now - lastDaily < 86400000) {
-            return interaction.editReply("⏳ Bạn đã nhận quà hôm nay rồi!");
-        }
-        addCoins(userId, 500);
-        dailyCooldown.set(userId, now);
-        return interaction.editReply("🎁 Bạn nhận được **500 coin**!");
+if (commandName === 'daily') {
+    await interaction.deferReply();
+
+    const userId = interaction.user.id; // ❗ BẮT BUỘC
+
+    const lastDaily = dailyCooldown.get(userId) || 0;
+    const now = Date.now();
+
+    if (now - lastDaily < 86400000) {
+        return interaction.editReply("⏳ Bạn đã nhận quà hôm nay rồi!");
     }
 
+    addCoins(userId, 500);
+    dailyCooldown.set(userId, now);
+
+    return interaction.editReply("🎁 Bạn nhận được **500 coin**!");
+}
     // --- LỆNH TOPCOIN ---
-    if (commandName === 'topcoin') {
-        await interaction.deferReply();
-        const sorted = Object.entries(coins)
-            .sort(([, a], [, b]) => b - a)
-            .slice(0, 10);
-        const list = sorted.map(([id, val], i) => `${i + 1}. <@${id}>: **${val.toLocaleString()}** 🪙`).join("\n");
-        const embed = new EmbedBuilder()
-            .setTitle("🏆 TOP ĐẠI GIA SENSELESS FISH")
-            .setDescription(list || "Chưa có dữ liệu")
-            .setColor("#f1c40f");
-        return interaction.editReply({ embeds: [embed] });
-    }
+if (commandName === 'topcoin') {
+    await interaction.deferReply();
+
+    const sorted = Object.entries(coins || {})
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 10);
+
+    const list = sorted.length
+        ? sorted.map(([id, val], i) => `${i + 1}. <@${id}>: **${val}** 🪙`).join("\n")
+        : "Chưa có dữ liệu";
+
+    const embed = new EmbedBuilder()
+        .setTitle("🏆 TOP COIN")
+        .setDescription(list)
+        .setColor("#f1c40f");
+
+    return interaction.editReply({ embeds: [embed] });
+}
 
     // --- LỆNH PAY ---
-    if (commandName === 'pay') {
-        await interaction.deferReply();
-        const target = options.getUser('user');
-        const amount = options.getInteger('amount');
-        if (target.id === userId) return interaction.editReply("❌ Không thể chuyển cho chính mình!");
-        if (amount <= 0 || getCoins(userId) < amount) return interaction.editReply("❌ Số tiền không hợp lệ hoặc bạn không đủ coin!");
-        
-        addCoins(userId, -amount);
-        addCoins(target.id, amount);
-        return interaction.editReply(`✅ Đã chuyển **${amount} coin** cho <@${target.id}>!`);
+if (commandName === 'pay') {
+    await interaction.deferReply();
+
+    const userId = interaction.user.id;
+    const target = options.getUser('user');
+    const amount = options.getInteger('amount');
+
+    if (!target || amount <= 0) {
+        return interaction.editReply("❌ Dữ liệu không hợp lệ!");
     }
+
+    if (target.id === userId) {
+        return interaction.editReply("❌ Không thể chuyển cho chính mình!");
+    }
+
+    if (getCoins(userId) < amount) {
+        return interaction.editReply("❌ Không đủ coin!");
+    }
+
+    addCoins(userId, -amount);
+    addCoins(target.id, amount);
+
+    return interaction.editReply(`✅ Đã chuyển **${amount} coin** cho <@${target.id}>`);
+}
 
         /* ===== STAFFSTRIKE ===== */
         else if (commandName === "staffstrike") {
