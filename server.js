@@ -37,16 +37,14 @@ let coins = JSON.parse(fs.readFileSync("coins.json"));
 const saveCoins = () => fs.writeFileSync("coins.json", JSON.stringify(coins, null, 2));
 
 function getCoins(userId) {
-    // Chỉ thiết lập 1000 nếu user chưa từng có tên trong danh sách (undefined)
-    if (coins[userId] === undefined) coins[userId] = 1000; 
+    // Kiểm tra nếu giá trị là undefined (chưa có trong file) mới đặt là 1000
+    if (coins[userId] === undefined) {
+        coins[userId] = 1000;
+        saveCoins();
+    }
     return coins[userId];
 }
 
-function addCoins(userId, amount) {
-    if (!coins[userId]) coins[userId] = 1000;
-    coins[userId] += amount;
-    saveCoins();
-}
 const dailyCooldown = new Map(); // userId → lastDailyTimestamp
 
 // Biến lưu trữ cooldown cho lệnh Daily
@@ -491,42 +489,6 @@ client.on("interactionCreate", async interaction => {
     if (interaction.isChatInputCommand()) {
         const { commandName, options } = interaction;
     
-// --- TÍNH NĂNG B: BONUS DAILY ---
-// --- LỆNH DAILY (Nhận tiền hàng ngày) ---
-if (commandName === 'daily') {
-    const lastDaily = dailyCooldown.get(userId) || 0;
-    const now = Date.now();
-    if (now - lastDaily < 86400000) { // 24 giờ
-        return interaction.editReply("⏳ Bạn đã nhận quà hôm nay rồi, mai quay lại nhé!");
-    }
-    addCoins(userId, 500); // Tặng 500 coin
-    dailyCooldown.set(userId, now);
-    return interaction.editReply("🎁 Bạn đã nhận được **500 coin**!");
-}
-
-// --- LỆNH TOPCOIN (Xem đại gia) ---
-if (commandName === 'topcoin') {
-    const sorted = Object.entries(coins)
-        .sort(([, a], [, b]) => b - a)
-        .slice(0, 10);
-    const leaderboard = sorted.map(([id, val], i) => `${i + 1}. <@${id}>: ${val} 🪙`).join("\n");
-    const embed = new EmbedBuilder()
-        .setTitle("🏆 BẢNG XẾP HẠNG ĐẠI GIA")
-        .setDescription(leaderboard || "Chưa có dữ liệu")
-        .setColor("#FFD700");
-    return interaction.editReply({ embeds: [embed] });
-}
-
-// --- LỆNH PAY (Chuyển tiền) ---
-if (commandName === 'pay') {
-    const target = options.getUser('user');
-    const amount = options.getInteger('amount');
-    if (amount <= 0 || getCoins(userId) < amount) return interaction.editReply("❌ Giao dịch thất bại!");
-    
-    addCoins(userId, -amount);
-    addCoins(target.id, amount);
-    return interaction.editReply(`✅ Đã chuyển **${amount} coin** cho <@${target.id}>`);
-}
         /* ===== BLACKLIST ===== */
         if (commandName === "blacklist") {
             await interaction.deferReply({ ephemeral: true });
@@ -739,6 +701,46 @@ if (commandName === 'pay') {
                 `✅ Đã gỡ Strike ${strikeIndex + 1}\n📌 ${removed.reason}\n📉 Còn: ${user.strikes.length}/${user.staff ? 4 : 3}`
             );
         }
+// --- LỆNH DAILY ---
+    if (commandName === 'daily') {
+        await interaction.deferReply();
+        const dailyCooldown = new Map(); // Bạn nên khai báo Map này ở đầu file (dưới các biến require)
+        const lastDaily = dailyCooldown.get(userId) || 0;
+        const now = Date.now();
+        if (now - lastDaily < 86400000) {
+            return interaction.editReply("⏳ Bạn đã nhận quà hôm nay rồi!");
+        }
+        addCoins(userId, 500);
+        dailyCooldown.set(userId, now);
+        return interaction.editReply("🎁 Bạn nhận được **500 coin**!");
+    }
+
+    // --- LỆNH TOPCOIN ---
+    if (commandName === 'topcoin') {
+        await interaction.deferReply();
+        const sorted = Object.entries(coins)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, 10);
+        const list = sorted.map(([id, val], i) => `${i + 1}. <@${id}>: **${val.toLocaleString()}** 🪙`).join("\n");
+        const embed = new EmbedBuilder()
+            .setTitle("🏆 TOP ĐẠI GIA SENSELESS FISH")
+            .setDescription(list || "Chưa có dữ liệu")
+            .setColor("#f1c40f");
+        return interaction.editReply({ embeds: [embed] });
+    }
+
+    // --- LỆNH PAY ---
+    if (commandName === 'pay') {
+        await interaction.deferReply();
+        const target = options.getUser('user');
+        const amount = options.getInteger('amount');
+        if (target.id === userId) return interaction.editReply("❌ Không thể chuyển cho chính mình!");
+        if (amount <= 0 || getCoins(userId) < amount) return interaction.editReply("❌ Số tiền không hợp lệ hoặc bạn không đủ coin!");
+        
+        addCoins(userId, -amount);
+        addCoins(target.id, amount);
+        return interaction.editReply(`✅ Đã chuyển **${amount} coin** cho <@${target.id}>!`);
+    }
 
         /* ===== STAFFSTRIKE ===== */
         else if (commandName === "staffstrike") {
