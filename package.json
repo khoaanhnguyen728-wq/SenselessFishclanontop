@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "deploy": "node deploy-commands.js"
   },
   "dependencies": {
     "@google/generative-ai": "0.21.0",
