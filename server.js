@@ -46,6 +46,20 @@ function addCoins(userId, amount) {
     coins[userId] += amount;
     saveCoins();
 }
+// Các hàm quản lý tiền tệ
+function getCoins(userId) {
+    if (!coins[userId]) coins[userId] = 1000; // Vốn khởi nghiệp
+    return coins[userId];
+}
+
+function addCoins(userId, amount) {
+    getCoins(userId);
+    coins[userId] += amount;
+    saveCoins();
+}
+
+// Biến lưu trữ cooldown cho lệnh Daily
+const dailyCooldown = new Map();
 const AI_CHANNEL = process.env.AI_CHANNEL;
 console.log("ENV TOKEN:", process.env.TOKEN);
 process.on("unhandledRejection", console.error);
@@ -158,7 +172,7 @@ let stats = { total: 0, online: 0 };
 const selected = new Map();
 
 client.once("ready", () => {
-    console.log("✅ BOT LOGIN THÀNH CÔNG:", client.user.tag);
+    console.log(`✅ DISCORD: Bot đã kết nối thành công với tên ${client.user.tag}`);
     setInterval(() => {
     console.log("⏳ Đang update AOV...");
     updateAOVLeaderboard().catch(console.error);
@@ -486,7 +500,53 @@ client.on("interactionCreate", async interaction => {
     // ===== SLASH COMMANDS =====
     if (interaction.isChatInputCommand()) {
         const { commandName, options } = interaction;
+    
+// --- TÍNH NĂNG B: BONUS DAILY ---
+if (commandName === 'daily') {
+    const lastDaily = dailyCooldown.get(userId) || 0;
+    const now = Date.now();
+    const timeout = 86400000; // 24 giờ tính bằng mili giây
 
+    if (now - lastDaily < timeout) {
+        const timeLeft = timeout - (now - lastDaily);
+        const hours = Math.floor(timeLeft / 3600000);
+        const minutes = Math.floor((timeLeft % 3600000) / 60000);
+        return interaction.editReply(`⏳ Bạn đã nhận quà hôm nay rồi! Quay lại sau **${hours} giờ ${minutes} phút** nữa nhé.`);
+    }
+
+    const gift = 500; // Số tiền tặng
+    addCoins(userId, gift);
+    dailyCooldown.set(userId, now);
+    return interaction.editReply(`🎁 Chúc mừng! Bạn vừa nhận được **${gift} coin** quà điểm danh hằng ngày.`);
+}
+
+// --- TÍNH NĂNG B: BẢNG XẾP HẠNG (TOP COIN) ---
+if (commandName === 'topcoin') {
+    const sorted = Object.entries(coins)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 10); // Lấy 10 người giàu nhất
+
+    const embed = new EmbedBuilder()
+        .setTitle("🏆 BẢNG VÀNG ĐẠI GIA SENSELESS FISH")
+        .setColor("#f1c40f")
+        .setDescription(sorted.map(([id, amount], i) => `${i + 1}. <@${id}>: \`${amount.toLocaleString()}\` 🪙`).join("\n"));
+
+    return interaction.editReply({ embeds: [embed] });
+}
+
+// --- TÍNH NĂNG B: BẮN TIỀN (PAY) ---
+if (commandName === 'pay') {
+    const target = options.getUser('user');
+    const amount = options.getInteger('amount');
+
+    if (target.id === userId) return interaction.editReply("❌ Bạn không thể tự chuyển tiền cho chính mình!");
+    if (amount <= 0) return interaction.editReply("❌ Số tiền phải lớn hơn 0!");
+    if (getCoins(userId) < amount) return interaction.editReply("❌ Bạn không đủ tiền để chuyển!");
+
+    addCoins(userId, -amount);
+    addCoins(target.id, amount);
+    return interaction.editReply(`✅ Giao dịch thành công! Bạn đã chuyển **${amount} coin** cho <@${target.id}>.`);
+}
         /* ===== BLACKLIST ===== */
         if (commandName === "blacklist") {
             await interaction.deferReply({ ephemeral: true });
@@ -542,6 +602,7 @@ client.on("interactionCreate", async interaction => {
                 logChannel.send({ embeds: [logEmbed] }).catch(() => null);
             }
         }
+        
 
         /* ===== UNBLACKLIST ===== */
         else if (commandName === "unblacklist") {
@@ -1156,62 +1217,87 @@ client.on("interactionCreate", async interaction => {
         }
 
         // Modal tài xỉu
-        if (interaction.customId.startsWith("bet_")) {
-            const userId = interaction.user.id;
-            const choice = interaction.customId.split("_")[1];
-            const money = parseInt(interaction.fields.getTextInputValue("money"));
+// Modal tài xỉu nâng cấp full tính năng
+if (interaction.customId.startsWith("bet_")) {
+    const userId = interaction.user.id;
+    const choice = interaction.customId.split("_")[1]; // "tai" hoặc "xiu"
+    const moneyInput = interaction.fields.getTextInputValue("money");
+    const money = parseInt(moneyInput);
 
-            if (isNaN(money) || money <= 0) {
-                return interaction.reply({ content: "❌ Tiền không hợp lệ", ephemeral: true });
-            }
-
-            if (getCoins(userId) < money) {
-                return interaction.reply({ content: "❌ Không đủ coin", ephemeral: true });
-            }
-
-            await interaction.deferReply();
-
-            const msg = await interaction.editReply({ content: "🎲 Đang lắc..." });
-
-for (let i = 0; i < 4; i++) { // Chỉ lắc 4 lần
-    const a = Math.floor(Math.random()*6)+1;
-    const b = Math.floor(Math.random()*6)+1;
-    const c = Math.floor(Math.random()*6)+1;
-
-    await msg.edit({
-        content: `🎲 ĐANG LẮC...\n\n   ${a}   ${b}   ${c}\n   ${b}   ${c}   ${a}\n   ${c}   ${a}   ${b}`
-    });
-
-    await new Promise(r => setTimeout(r, 1000)); // Chờ 1 giây mỗi lần lắc
-}
-
-            const d1 = Math.floor(Math.random()*6)+1;
-            const d2 = Math.floor(Math.random()*6)+1;
-            const d3 = Math.floor(Math.random()*6)+1;
-
-            const total = d1 + d2 + d3;
-            const result = total >= 11 ? "tai" : "xiu";
-            const win = result === choice;
-            const reward = win ? money : -money;
-
-            addCoins(userId, reward);
-
-            const embed = new EmbedBuilder()
-                .setTitle("🎲 KẾT QUẢ")
-                .setColor(win ? "Green" : "Red")
-                .setDescription(
-                    `🎲 ${d1} - ${d2} - ${d3}\n\n` +
-                    `👉 Tổng: **${total}**\n` +
-                    `👉 Kết quả: **${result.toUpperCase()}**\n\n` +
-                    `${win ? "🎉 THẮNG!" : "💀 THUA!"}\n\n` +
-                    `💰 ${win ? "+" : ""}${reward}\n` +
-                    `💳 Tổng: ${getCoins(userId)}`
-                );
-
-            return msg.edit({ content: "", embeds: [embed] });
-        }
+    // 1. Kiểm tra tính hợp lệ của tiền cược
+    if (isNaN(money) || money <= 0) {
+        return interaction.reply({ content: "❌ Số tiền cược không hợp lệ!", ephemeral: true });
     }
 
+    // Kiểm tra số dư hiện tại
+    if (getCoins(userId) < money) {
+        return interaction.reply({ content: `❌ Bạn không đủ coin! (Hiện có: ${getCoins(userId)})`, ephemeral: true });
+    }
+
+    // Phản hồi chờ để tránh lỗi "Application did not respond"
+    await interaction.deferReply();
+
+    // 2. Tạm trừ tiền cược (Bảo mật: Tránh bug tiền khi đang lắc)
+    addCoins(userId, -money);
+
+    const msg = await interaction.editReply({ content: "🎲 **Đang lắc xúc xắc...**" });
+
+    // Hiệu ứng lắc chuyên nghiệp (4 lần)
+    for (let i = 0; i < 4; i++) {
+        const temp1 = Math.floor(Math.random() * 6) + 1;
+        const temp2 = Math.floor(Math.random() * 6) + 1;
+        const temp3 = Math.floor(Math.random() * 6) + 1;
+        await msg.edit({
+            content: `🎲 **ĐANG LẮC...**\n\n   ┃ ${temp1} ┃ ${temp2} ┃ ${temp3} ┃`
+        });
+        await new Promise(r => setTimeout(r, 800));
+    }
+
+    // 3. Tính toán kết quả thật
+    const d1 = Math.floor(Math.random() * 6) + 1;
+    const d2 = Math.floor(Math.random() * 6) + 1;
+    const d3 = Math.floor(Math.random() * 6) + 1;
+    const total = d1 + d2 + d3;
+
+    // Cơ chế Bão: 3 viên giống nhau nhà cái ăn
+    const isBao = (d1 === d2 && d2 === d3);
+    const result = total >= 11 ? "tai" : "xiu";
+    const win = !isBao && result === choice;
+
+    let resultMessage = "";
+    if (win) {
+        const tax = 0.05; // Thuế 5%
+        const winAmount = Math.floor(money * 2 * (1 - tax)); 
+        addCoins(userId, winAmount);
+        resultMessage = `🎉 **THẮNG!** Bạn nhận được **${winAmount}** coin (đã trừ 5% thuế)`;
+    } else {
+        resultMessage = isBao ? `💀 **BÃO!** (Ba viên ${d1}) - Nhà cái ăn sạch!` : `💀 **THUA!** Chúc bạn may mắn lần sau.`;
+    }
+
+    // 4. Hiển thị Embed kết quả chi tiết
+    const embed = new EmbedBuilder()
+        .setTitle("🎲 KẾT QUẢ TÀI XỈU")
+        .setColor(win ? "#00ff00" : "#ff0000")
+        .setThumbnail(interaction.user.displayAvatarURL())
+        .setDescription(
+            `👤 **Người chơi:** <@${userId}>\n` +
+            `💰 **Mức cược:** ${money} coin\n` +
+            `🔘 **Đặt cửa:** ${choice.toUpperCase()}\n\n` +
+            `━━━━━━━━━━━━━━━━━━\n` +
+            `🎲 **Kết quả:** ${d1} - ${d2} - ${d3} (Tổng: **${total}**)\n` +
+            `🎯 **Cửa thắng:** ${isBao ? "BÃO" : result.toUpperCase()}\n` +
+            `━━━━━━━━━━━━━━━━━━\n\n` +
+            `${resultMessage}\n` +
+            `💳 **Số dư mới:** ${getCoins(userId)} coin`
+        )
+        .setTimestamp();
+
+    // Ghi log vào console (hoặc gửi vào channel log nếu bạn có LOG_CHANNEL)
+    console.log(`[TÀI XỈU] ${interaction.user.tag} đặt ${money} vào ${choice} - Kết quả: ${total} (${win ? "THẮNG" : "THUA"})`);
+
+    return msg.edit({ content: "", embeds: [embed] });
+}
+    }
     } catch (err) {
         console.error("LỖI HỆ THỐNG INTERACTION:", err);
 
