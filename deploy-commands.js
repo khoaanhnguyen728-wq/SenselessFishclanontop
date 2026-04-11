@@ -3,6 +3,18 @@ const { REST, Routes, SlashCommandBuilder } = require("discord.js");
 
 const commands = [
 
+    new SlashCommandBuilder()
+        .setName('daily')
+        .setDescription('Nhận coin hằng ngày'),
+    new SlashCommandBuilder()
+        .setName('topcoin')
+        .setDescription('Xem bảng xếp hạng giàu nhất Clan'),
+    new SlashCommandBuilder()
+        .setName('pay')
+        .setDescription('Chuyển tiền cho thành viên khác')
+        .addUserOption(opt => opt.setName('user').setDescription('Người nhận').setRequired(true))
+        .addIntegerOption(opt => opt.setName('amount').setDescription('Số tiền').setRequired(true)),
+
 new SlashCommandBuilder()
   .setName("taixiu")
   .setDescription("Chơi tài xỉu"),
