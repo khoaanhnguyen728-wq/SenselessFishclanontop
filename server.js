@@ -64,7 +64,18 @@ const {
     ChannelType,
     PermissionsBitField
 } = require("discord.js");
-
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildPresences,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent
+    ]
+});
+client.once("ready", () => {
+    console.log("BOT ID:", client.user.id);
+});
 const app = express();
 app.use("/image", express.static("images"));
 app.use(express.json());
@@ -139,15 +150,6 @@ async function sendStrikeLog(client, embed) {
 }
 
 /* ================= DISCORD BOT ================= */
-const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildPresences,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
-    ]
-});
 
 const TOP_CHANNEL = process.env.TOP_CHANNEL;
 const TOP_MESSAGE = process.env.TOP_MESSAGE;
