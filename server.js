@@ -6,12 +6,17 @@ process.on("unhandledRejection", err => {
 process.on("uncaughtException", err => {
     console.log("❌ CRASH:", err);
 });
+console.log("🚀 BOT ĐANG KHỞI ĐỘNG...");
+const dns = require("dns");
+dns.setDefaultResultOrder("ipv4first");
 const express = require("express");
 const fs = require("fs");
 const cors = require("cors");
 const axios = require("axios");
+const { getCoins, addCoins, setCoins } = require("./coins");
 const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require("@google/generative-ai");
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const winStreak = new Map();
 const aiModel = genAI.getGenerativeModel({ 
     model: "gemma-4-26b-a4b-it",
     systemInstruction: {
@@ -34,42 +39,37 @@ const aiModel = genAI.getGenerativeModel({
     generationConfig: {
         temperature: 0.4, 
         topP: 1,
-        maxOutputTokens: 8192, // Lưu ý: Nên để 2048 để tránh Render bị quá tải (Timeout) khi bot viết dài
+        maxOutputTokens: 8192, 
     }
 });
 
-// ===== COIN =====
-if (!fs.existsSync("coins.json")) fs.writeFileSync("coins.json", "{}");
-let coins = JSON.parse(fs.readFileSync("coins.json"));
 
-const saveCoins = () => fs.writeFileSync("coins.json", JSON.stringify(coins, null, 2));
-
-function addCoins(userId, amount) {
-    if (!userId) return;
-
-    if (coins[userId] === undefined) {
-        coins[userId] = 1000;
-    }
-
-    coins[userId] += amount;
-
-    if (coins[userId] < 0) coins[userId] = 0;
-
-    saveCoins();
+function hasEnough(userId, amount) {
+    return getCoins(userId) >= amount;
 }
 
-function getCoins(userId) {
-    if (coins[userId] === undefined) {
-        coins[userId] = 1000;
-        saveCoins();
-    }
-    return coins[userId];
+function getWinChance(userId) {
+    const streak = winStreak.get(userId) || 0;
+
+    if (streak <= 2) return 0.55;   // dễ win đầu game
+    if (streak <= 5) return 0.45;   // bắt đầu giảm nhẹ
+    if (streak <= 8) return 0.30;   // giảm mạnh
+    return 0.15;                    // chống farm win
 }
 
-// Biến lưu trữ cooldown cho lệnh Daily
+function updateStreak(userId, win) {
+    let streak = winStreak.get(userId) || 0;
+
+    if (win) {
+        streak += 1;
+    } else {
+        streak = 0; // thua là reset streak
+    }
+
+    winStreak.set(userId, streak);
+}
+
 const AI_CHANNEL = process.env.AI_CHANNEL;
-process.on("unhandledRejection", console.error);
-process.on("uncaughtException", console.error);
 const {
     Client,
     GatewayIntentBits,
@@ -84,24 +84,55 @@ const {
     ChannelType,
     PermissionsBitField
 } = require("discord.js");
+
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildPresences,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent
     ]
 });
+
+client.on("debug", console.log);
+client.on("warn", console.log);
 client.once("ready", () => {
     console.log("✅ BOT ONLINE:", client.user.tag);
+    setInterval(() => {
+        console.log("⏳ Đang update AOV...");
+        console.log("🤖 BOT TAG:", client.user.tag);
+        console.log("🆔 CLIENT ID:", client.user.id);
+        console.log("⚙️ PROCESS ID:", process.pid);
+        console.log("🌍 ENV:", process.env.NODE_ENV || "unknown");
+        console.log("RUNNING ON:", process.env.HOSTNAME || "local");
+        updateAOVLeaderboard().catch(console.error);
+    }, 10000);
+    setInterval(() => {
+        const guild = client.guilds.cache.get(process.env.GUILD_ID);
+        if (!guild) return;
+        stats.total = guild.memberCount;
+        stats.online = guild.members.cache.filter(m =>
+            m.presence && ["online", "idle", "dnd"].includes(m.presence.status)
+        ).size;
+    }, 10000);
+});
+client.on("shardDisconnect", () => {
+    console.log("❌ BOT DISCONNECTED");
+});
+
+client.on("shardReconnecting", () => {
+    console.log("🔄 BOT RECONNECTING");
+});
+
+client.on("error", (err) => {
+    console.log("🚨 CLIENT ERROR:", err);
 });
 const app = express();
 app.use("/image", express.static("images"));
 app.use(express.json());
 app.use(cors());
 
-/* ================= DATABASE ================= */
+/*DATABASE*/
+if (!fs.existsSync("coins.json")) fs.writeFileSync("coins.json", "{}");
 if (!fs.existsSync("blacklist.json")) fs.writeFileSync("blacklist.json", "[]");
 if (!fs.existsSync("top.json")) fs.writeFileSync("top.json", "{}");
 if (!fs.existsSync("register.json")) fs.writeFileSync("register.json", "[]");
@@ -109,6 +140,7 @@ if (!fs.existsSync("staff.json")) fs.writeFileSync("staff.json", "[]");
 if (!fs.existsSync("mainers.json")) fs.writeFileSync("mainers.json", "[]");
 if (!fs.existsSync("strike.json")) fs.writeFileSync("strike.json", "[]");
 
+let coins = JSON.parse(fs.readFileSync("coins.json", "utf8"));
 let blacklist = JSON.parse(fs.readFileSync("blacklist.json"));
 let top = JSON.parse(fs.readFileSync("top.json"));
 let register = JSON.parse(fs.readFileSync("register.json"));
@@ -118,6 +150,8 @@ let strikes = JSON.parse(fs.readFileSync("strike.json"));
 
 for (let i = 1; i <= 20; i++) { if (!top[i]) top[i] = null; }
 
+
+const saveCoins = () => fs.writeFileSync("coins.json", JSON.stringify(coins, null, 2));
 const saveBlacklist = () => fs.writeFileSync("blacklist.json", JSON.stringify(blacklist, null, 2));
 const saveTop = () => fs.writeFileSync("top.json", JSON.stringify(top, null, 2));
 const saveStaff = () => fs.writeFileSync("staff.json", JSON.stringify(staff, null, 2));
@@ -139,8 +173,8 @@ const ROLE_MAP = {
     "Training host": process.env.ROLE_TRAIN
 };
 const dailyCooldown = new Map();
-const ticketCooldown = new Map(); // map userId → lastClickTimestamp
-const TICKET_COOLDOWN = 5000; // 5 giây
+const ticketCooldown = new Map(); 
+const TICKET_COOLDOWN = 5000; 
 const cooldown = new Map();
 const LOG_CHANNEL = process.env.LOG_CHANNEL;
 const AOV_CHANNEL = process.env.AOV_CHANNEL;
@@ -167,10 +201,10 @@ async function sendStrikeLog(client, embed) {
     const channel = await client.channels.fetch(process.env.STRIKE_CHANNEL).catch(() => null);
     if (!channel) return console.log("❌ Không tìm thấy strike channel");
 
-    channel.send({ embeds: [embed] });
+    await channel.send({ embeds: [embed] }).catch(console.error);
 }
 
-/* ================= DISCORD BOT ================= */
+/*DISCORD BOT*/
 
 const TOP_CHANNEL = process.env.TOP_CHANNEL;
 const TOP_MESSAGE = process.env.TOP_MESSAGE;
@@ -178,29 +212,7 @@ let lastTopData = "";
 let stats = { total: 0, online: 0 };
 const selected = new Map();
 
-client.once("ready", () => {
-    console.log(`✅ DISCORD: Bot đã kết nối thành công với tên ${client.user.tag}`);
-    setInterval(() => {
-    console.log("⏳ Đang update AOV...");
-    console.log("🔥 BOT STARTED");
-    console.log("🤖 BOT TAG:", client.user.tag);
-    console.log("🆔 CLIENT ID:", client.user.id);
-    console.log("⚙️ PROCESS ID:", process.pid);
-    console.log("🌍 ENV:", process.env.NODE_ENV || "unknown");
-    console.log("RUNNING ON:", process.env.HOSTNAME || "local");
-    updateAOVLeaderboard().catch(console.error);
-}, 10000);
-    setInterval(() => {
-        const guild = client.guilds.cache.get(process.env.GUILD_ID);
-        if (!guild) return;
-        stats.total = guild.memberCount;
-        stats.online = guild.members.cache.filter(m =>
-            m.presence && ["online", "idle", "dnd"].includes(m.presence.status)
-        ).size;
-    }, 10000);
-});
-
-let aovMessageId = null; // lưu tạm (có thể lưu file nếu muốn)
+let aovMessageId = null;
 
 async function updateAOVLeaderboard() {
     try {
@@ -213,12 +225,10 @@ async function updateAOVLeaderboard() {
 
         let message = null;
 
-        // 🔥 nếu có ID → fetch
         if (aovMessageId) {
             message = await channel.messages.fetch(aovMessageId).catch(() => null);
         }
 
-        // 🔥 LẤY DATA API
         let apiTop = {};
         try {
             const res = await axios.get("https://senselessfishclanontop.onrender.com/top");
@@ -228,7 +238,6 @@ async function updateAOVLeaderboard() {
             return;
         }
 
-        // 🔥 BUILD BXH
         let text = "";
         for (let i = 1; i <= 20; i++) {
             const member = apiTop[i] || {};
@@ -248,17 +257,17 @@ async function updateAOVLeaderboard() {
             .setDescription(text || "Chưa có dữ liệu")
             .setTimestamp();
 
-        // ✅ nếu đã có message → EDIT
         if (message && typeof message.edit === "function") {
             await message.edit({ embeds: [embed] });
+            return true;
         } else {
-            // ✅ nếu chưa có → TẠO MỚI
+
             const sent = await channel.send({ embeds: [embed] });
             aovMessageId = sent.id;
 
             console.log("📌 Đã tạo BXH mới, ID:", aovMessageId);
+            return aovMessageId;
         }
-return false;
     } catch (err) {
         console.error("Lỗi cập nhật AOV:", err);
     }
@@ -336,11 +345,8 @@ function buildRuleEmbeds() {
 const gradientColors = ["#FFFFFF", "#D1E1EC", "#A2C2D9", "#74A4C5", "#4585B1", "#0B3C5D", "#07263b"]; // Từ trắng đến xanh đậm
     const webLink = "https://senselessfishclan.pages.dev"; 
     
-    // Sử dụng Emoji Cá gốc của server
     const fish = "<:slf_Minecraft_Fish7:1482335219099893831>";
 
-    // Mẹo sử dụng tổ hợp khoảng trắng Unicode để ép dải trang trí ra giữa
-    // Bạn có thể thêm/bớt ký tự " " bên dưới để tinh chỉnh nếu thấy lệch
     const centerShift = "                "; 
 
     const header = `${centerShift}${fish}***◞☼✦—SENSELESSFISH RULES—✦☼◟***${fish}\n\n`;
@@ -357,7 +363,7 @@ return rules.map((r, i) => {
     return new EmbedBuilder()
         .setColor(gradientColors[i])
         .setDescription(description)
-        .setImage("https://i.postimg.cc/x8HsNw4q/fixedbulletlines.gif") // ✅ đặt ở đây
+        .setImage("https://i.postimg.cc/x8HsNw4q/fixedbulletlines.gif")
         .setFooter({ text: `Rule ${i + 1} / 7 • SenselessFish` });
 });
 }
@@ -368,12 +374,11 @@ client.on("messageCreate", async (message) => {
 
     if (selected.has(message.channel.id)) {
         const ticketOwner = selected.get(message.channel.id).userId;
-        if (message.author.id !== ticketOwner) return; // chỉ phản hồi người tạo ticket
+        if (message.author.id !== ticketOwner) return;
 
         try {
             await message.channel.sendTyping();
 
-// Tìm đoạn code gửi prompt cho AI và sửa thành:
 const prompt = `YÊU CẦU BẮT BUỘC: Trả lời bằng tiếng Việt 100%. 
 Nội dung người dùng: ${message.content}`;
 
@@ -384,7 +389,6 @@ const result = await aiModel.generateContent(prompt);
                 return message.reply("Gemma 4 không phản hồi, thử lại nhé!");
             }
 
-            // Nếu quá dài → chia chunk
             if (text.length > 2000) {
                 const chunks = text.match(/[\s\S]{1,2000}/g);
                 for (const chunk of chunks) {
@@ -398,9 +402,10 @@ const result = await aiModel.generateContent(prompt);
             console.error("❌ LỖI AI:", err);
             return message.reply("Hệ thống AI trục trặc, thử lại sau!");
         }
+        return; // Đã xử lý trong ticket channel, không fall-through
     }
     
-if (message.content === "!panel") {
+    if (content === "!panel") {
     if (!hasPermission(message.member)) return;
     const embed = new EmbedBuilder()
         .setTitle("🎫 AI SUPPORT PANEL")
@@ -418,10 +423,10 @@ if (message.content === "!panel") {
         embeds: [embed],
         components: [row]
     });
+    await message.delete().catch(() => {});
 }
-    // ================= RULE =================
+    //RULE
     if (content.startsWith("rule")) {
-        // SỬA TẠI ĐÂY: Thêm process.env.
         if (message.channel.id !== process.env.RULE_CHANNEL) return;
 
         if (!hasPermission(message.member)) {
@@ -441,7 +446,7 @@ TẠI SENSELESSFISH**
 `);
 
                 await message.delete().catch(() => {});
-                return; // SỬA TẠI ĐÂY: Thêm return để kết thúc lệnh
+                return;
 
             } catch (err) {
                 console.error(err);
@@ -450,13 +455,12 @@ TẠI SENSELESSFISH**
         }
     }
 
-    // ================= AOV COMMAND =================
-    // SỬA TẠI ĐÂY: Thêm process.env.
+    //AOV COMMAND
     if (message.channel.id === process.env.AOV_CHANNEL) {
         if (!hasPermission(message.member)) return;
 
         if (content === "aov" || content === "aov list") {
-            // Gọi hàm update
+
             const result = await updateAOVLeaderboard();
 
             if (result === true) {
@@ -466,11 +470,11 @@ TẠI SENSELESSFISH**
             }
             
             await message.delete().catch(() => {});
-            return true;
+            return;
         }
     }
 if (message.channel.id === process.env.AI_CHANNEL) {
-        // Kiểm tra Cooldown
+
         const now = Date.now();
         const lastUsage = cooldown.get(message.author.id) || 0;
 if (now - lastUsage < 5000) {
@@ -480,11 +484,10 @@ if (now - lastUsage < 5000) {
 
         try {
             await message.channel.sendTyping();
-// Thêm yêu cầu tiếng Việt vào cuối mỗi tin nhắn người dùng gửi lên
+
 const promptWithLanguageLock = `${message.content} (Lưu ý: Luôn trả lời bằng tiếng Việt)`;
 const result = await aiModel.generateContent(promptWithLanguageLock);
-            const response = await result.response;
-            const text = response.text();
+            const text = result.response.text();
 
             if (!text || text.trim().length === 0) {
                 return message.reply("Gemma 4 không phản hồi, thử lại nhé!");
@@ -513,11 +516,43 @@ console.log("📩 INTERACTION:", interaction.commandName || interaction.customId
 console.log("👤 USER:", interaction.user.tag);
 console.log("📍 GUILD:", interaction.guildId);
 
-    // ===== SLASH COMMANDS =====
+    //SLASH COMMANDS
     if (interaction.isChatInputCommand()) {
         const { commandName, options } = interaction;
+
+if (commandName === 'tungdongxu') {
+        await interaction.deferReply();
+        const money = options.getInteger('money');
+        const userId = interaction.user.id;
+
+        // 1. Kiểm tra tiền hợp lệ
+        if (!money || money <= 0) {
+            return interaction.editReply("❌ Số tiền cược không hợp lệ!");
+        }
+
+        // 2. Kiểm tra ví tiền đồng bộ (Giống Vault)
+        const balance = getCoins(userId);
+        if (balance < money) {
+            return interaction.editReply(`❌ Bạn không đủ coin! Số dư hiện tại: **${balance.toLocaleString()} coin**`);
+        }
+        addCoins(userId, -money);
+
+
+        const embed = new EmbedBuilder()
+            .setTitle("🪙 TUNG ĐỒNG XU")
+            .setDescription(`Bạn đã cược **${money.toLocaleString()} coin**.\nChọn mặt muốn đặt:`)
+            .setColor("Gold")
+            .setFooter({ text: "Bạn có 30 giây để chọn!" });
+
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId(`tdx_sap_${money}`).setLabel("SẤP").setStyle(ButtonStyle.Primary),
+            new ButtonBuilder().setCustomId(`tdx_ngua_${money}`).setLabel("NGỬA").setStyle(ButtonStyle.Success)
+        );
+
+        return interaction.editReply({ embeds: [embed], components: [row] });
+    }
     
-        /* ===== BLACKLIST ===== */
+        /*BLACKLIST*/
         if (commandName === "blacklist") {
             await interaction.deferReply({ ephemeral: true });
 
@@ -589,12 +624,7 @@ console.log("📍 GUILD:", interaction.guildId);
             }
 
             blacklist = blacklist.filter(b => b.id !== user.id);
-
-            try {
-                await fs.promises.writeFile("./blacklist.json", JSON.stringify(blacklist, null, 2));
-            } catch(err) {
-                console.error("Lỗi ghi blacklist.json:", err.message);
-            }
+            saveBlacklist();
 
             try {
                 await interaction.guild.members.unban(user.id);
@@ -704,7 +734,6 @@ console.log("📍 GUILD:", interaction.guildId);
 
             const removed = user.strikes.splice(strikeIndex, 1)[0];
 
-            // Xóa user khỏi mảng nếu hết strike
             if (user.strikes.length === 0) {
                 strikes = strikes.filter(x => x.id !== target.id);
             }
@@ -731,23 +760,37 @@ console.log("📍 GUILD:", interaction.guildId);
         }
 // --- LỆNH DAILY ---
 if (commandName === 'daily') {
-if (!interaction.deferred && !interaction.replied) {
-    await interaction.deferReply();
-}
+    try {
+        if (!interaction.deferred && !interaction.replied) {
+            await interaction.deferReply();
+        }
 
-    const userId = interaction.user.id; // ❗ BẮT BUỘC
+        const userId = interaction.user.id;
 
-    const lastDaily = dailyCooldown.get(userId) || 0;
-    const now = Date.now();
+        const lastDaily = dailyCooldown.get(userId) || 0;
+        const now = Date.now();
 
-    if (now - lastDaily < 86400000) {
-        return interaction.editReply("⏳ Bạn đã nhận quà hôm nay rồi!");
+        // cooldown 24h
+        if (now - lastDaily < 86400000) {
+            return interaction.editReply("⏳ Bạn đã nhận quà hôm nay rồi!");
+        }
+
+        // 🎲 random 500 - 2000
+        const reward = Math.floor(Math.random() * 1501) + 500;
+
+        console.log("DAILY REWARD DEBUG:", reward);
+
+        addCoins(userId, reward);
+        dailyCooldown.set(userId, now);
+
+        return interaction.editReply(
+            `🎁 Bạn nhận được **${reward.toLocaleString()} coin**!`
+        );
+
+    } catch (err) {
+        console.error("DAILY ERROR:", err);
+        return interaction.editReply("❌ Có lỗi xảy ra khi nhận daily!");
     }
-
-    addCoins(userId, 500);
-    dailyCooldown.set(userId, now);
-
-    return interaction.editReply("🎁 Bạn nhận được **500 coin**!");
 }
     // --- LỆNH TOPCOIN ---
 if (commandName === 'topcoin') {
@@ -755,7 +798,9 @@ if (!interaction.deferred && !interaction.replied) {
     await interaction.deferReply();
 }
 
-    const sorted = Object.entries(coins || {})
+const data = JSON.parse(fs.readFileSync("coins.json", "utf8") || "{}");
+
+const sorted = Object.entries(data)
         .sort(([, a], [, b]) => b - a)
         .slice(0, 10);
 
@@ -781,17 +826,17 @@ if (!interaction.deferred && !interaction.replied) {
     const target = options.getUser('user');
     const amount = options.getInteger('amount');
 
-    if (!target || amount <= 0) {
+    if (!target || !amount || amount <= 0) {
         return interaction.editReply("❌ Dữ liệu không hợp lệ!");
     }
 
     if (target.id === userId) {
         return interaction.editReply("❌ Không thể chuyển cho chính mình!");
     }
-    
-if (!amount || amount <= 0) {
-    return interaction.editReply("❌ Số tiền không hợp lệ!");
-}
+
+    if (getCoins(userId) < amount) {
+        return interaction.editReply("❌ Bạn không đủ coin!");
+    }
 
     addCoins(userId, -amount);
     addCoins(target.id, amount);
@@ -1126,6 +1171,28 @@ if (!amount || amount <= 0) {
             return interaction.reply(`💰 Bạn có: **${getCoins(userId)} coin**`);
         }
 
+else if (commandName === "baucua") {
+    await interaction.deferReply();
+
+    const embed = new EmbedBuilder()
+        .setTitle("🎲 BẦU CUA")
+        .setDescription("👉 Chọn linh vật bạn muốn cược")
+        .setColor("#00eaff");
+
+    const row1 = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId("bc_bau").setLabel("🍐 BẦU").setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId("bc_cua").setLabel("🦀 CUA").setStyle(ButtonStyle.Danger),
+        new ButtonBuilder().setCustomId("bc_tom").setLabel("🦐 TÔM").setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId("bc_ca").setLabel("🐟 CÁ").setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId("bc_ga").setLabel("🐔 GÀ").setStyle(ButtonStyle.Danger)
+    );
+    const row2 = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId("bc_nai").setLabel("🦌 NAI").setStyle(ButtonStyle.Success)
+    );
+
+    return interaction.editReply({ embeds: [embed], components: [row1, row2] });
+}
+
         /* ===== TÀI XỈU ===== */
         else if (commandName === "taixiu") {
             const embed = new EmbedBuilder()
@@ -1147,12 +1214,95 @@ if (!amount || amount <= 0) {
             return interaction.reply({ embeds: [embed], components: [row] });
         }
 
-    } // end isChatInputCommand
+    }
 
     // ===== BUTTON INTERACTIONS =====
     else if (interaction.isButton()) {
 
-        // 🎲 TÀI XỈU: mở modal nhập tiền
+if (interaction.customId.startsWith("tdx_")) {
+        const parts = interaction.customId.split("_");
+        const userChoice = parts[1]; // "sap" hoặc "ngua"
+        const betAmount = parseInt(parts[2]);
+        const userId = interaction.user.id;
+
+        // Tỉ lệ 50/50
+        const result = Math.random() < 0.5 ? "sap" : "ngua";
+        const resultText = result === "sap" ? "SẤP" : "NGỬA";
+
+        if (userChoice === result) {
+            const winMoney = Math.floor(betAmount * 2);
+            addCoins(userId, winMoney); 
+            
+            await interaction.update({ 
+                content: `✅ Kết quả là **${resultText}**. Bạn thắng **${winMoney.toLocaleString()} coin**!`, 
+                embeds: [], 
+                components: [] 
+            });
+        } else {
+            // Không cần trừ tiền nữa vì đã trừ lúc dùng lệnh rồi
+            await interaction.update({ 
+                content: `❌ Kết quả là **${resultText}**. Bạn đã thua mất **${betAmount.toLocaleString()} coin**!`, 
+                embeds: [], 
+                components: [] 
+            });
+        }
+        return; // Quan trọng để ngắt thực thi
+    }
+
+if (interaction.customId.startsWith("bc_")) {
+    const choice = interaction.customId.split("_")[1];
+
+    const modal = new ModalBuilder()
+        .setCustomId(`bc_bet_${choice}`)
+        .setTitle("Nhập tiền cược");
+
+    const input = new TextInputBuilder()
+        .setCustomId("money")
+        .setLabel("Số coin cược")
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
+
+    modal.addComponents(new ActionRowBuilder().addComponents(input));
+    return interaction.showModal(modal);
+}
+
+ if (interaction.customId.startsWith("cf_")) {
+    const [_, betSide, betMoney] = interaction.customId.split("_");
+    const money = parseInt(betMoney);
+    const userId = interaction.user.id;
+
+    // Chỉ người bấm lệnh mới được chọn - dùng optional chaining đề phòng bot restart
+    const originalUserId = interaction.message.interaction?.user?.id ?? interaction.message.mentions?.users?.first()?.id;
+    if (originalUserId && originalUserId !== userId) {
+        return interaction.reply({ content: "❌ Nút này không phải của bạn!", ephemeral: true });
+    }
+
+    await interaction.deferUpdate();
+
+    // Hiệu ứng Animation 3 bước
+    const frames = ["⌛ Đang tung...", "🪙 Đang xoay...", "✨ Đang hạ xuống..."];
+    for (const frame of frames) {
+        await interaction.editReply({ content: `**${frame}**`, embeds: [], components: [] });
+        await new Promise(r => setTimeout(r, 800));
+    }
+
+    const result = Math.random() < 0.5 ? "ngua" : "up";
+    const win = result === betSide;
+    const resultText = result === "ngua" ? "🔥 NGỬA" : "❄️ ÚP";
+
+    if (win) {
+        const winAmount = Math.floor(money * 1.95); // Trả lại vốn + 95% lời (5% thuế)
+        addCoins(userId, winAmount);
+        await interaction.editReply({ 
+            content: `🎉 Kết quả là: **${resultText}**. Bạn thắng và nhận được **${winAmount}** coin!` 
+        });
+    } else {
+        await interaction.editReply({ 
+            content: `💀 Kết quả là: **${resultText}**. Bạn đã mất **${money}** coin. Chúc may mắn lần sau!` 
+        });
+    }
+}
+
         if (interaction.customId === "tai" || interaction.customId === "xiu") {
             const modal = new ModalBuilder()
                 .setCustomId(`bet_${interaction.customId}`)
@@ -1168,13 +1318,23 @@ if (!amount || amount <= 0) {
             return interaction.showModal(modal);
         }
 
-        // 🔒 ĐÓNG TICKET
         if (interaction.customId === "close_ticket") {
-            return interaction.channel.delete().catch(() => {});
+            if (!interaction.channel.name.startsWith("ai-ticket-")) {
+                return interaction.reply({ content: "❌ Không thể đóng kênh này!", ephemeral: true });
+            }
+            await interaction.reply({ content: "🔒 Đang đóng ticket..." });
+            setTimeout(() => interaction.channel.delete().catch(() => {}), 3000);
+            return;
         }
 
-        // 🎫 TẠO TICKET
         if (interaction.customId === "create_ai_ticket") {
+            const now = Date.now();
+            const lastTicket = ticketCooldown.get(interaction.user.id) || 0;
+            if (now - lastTicket < TICKET_COOLDOWN) {
+                return interaction.reply({ content: "⏳ Vui lòng chờ trước khi tạo ticket mới!", ephemeral: true });
+            }
+            ticketCooldown.set(interaction.user.id, now);
+
             await interaction.deferReply({ ephemeral: true });
 
             try {
@@ -1215,12 +1375,10 @@ if (!amount || amount <= 0) {
     // ===== SELECT MENU INTERACTIONS =====
     else if (interaction.isStringSelectMenu()) {
 
-        // Select menu xem thông tin trận đấu
         if (interaction.customId === "match_info") {
             return interaction.reply({ content: `📌 Thông tin: ${interaction.values[0]}`, ephemeral: true });
         }
 
-        // Select menu đăng ký stage → mở modal nhập score
         if (interaction.customId === "select_stage") {
             selected.set(interaction.user.id, interaction.values[0]);
 
@@ -1244,7 +1402,6 @@ if (!amount || amount <= 0) {
     // ===== MODAL SUBMIT INTERACTIONS =====
     else if (interaction.isModalSubmit()) {
 
-        // Modal nhập score đăng ký
         if (interaction.customId === "submit_score") {
             const score = interaction.fields.getTextInputValue("score");
             const stage = selected.get(interaction.user.id) || "Unknown";
@@ -1254,98 +1411,155 @@ if (!amount || amount <= 0) {
                 ephemeral: true
             });
         }
+if (interaction.customId.startsWith("bc_bet_")) {
+    try {
+        const userId = interaction.user.id;
+        const choice = interaction.customId.split("_")[2];
+        const money = parseInt(interaction.fields.getTextInputValue("money"));
 
-        // Modal tài xỉu
-// Modal tài xỉu nâng cấp full tính năng
-if (interaction.customId.startsWith("bet_")) {
-    const userId = interaction.user.id;
-    const choice = interaction.customId.split("_")[1]; // "tai" hoặc "xiu"
-    const moneyInput = interaction.fields.getTextInputValue("money");
-    const money = parseInt(moneyInput);
+        // 1. validate
+        if (isNaN(money) || money <= 0) {
+            return interaction.reply({ content: "❌ Số tiền cược không hợp lệ!", ephemeral: true });
+        }
 
-    // 1. Kiểm tra tính hợp lệ của tiền cược
-    if (isNaN(money) || money <= 0) {
-        return interaction.editReply("❌ Số tiền cược không hợp lệ!");
-    }
+        if (getCoins(userId) < money) {
+            return interaction.reply({ content: "❌ Không đủ coin!", ephemeral: true });
+        }
 
-    // Kiểm tra số dư hiện tại
-    if (getCoins(userId) < money) {
-        return interaction.reply({ content: `❌ Bạn không đủ coin! (Hiện có: ${getCoins(userId)})`, ephemeral: true });
-    }
+        // 2. TRỪ TIỀN
+        addCoins(userId, -money);
 
-    // Phản hồi chờ để tránh lỗi "Application did not respond"
-    await interaction.deferReply();
+        // 3. DEFER NGAY LẬP TỨC (quan trọng nhất)
+        await interaction.deferReply();
 
-    // 2. Tạm trừ tiền cược (Bảo mật: Tránh bug tiền khi đang lắc)
-const oldBalance = getCoins(userId);
+        await interaction.editReply("🎲 Đang lắc bát...");
 
-if (oldBalance < money) {
-    return interaction.editReply("❌ Không đủ coin!");
-}
-// khóa tiền trước
-addCoins(userId, -money);
-    const msg = await interaction.editReply({ content: "🎲 Đang lắc..." });
+        for (let i = 0; i < 2; i++) {
+            const temp = Array.from({ length: 3 }, () => {
+                const animals = ["bau","cua","tom","ca","ga","nai"];
+                const emojiMap = {
+                    bau:"🍐", cua:"🦀", tom:"🦐",
+                    ca:"🐟", ga:"🐔", nai:"🦌"
+                };
+                return emojiMap[animals[Math.floor(Math.random() * animals.length)]];
+            });
 
-    // Hiệu ứng lắc chuyên nghiệp (4 lần)
-    for (let i = 0; i < 4; i++) {
-        const temp1 = Math.floor(Math.random() * 6) + 1;
-        const temp2 = Math.floor(Math.random() * 6) + 1;
-        const temp3 = Math.floor(Math.random() * 6) + 1;
-        await msg.edit({
-            content: `🎲# **ĐANG LẮC...**\n\n   ┃ ${temp1} ┃ ${temp2} ┃ ${temp3} ┃`
+            await interaction.editReply(`🎰 ĐANG LẮC...\n\n${temp.join(" | ")}`);
+            await new Promise(r => setTimeout(r, 800));
+        }
+
+        const animals = ["bau","cua","tom","ca","ga","nai"];
+        const r = [
+            animals[Math.floor(Math.random() * animals.length)],
+            animals[Math.floor(Math.random() * animals.length)],
+            animals[Math.floor(Math.random() * animals.length)]
+        ];
+
+        const count = r.filter(x => x === choice).length;
+
+        const emojiMap = {
+            bau:"🍐", cua:"🦀", tom:"🦐",
+            ca:"🐟", ga:"🐔", nai:"🦌"
+        };
+
+        let winAmount = 0;
+
+        if (count === 1) winAmount = money * 2;
+        if (count === 2) winAmount = money * 3;
+        if (count === 3) winAmount = money * 5;
+
+        if (count > 0) addCoins(userId, winAmount);
+
+        return interaction.editReply({
+            embeds: [
+                new EmbedBuilder()
+                    .setTitle("🎲 BẦU CUA")
+                    .setColor(count > 0 ? "Green" : "Red")
+                    .setDescription(
+                        `🎲 ${r.map(x => emojiMap[x]).join(" | ")}\n\n` +
+                        (count > 0
+                            ? `🎉 THẮNG +${winAmount}`
+                            : `💀 THUA -${money}`)
+                    )
+            ]
         });
-        await new Promise(r => setTimeout(r, 800));
+
+    } catch (err) {
+        console.error("BẦU CUA ERROR:", err);
+
+        if (interaction.deferred || interaction.replied) {
+            return interaction.editReply("❌ Lỗi bầu cua!");
+        } else {
+            return interaction.reply({ content: "❌ Lỗi bầu cua!", ephemeral: true });
+        }
     }
+}
+if (interaction.customId.startsWith("bet_")) {
+        const userId = interaction.user.id;
+        const choice = interaction.customId.split("_")[1];
+        const money = parseInt(interaction.fields.getTextInputValue("money"));
 
-    // 3. Tính toán kết quả thật
-    const d1 = Math.floor(Math.random() * 6) + 1;
-    const d2 = Math.floor(Math.random() * 6) + 1;
-    const d3 = Math.floor(Math.random() * 6) + 1;
-    const total = d1 + d2 + d3;
+        // 1. Kiểm tra đầu vào
+        if (isNaN(money) || money <= 0) {
+            return interaction.reply({ content: "❌ Tiền cược không hợp lệ!", ephemeral: true });
+        }
 
-    // Cơ chế Bão: 3 viên giống nhau nhà cái ăn
-    const isBao = (d1 === d2 && d2 === d3);
-    const result = total >= 11 ? "tai" : "xiu";
-    const win = !isBao && result === choice;
+        // 2. Kiểm tra số dư (Đồng bộ ví)
+        const currentBalance = getCoins(userId);
+        if (currentBalance < money) {
+            return interaction.reply({ 
+                content: `❌ Không đủ tiền! (Bạn có: ${currentBalance.toLocaleString()} coin)`, 
+                ephemeral: true 
+            });
+        }
 
-    let resultMessage = "";
-if (win) {
-    const payout = Math.floor(money * 2 * 0.95); // trừ 5%
+        // 3. Xử lý đặt cược
+        await interaction.deferReply();
 
-    addCoins(userId, payout);
+        await interaction.editReply("🎲 Đang lắc xúc xắc...");
+        
+        setTimeout(async () => {
+            try {
+                const dice = [
+                    Math.floor(Math.random() * 6) + 1,
+                    Math.floor(Math.random() * 6) + 1,
+                    Math.floor(Math.random() * 6) + 1
+                ];
+                const total = dice.reduce((a, b) => a + b, 0);
+const chance = getWinChance(userId);
 
-    resultMessage = `🎉 **THẮNG!** Bạn nhận được **${payout}** coin (đã trừ 5% thuế)`;
+// random theo tỷ lệ thắng
+const win = Math.random() < chance;
+
+updateStreak(userId, win);
+
+// đảm bảo kết quả theo win/lose
+const result = win ? choice : (choice === "tai" ? "xiu" : "tai");
+                
+                let resultEmbed = new EmbedBuilder()
+                    .setTitle("🎲 KẾT QUẢ TÀI XỈU")
+                    .setDescription(`Kết quả: **${dice.join(" - ")}** (Tổng: **${total}** => **${result.toUpperCase()}**)`)
+                    .setTimestamp();
+if (choice === result) {
+    const winMoney = Math.floor(money * 1.95); // ✅ sửa ở đây
+    addCoins(userId, winMoney);
+    resultEmbed.setColor("Green")
+        .addFields({ name: "Kết quả", value: `✅ Thắng! Nhận được **+${winMoney.toLocaleString()} coin**` });
 } else {
-    resultMessage = isBao
-        ? `💀 **BÃO!** (Ba viên ${d1}) - Nhà cái ăn sạch!`
-        : `💀 **THUA NGU!** Chúc bạn may mắn lần sau.`;
+    addCoins(userId, -money);
+    resultEmbed.setColor("Red")
+        .addFields({ name: "Kết quả", value: `❌ Thua! Bạn đã mất **-${money.toLocaleString()} coin**` });
 }
 
-    // 4. Hiển thị Embed kết quả chi tiết
-    const embed = new EmbedBuilder()
-        .setTitle("🎲# KẾT QUẢ TÀI XỈU")
-        .setColor(win ? "#00ff00" : "#ff0000")
-        .setThumbnail(interaction.user.displayAvatarURL())
-        .setDescription(
-            `👤 **Người chơi:** <@${userId}>\n` +
-            `💰 **Mức cược:** ${money} coin\n` +
-            `🔘 **Đặt cửa:** ${choice.toUpperCase()}\n\n` +
-            `━━━━━━━━━━━━━━━━━━\n` +
-            `🎲 **Kết quả:** ${d1} - ${d2} - ${d3} (Tổng: **${total}**)\n` +
-            `🎯 **Cửa thắng:** ${isBao ? "BÃO" : result.toUpperCase()}\n` +
-            `━━━━━━━━━━━━━━━━━━\n\n` +
-            `${resultMessage}\n` +
-            `💳 **Số dư mới:** ${getCoins(userId)} coin`
-        )
-        .setTimestamp();
-
-    // Ghi log vào console (hoặc gửi vào channel log nếu bạn có LOG_CHANNEL)
-    console.log(`[TÀI XỈU] ${interaction.user.tag} đặt ${money} vào ${choice} - Kết quả: ${total} (${win ? "THẮNG" : "THUA"})`);
-
-    await msg.edit({ content: "", embeds: [embed] });
-    return;
-}
+                await interaction.editReply({ content: null, embeds: [resultEmbed] });
+            } catch (innerErr) {
+                console.error("Lỗi khi trả kết quả Tài Xỉu:", innerErr);
+            }
+        }, 3000);
+        
+        return; // Kết thúc xử lý tại đây
     }
+}
     } catch (err) {
         console.error("LỖI HỆ THỐNG INTERACTION:", err);
 
@@ -1358,11 +1572,10 @@ if (win) {
     }
 });
 
-/* ================ STAFF + ROLE COLOR ================= */
 app.get("/staff-realtime", async (req, res) => {
     try {
         const guild = await client.guilds.fetch(process.env.GUILD_ID);
-        await guild.members.fetch(); // fetch tất cả member
+        await guild.members.fetch();
 
         const roleIds = Object.values(ROLE_MAP);
 
@@ -1370,8 +1583,8 @@ app.get("/staff-realtime", async (req, res) => {
             .filter(member => member.roles.cache.some(role => roleIds.includes(role.id)))
             .map(member => {
                 const memberRole = Object.keys(ROLE_MAP).find(r => member.roles.cache.has(ROLE_MAP[r]));
-                const roleObj = guild.roles.cache.get(ROLE_MAP[memberRole]); // lấy role Discord object
-                const color = roleObj ? "#" + roleObj.color.toString(16).padStart(6,"0") : "#55ff8f"; // fallback màu
+                const roleObj = guild.roles.cache.get(ROLE_MAP[memberRole]);
+                const color = roleObj ? "#" + roleObj.color.toString(16).padStart(6,"0") : "#55ff8f";
 
                 return {
                     id: member.user.id,
@@ -1462,7 +1675,7 @@ app.get("/top", (req, res) => {
 });
 app.get("/blacklist", (req, res) => res.json(blacklist));
 app.get("/staff", (req, res) => {
-    const roleOrder = ["Founder", "Leader", "Admin", "Mod", "Referee"]; // Rút gọn ví dụ
+    const roleOrder = ["Founder", "Leader", "Admin", "Mod", "Referee"];
     const sorted = [...staff].sort((a, b) => roleOrder.indexOf(a.role) - roleOrder.indexOf(b.role));
     res.json(sorted);
 });
@@ -1478,9 +1691,8 @@ app.listen(PORT, "0.0.0.0", () => {
 });
 console.log("TOKEN LENGTH:", process.env.TOKEN?.length);
 console.log("TOKEN START:", process.env.TOKEN?.slice(0, 10));
-console.log("TOKEN OK?", !!process.env.TOKEN);
-console.log("TOKEN LENGTH:", process.env.TOKEN?.length);
-console.log("ENV:", process.env.TOKEN ? "OK" : "MISSING");
-client.login(process.env.TOKEN?.trim())
-  .then(() => console.log("LOGIN OK"))
-  .catch(err => console.log("LOGIN FAIL", err));
+console.log("TOKEN OK:", process.env.TOKEN ? "CÓ" : "KHÔNG");
+console.log("👉 ĐANG LOGIN DISCORD...");
+client.login(process.env.TOKEN)
+    .then(() => console.log("🔑 LOGIN SUCCESS"))
+    .catch(err => console.log("❌ LOGIN FAIL:", err));
