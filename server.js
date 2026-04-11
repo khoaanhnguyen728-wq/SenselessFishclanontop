@@ -156,7 +156,7 @@ let stats = { total: 0, online: 0 };
 const selected = new Map();
 
 client.once("ready", () => {
-    console.log("Bot online:", client.user.tag);
+    console.log("✅ BOT LOGIN THÀNH CÔNG:", client.user.tag);
     setInterval(() => {
     console.log("⏳ Đang update AOV...");
     updateAOVLeaderboard().catch(console.error);
@@ -1340,4 +1340,6 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
     console.log("Server chạy port " + PORT);
 });
+console.log("TOKEN LENGTH:", process.env.TOKEN?.length);
+console.log("TOKEN START:", process.env.TOKEN?.slice(0, 10));
 client.login(process.env.TOKEN);
