@@ -68,7 +68,6 @@ function getCoins(userId) {
 
 // Biến lưu trữ cooldown cho lệnh Daily
 const AI_CHANNEL = process.env.AI_CHANNEL;
-console.log("ENV TOKEN:", process.env.TOKEN);
 process.on("unhandledRejection", console.error);
 process.on("uncaughtException", console.error);
 const {
@@ -1293,7 +1292,7 @@ addCoins(userId, -money);
         const temp2 = Math.floor(Math.random() * 6) + 1;
         const temp3 = Math.floor(Math.random() * 6) + 1;
         await msg.edit({
-            content: `🎲 **ĐANG LẮC...**\n\n   ┃ ${temp1} ┃ ${temp2} ┃ ${temp3} ┃`
+            content: `🎲# **ĐANG LẮC...**\n\n   ┃ ${temp1} ┃ ${temp2} ┃ ${temp3} ┃`
         });
         await new Promise(r => setTimeout(r, 800));
     }
@@ -1319,12 +1318,12 @@ if (win) {
 } else {
     resultMessage = isBao
         ? `💀 **BÃO!** (Ba viên ${d1}) - Nhà cái ăn sạch!`
-        : `💀 **THUA!** Chúc bạn may mắn lần sau.`;
+        : `💀 **THUA NGU!** Chúc bạn may mắn lần sau.`;
 }
 
     // 4. Hiển thị Embed kết quả chi tiết
     const embed = new EmbedBuilder()
-        .setTitle("🎲 KẾT QUẢ TÀI XỈU")
+        .setTitle("🎲# KẾT QUẢ TÀI XỈU")
         .setColor(win ? "#00ff00" : "#ff0000")
         .setThumbnail(interaction.user.displayAvatarURL())
         .setDescription(
