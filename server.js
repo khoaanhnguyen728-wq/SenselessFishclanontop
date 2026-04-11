@@ -1,4 +1,11 @@
 require("dotenv").config();
+process.on("unhandledRejection", err => {
+    console.log("❌ UNHANDLED:", err);
+});
+
+process.on("uncaughtException", err => {
+    console.log("❌ CRASH:", err);
+});
 const express = require("express");
 const fs = require("fs");
 const cors = require("cors");
@@ -30,6 +37,7 @@ const aiModel = genAI.getGenerativeModel({
         maxOutputTokens: 8192, // Lưu ý: Nên để 2048 để tránh Render bị quá tải (Timeout) khi bot viết dài
     }
 });
+
 // ===== COIN =====
 if (!fs.existsSync("coins.json")) fs.writeFileSync("coins.json", "{}");
 let coins = JSON.parse(fs.readFileSync("coins.json"));
@@ -87,7 +95,7 @@ const client = new Client({
     ]
 });
 client.once("ready", () => {
-    console.log("BOT ID:", client.user.id);
+    console.log("✅ BOT ONLINE:", client.user.tag);
 });
 const app = express();
 app.use("/image", express.static("images"));
@@ -1471,4 +1479,9 @@ app.listen(PORT, "0.0.0.0", () => {
 });
 console.log("TOKEN LENGTH:", process.env.TOKEN?.length);
 console.log("TOKEN START:", process.env.TOKEN?.slice(0, 10));
-client.login(process.env.TOKEN);
+console.log("TOKEN OK?", !!process.env.TOKEN);
+console.log("TOKEN LENGTH:", process.env.TOKEN?.length);
+console.log("ENV:", process.env.TOKEN ? "OK" : "MISSING");
+client.login(process.env.TOKEN?.trim())
+  .then(() => console.log("LOGIN OK"))
+  .catch(err => console.log("LOGIN FAIL", err));
