@@ -37,7 +37,8 @@ let coins = JSON.parse(fs.readFileSync("coins.json"));
 const saveCoins = () => fs.writeFileSync("coins.json", JSON.stringify(coins, null, 2));
 
 function getCoins(userId) {
-    if (!coins[userId]) coins[userId] = 1000;
+    // Chỉ thiết lập 1000 nếu user chưa từng có tên trong danh sách (undefined)
+    if (coins[userId] === undefined) coins[userId] = 1000; 
     return coins[userId];
 }
 
@@ -46,20 +47,9 @@ function addCoins(userId, amount) {
     coins[userId] += amount;
     saveCoins();
 }
-// Các hàm quản lý tiền tệ
-function getCoins(userId) {
-    if (!coins[userId]) coins[userId] = 1000; // Vốn khởi nghiệp
-    return coins[userId];
-}
-
-function addCoins(userId, amount) {
-    getCoins(userId);
-    coins[userId] += amount;
-    saveCoins();
-}
+const dailyCooldown = new Map(); // userId → lastDailyTimestamp
 
 // Biến lưu trữ cooldown cho lệnh Daily
-const dailyCooldown = new Map();
 const AI_CHANNEL = process.env.AI_CHANNEL;
 console.log("ENV TOKEN:", process.env.TOKEN);
 process.on("unhandledRejection", console.error);
@@ -502,50 +492,40 @@ client.on("interactionCreate", async interaction => {
         const { commandName, options } = interaction;
     
 // --- TÍNH NĂNG B: BONUS DAILY ---
+// --- LỆNH DAILY (Nhận tiền hàng ngày) ---
 if (commandName === 'daily') {
     const lastDaily = dailyCooldown.get(userId) || 0;
     const now = Date.now();
-    const timeout = 86400000; // 24 giờ tính bằng mili giây
-
-    if (now - lastDaily < timeout) {
-        const timeLeft = timeout - (now - lastDaily);
-        const hours = Math.floor(timeLeft / 3600000);
-        const minutes = Math.floor((timeLeft % 3600000) / 60000);
-        return interaction.editReply(`⏳ Bạn đã nhận quà hôm nay rồi! Quay lại sau **${hours} giờ ${minutes} phút** nữa nhé.`);
+    if (now - lastDaily < 86400000) { // 24 giờ
+        return interaction.editReply("⏳ Bạn đã nhận quà hôm nay rồi, mai quay lại nhé!");
     }
-
-    const gift = 500; // Số tiền tặng
-    addCoins(userId, gift);
+    addCoins(userId, 500); // Tặng 500 coin
     dailyCooldown.set(userId, now);
-    return interaction.editReply(`🎁 Chúc mừng! Bạn vừa nhận được **${gift} coin** quà điểm danh hằng ngày.`);
+    return interaction.editReply("🎁 Bạn đã nhận được **500 coin**!");
 }
 
-// --- TÍNH NĂNG B: BẢNG XẾP HẠNG (TOP COIN) ---
+// --- LỆNH TOPCOIN (Xem đại gia) ---
 if (commandName === 'topcoin') {
     const sorted = Object.entries(coins)
         .sort(([, a], [, b]) => b - a)
-        .slice(0, 10); // Lấy 10 người giàu nhất
-
+        .slice(0, 10);
+    const leaderboard = sorted.map(([id, val], i) => `${i + 1}. <@${id}>: ${val} 🪙`).join("\n");
     const embed = new EmbedBuilder()
-        .setTitle("🏆 BẢNG VÀNG ĐẠI GIA SENSELESS FISH")
-        .setColor("#f1c40f")
-        .setDescription(sorted.map(([id, amount], i) => `${i + 1}. <@${id}>: \`${amount.toLocaleString()}\` 🪙`).join("\n"));
-
+        .setTitle("🏆 BẢNG XẾP HẠNG ĐẠI GIA")
+        .setDescription(leaderboard || "Chưa có dữ liệu")
+        .setColor("#FFD700");
     return interaction.editReply({ embeds: [embed] });
 }
 
-// --- TÍNH NĂNG B: BẮN TIỀN (PAY) ---
+// --- LỆNH PAY (Chuyển tiền) ---
 if (commandName === 'pay') {
     const target = options.getUser('user');
     const amount = options.getInteger('amount');
-
-    if (target.id === userId) return interaction.editReply("❌ Bạn không thể tự chuyển tiền cho chính mình!");
-    if (amount <= 0) return interaction.editReply("❌ Số tiền phải lớn hơn 0!");
-    if (getCoins(userId) < amount) return interaction.editReply("❌ Bạn không đủ tiền để chuyển!");
-
+    if (amount <= 0 || getCoins(userId) < amount) return interaction.editReply("❌ Giao dịch thất bại!");
+    
     addCoins(userId, -amount);
     addCoins(target.id, amount);
-    return interaction.editReply(`✅ Giao dịch thành công! Bạn đã chuyển **${amount} coin** cho <@${target.id}>.`);
+    return interaction.editReply(`✅ Đã chuyển **${amount} coin** cho <@${target.id}>`);
 }
         /* ===== BLACKLIST ===== */
         if (commandName === "blacklist") {
