@@ -1412,63 +1412,73 @@ if (interaction.customId.startsWith("bc_")) {
             });
         }
 if (interaction.customId.startsWith("bc_bet_")) {
+    const userId = interaction.user.id;
+
     try {
-        const userId = interaction.user.id;
         const choice = interaction.customId.split("_")[2];
         const money = parseInt(interaction.fields.getTextInputValue("money"));
 
-        // 1. validate
+        const animals = ["bau", "cua", "tom", "ca", "ga", "nai"];
+        const emojiMap = {
+            bau: "🍐",
+            cua: "🦀",
+            tom: "🦐",
+            ca: "🐟",
+            ga: "🐔",
+            nai: "🦌"
+        };
+
+        // ===== VALIDATE =====
         if (isNaN(money) || money <= 0) {
-            return interaction.reply({ content: "❌ Số tiền cược không hợp lệ!", ephemeral: true });
+            return interaction.reply({
+                content: "❌ Số tiền cược không hợp lệ!",
+                ephemeral: true
+            });
         }
 
-        if (getCoins(userId) < money) {
-            return interaction.reply({ content: "❌ Không đủ coin!", ephemeral: true });
+        const balance = getCoins(userId);
+        if (balance < money) {
+            return interaction.reply({
+                content: `❌ Không đủ coin! (Bạn có: ${balance.toLocaleString()})`,
+                ephemeral: true
+            });
         }
 
-        // 2. TRỪ TIỀN
+        // ===== TRỪ TIỀN TRƯỚC =====
         addCoins(userId, -money);
 
-        // 3. DEFER NGAY LẬP TỨC (quan trọng nhất)
+        // ===== DEFER AN TOÀN =====
         await interaction.deferReply();
 
-        await interaction.editReply("🎲 Đang lắc bát...");
+        await interaction.editReply("🎲 Đang lắc bầu cua...");
 
+        // ===== ANIMATION =====
         for (let i = 0; i < 2; i++) {
-            const temp = Array.from({ length: 3 }, () => {
-                const animals = ["bau","cua","tom","ca","ga","nai"];
-                const emojiMap = {
-                    bau:"🍐", cua:"🦀", tom:"🦐",
-                    ca:"🐟", ga:"🐔", nai:"🦌"
-                };
-                return emojiMap[animals[Math.floor(Math.random() * animals.length)]];
-            });
+            const temp = Array.from({ length: 3 }, () =>
+                emojiMap[animals[Math.floor(Math.random() * animals.length)]]
+            );
 
             await interaction.editReply(`🎰 ĐANG LẮC...\n\n${temp.join(" | ")}`);
             await new Promise(r => setTimeout(r, 800));
         }
 
-        const animals = ["bau","cua","tom","ca","ga","nai"];
-        const r = [
+        // ===== KẾT QUẢ =====
+        const result = [
             animals[Math.floor(Math.random() * animals.length)],
             animals[Math.floor(Math.random() * animals.length)],
             animals[Math.floor(Math.random() * animals.length)]
         ];
 
-        const count = r.filter(x => x === choice).length;
-
-        const emojiMap = {
-            bau:"🍐", cua:"🦀", tom:"🦐",
-            ca:"🐟", ga:"🐔", nai:"🦌"
-        };
+        const count = result.filter(x => x === choice).length;
 
         let winAmount = 0;
-
         if (count === 1) winAmount = money * 2;
-        if (count === 2) winAmount = money * 3;
-        if (count === 3) winAmount = money * 5;
+        else if (count === 2) winAmount = money * 3;
+        else if (count === 3) winAmount = money * 5;
 
-        if (count > 0) addCoins(userId, winAmount);
+        if (count > 0) {
+            addCoins(userId, winAmount);
+        }
 
         return interaction.editReply({
             embeds: [
@@ -1476,10 +1486,10 @@ if (interaction.customId.startsWith("bc_bet_")) {
                     .setTitle("🎲 BẦU CUA")
                     .setColor(count > 0 ? "Green" : "Red")
                     .setDescription(
-                        `🎲 ${r.map(x => emojiMap[x]).join(" | ")}\n\n` +
+                        `🎲 ${result.map(x => emojiMap[x]).join(" | ")}\n\n` +
                         (count > 0
-                            ? `🎉 THẮNG +${winAmount}`
-                            : `💀 THUA -${money}`)
+                            ? `🎉 THẮNG +${winAmount.toLocaleString()}`
+                            : `💀 THUA -${money.toLocaleString()}`)
                     )
             ]
         });
@@ -1487,11 +1497,16 @@ if (interaction.customId.startsWith("bc_bet_")) {
     } catch (err) {
         console.error("BẦU CUA ERROR:", err);
 
-        if (interaction.deferred || interaction.replied) {
-            return interaction.editReply("❌ Lỗi bầu cua!");
-        } else {
-            return interaction.reply({ content: "❌ Lỗi bầu cua!", ephemeral: true });
-        }
+        try {
+            if (interaction.deferred || interaction.replied) {
+                return interaction.editReply("❌ Lỗi bầu cua!");
+            } else {
+                return interaction.reply({
+                    content: "❌ Lỗi bầu cua!",
+                    ephemeral: true
+                });
+            }
+        } catch {}
     }
 }
 if (interaction.customId.startsWith("bet_")) {
