@@ -36,17 +36,26 @@ let coins = JSON.parse(fs.readFileSync("coins.json"));
 
 const saveCoins = () => fs.writeFileSync("coins.json", JSON.stringify(coins, null, 2));
 
+function addCoins(userId, amount) {
+    if (!userId) return;
+
+    if (coins[userId] === undefined) {
+        coins[userId] = 1000;
+    }
+
+    coins[userId] += amount;
+
+    if (coins[userId] < 0) coins[userId] = 0;
+
+    saveCoins();
+}
+
 function getCoins(userId) {
-    if (!coins[userId]) {
+    if (coins[userId] === undefined) {
         coins[userId] = 1000;
         saveCoins();
     }
     return coins[userId];
-}
-function addCoins(userId, amount) {
-    if (coins[userId] === undefined) coins[userId] = 1000;
-    coins[userId] += amount;
-    saveCoins();
 }
 
 // Biến lưu trữ cooldown cho lệnh Daily
@@ -242,7 +251,7 @@ async function updateAOVLeaderboard() {
 
             console.log("📌 Đã tạo BXH mới, ID:", aovMessageId);
         }
-
+return false;
     } catch (err) {
         console.error("Lỗi cập nhật AOV:", err);
     }
@@ -715,7 +724,9 @@ console.log("📍 GUILD:", interaction.guildId);
         }
 // --- LỆNH DAILY ---
 if (commandName === 'daily') {
+if (!interaction.deferred && !interaction.replied) {
     await interaction.deferReply();
+}
 
     const userId = interaction.user.id; // ❗ BẮT BUỘC
 
@@ -733,7 +744,9 @@ if (commandName === 'daily') {
 }
     // --- LỆNH TOPCOIN ---
 if (commandName === 'topcoin') {
+if (!interaction.deferred && !interaction.replied) {
     await interaction.deferReply();
+}
 
     const sorted = Object.entries(coins || {})
         .sort(([, a], [, b]) => b - a)
@@ -753,7 +766,9 @@ if (commandName === 'topcoin') {
 
     // --- LỆNH PAY ---
 if (commandName === 'pay') {
+if (!interaction.deferred && !interaction.replied) {
     await interaction.deferReply();
+}
 
     const userId = interaction.user.id;
     const target = options.getUser('user');
@@ -766,10 +781,10 @@ if (commandName === 'pay') {
     if (target.id === userId) {
         return interaction.editReply("❌ Không thể chuyển cho chính mình!");
     }
-
-    if (getCoins(userId) < amount) {
-        return interaction.editReply("❌ Không đủ coin!");
-    }
+    
+if (!amount || amount <= 0) {
+    return interaction.editReply("❌ Số tiền không hợp lệ!");
+}
 
     addCoins(userId, -amount);
     addCoins(target.id, amount);
@@ -1243,7 +1258,7 @@ if (interaction.customId.startsWith("bet_")) {
 
     // 1. Kiểm tra tính hợp lệ của tiền cược
     if (isNaN(money) || money <= 0) {
-        return interaction.reply({ content: "❌ Số tiền cược không hợp lệ!", ephemeral: true });
+        return interaction.editReply("❌ Số tiền cược không hợp lệ!");
     }
 
     // Kiểm tra số dư hiện tại
@@ -1255,9 +1270,14 @@ if (interaction.customId.startsWith("bet_")) {
     await interaction.deferReply();
 
     // 2. Tạm trừ tiền cược (Bảo mật: Tránh bug tiền khi đang lắc)
-    addCoins(userId, -money);
+const oldBalance = getCoins(userId);
 
-    const msg = await interaction.editReply({ content: "🎲 **Đang lắc xúc xắc...**" });
+if (oldBalance < money) {
+    return interaction.editReply("❌ Không đủ coin!");
+}
+// khóa tiền trước
+addCoins(userId, -money);
+    const msg = await interaction.editReply({ content: "🎲 Đang lắc..." });
 
     // Hiệu ứng lắc chuyên nghiệp (4 lần)
     for (let i = 0; i < 4; i++) {
@@ -1282,14 +1302,17 @@ if (interaction.customId.startsWith("bet_")) {
     const win = !isBao && result === choice;
 
     let resultMessage = "";
-    if (win) {
-        const tax = 0.05; // Thuế 5%
-        const winAmount = Math.floor(money * 2 * (1 - tax)); 
-        addCoins(userId, winAmount);
-        resultMessage = `🎉 **THẮNG!** Bạn nhận được **${winAmount}** coin (đã trừ 5% thuế)`;
-    } else {
-        resultMessage = isBao ? `💀 **BÃO!** (Ba viên ${d1}) - Nhà cái ăn sạch!` : `💀 **THUA!** Chúc bạn may mắn lần sau.`;
-    }
+if (win) {
+    const payout = Math.floor(money * 2 * 0.95); // trừ 5%
+
+    addCoins(userId, payout);
+
+    resultMessage = `🎉 **THẮNG!** Bạn nhận được **${payout}** coin (đã trừ 5% thuế)`;
+} else {
+    resultMessage = isBao
+        ? `💀 **BÃO!** (Ba viên ${d1}) - Nhà cái ăn sạch!`
+        : `💀 **THUA!** Chúc bạn may mắn lần sau.`;
+}
 
     // 4. Hiển thị Embed kết quả chi tiết
     const embed = new EmbedBuilder()
@@ -1312,7 +1335,8 @@ if (interaction.customId.startsWith("bet_")) {
     // Ghi log vào console (hoặc gửi vào channel log nếu bạn có LOG_CHANNEL)
     console.log(`[TÀI XỈU] ${interaction.user.tag} đặt ${money} vào ${choice} - Kết quả: ${total} (${win ? "THẮNG" : "THUA"})`);
 
-    return msg.edit({ content: "", embeds: [embed] });
+    await msg.edit({ content: "", embeds: [embed] });
+    return;
 }
     }
     } catch (err) {
