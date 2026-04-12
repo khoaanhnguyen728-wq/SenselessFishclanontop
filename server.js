@@ -188,7 +188,6 @@ const ROLE_MAP = {
 };
 const dailyStreak = new Map(); 
 const dailyReward = new Map(); 
-const dailyCooldown = new Map();
 const ticketCooldown = new Map(); 
 const TICKET_COOLDOWN = 5000; 
 const cooldown = new Map();
