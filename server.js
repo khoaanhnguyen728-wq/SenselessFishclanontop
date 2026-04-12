@@ -186,6 +186,7 @@ const ROLE_MAP = {
     "Tryout host": process.env.ROLE_TRYOUT,
     "Training host": process.env.ROLE_TRAIN
 };
+const dailyCooldown = new Map();
 const dailyStreak = new Map(); 
 const dailyReward = new Map(); 
 const ticketCooldown = new Map(); 
