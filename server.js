@@ -1428,10 +1428,9 @@ if (interaction.customId.startsWith("bc_bet_")) {
             nai: "🦌"
         };
 
-        // ===== VALIDATE =====
         if (isNaN(money) || money <= 0) {
             return interaction.reply({
-                content: "❌ Số tiền cược không hợp lệ!",
+                content: "❌ Số tiền không hợp lệ!",
                 ephemeral: true
             });
         }
@@ -1439,30 +1438,22 @@ if (interaction.customId.startsWith("bc_bet_")) {
         const balance = getCoins(userId);
         if (balance < money) {
             return interaction.reply({
-                content: `❌ Không đủ coin! (Bạn có: ${balance.toLocaleString()})`,
+                content: `❌ Không đủ coin! Bạn có: ${balance}`,
                 ephemeral: true
             });
         }
 
-        // ===== TRỪ TIỀN TRƯỚC =====
         addCoins(userId, -money);
 
-        // ===== DEFER AN TOÀN =====
-        await interaction.deferReply();
+        // ⚠️ FIX QUAN TRỌNG: chỉ defer nếu CHƯA reply
+        if (!interaction.replied && !interaction.deferred) {
+            await interaction.deferReply();
+        }
 
         await interaction.editReply("🎲 Đang lắc bầu cua...");
 
-        // ===== ANIMATION =====
-        for (let i = 0; i < 2; i++) {
-            const temp = Array.from({ length: 3 }, () =>
-                emojiMap[animals[Math.floor(Math.random() * animals.length)]]
-            );
+        await new Promise(r => setTimeout(r, 1200));
 
-            await interaction.editReply(`🎰 ĐANG LẮC...\n\n${temp.join(" | ")}`);
-            await new Promise(r => setTimeout(r, 800));
-        }
-
-        // ===== KẾT QUẢ =====
         const result = [
             animals[Math.floor(Math.random() * animals.length)],
             animals[Math.floor(Math.random() * animals.length)],
@@ -1495,18 +1486,20 @@ if (interaction.customId.startsWith("bc_bet_")) {
         });
 
     } catch (err) {
-        console.error("BẦU CUA ERROR:", err);
+        console.error("❌ BẦU CUA ERROR FULL:", err);
 
         try {
             if (interaction.deferred || interaction.replied) {
-                return interaction.editReply("❌ Lỗi bầu cua!");
+                return interaction.editReply("❌ Lỗi bầu cua (xem log console)");
             } else {
                 return interaction.reply({
                     content: "❌ Lỗi bầu cua!",
                     ephemeral: true
                 });
             }
-        } catch {}
+        } catch (e) {
+            console.error("❌ FAIL SAFE ERROR:", e);
+        }
     }
 }
 if (interaction.customId.startsWith("bet_")) {
