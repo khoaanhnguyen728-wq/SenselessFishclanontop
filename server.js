@@ -186,6 +186,8 @@ const ROLE_MAP = {
     "Tryout host": process.env.ROLE_TRYOUT,
     "Training host": process.env.ROLE_TRAIN
 };
+const dailyStreak = new Map(); 
+const dailyReward = new Map(); 
 const dailyCooldown = new Map();
 const ticketCooldown = new Map(); 
 const TICKET_COOLDOWN = 5000; 
@@ -786,6 +788,7 @@ if (commandName === 'daily') {
         const now = Date.now();
         const lastDaily = dailyCooldown.get(userId) || 0;
         const oneDay = 86400000;
+        const twoDays = 172800000; // 48h — nếu quá 2 ngày thì reset streak
 
         // cooldown
         if (now - lastDaily < oneDay) {
@@ -798,20 +801,47 @@ if (commandName === 'daily') {
             );
         }
 
-        // reward
-        const reward = Math.floor(Math.random() * 1501) + 500;
+        // Tính streak: nếu bỏ lỡ hơn 2 ngày thì reset về 0
+        let streak = dailyStreak.get(userId) || 0;
+        if (lastDaily > 0 && now - lastDaily >= twoDays) {
+            streak = 0; // bỏ lỡ ngày → reset
+        }
+
+        // Tính reward: lần đầu 500, mỗi streak +15, max 5000
+        const reward = Math.min(500 + streak * 15, 5000);
+
+        // Cập nhật streak cho lần tiếp theo
+        streak += 1;
+        dailyStreak.set(userId, streak);
+        dailyCooldown.set(userId, now);
 
         addCoins(userId, reward);
-        dailyCooldown.set(userId, now);
+
+        const isMax = reward >= 5000;
+        const nextReward = Math.min(500 + streak * 15, 5000);
 
         const embed = new EmbedBuilder()
             .setTitle("🎁 QUÀ TẶNG HÀNG NGÀY")
-            .setColor("Green")
+            .setColor(isMax ? "Gold" : "Green")
             .setDescription(`Chúc mừng <@${userId}>! Bạn đã nhận được **${reward.toLocaleString()} coin**.`)
-            .addFields({
-                name: "Số dư hiện tại",
-                value: `💰 **${getCoins(userId).toLocaleString()} coin**`
-            })
+            .addFields(
+                {
+                    name: "🔥 Streak",
+                    value: `**${streak} ngày** liên tiếp`,
+                    inline: true
+                },
+                {
+                    name: "💰 Số dư hiện tại",
+                    value: `**${getCoins(userId).toLocaleString()} coin**`,
+                    inline: true
+                },
+                {
+                    name: isMax ? "🏆 Đã đạt tối đa!" : "⏭ Lần sau",
+                    value: isMax ? "Bạn đang nhận mức thưởng cao nhất!" : `**${nextReward.toLocaleString()} coin**`,
+                    inline: true
+                }
+            )
+            .setFooter({ text: "Nhận mỗi ngày để tăng streak • Bỏ lỡ 1 ngày sẽ mất streak!" })
             .setTimestamp();
 
         return interaction.editReply({ embeds: [embed] });
