@@ -761,35 +761,48 @@ if (commandName === 'tungdongxu') {
 // --- LỆNH DAILY ---
 if (commandName === 'daily') {
     try {
-        if (!interaction.deferred && !interaction.replied) {
-            await interaction.deferReply();
-        }
+        // 1. Phải deferReply ngay lập tức để giữ kết nối với Discord
+        await interaction.deferReply();
 
         const userId = interaction.user.id;
-
-        const lastDaily = dailyCooldown.get(userId) || 0;
         const now = Date.now();
+        const lastDaily = dailyCooldown.get(userId) || 0;
+        const oneDay = 86400000; // 24 giờ tính bằng ms
 
-        // cooldown 24h
-        if (now - lastDaily < 86400000) {
-            return interaction.editReply("⏳ Bạn đã nhận quà hôm nay rồi!");
+        // 2. Kiểm tra cooldown (24h)
+        if (now - lastDaily < oneDay) {
+            const remaining = oneDay - (now - lastDaily);
+            const hours = Math.floor(remaining / 3600000);
+            const minutes = Math.floor((remaining % 3600000) / 60000;
+            return interaction.editReply(`⏳ Bạn đã nhận quà hôm nay rồi! Quay lại sau **${hours} giờ ${minutes} phút** nữa nhé.`);
         }
 
-        // 🎲 random 500 - 2000
+        // 3. Tính toán phần thưởng (Random 500 - 2000)
         const reward = Math.floor(Math.random() * 1501) + 500;
 
-        console.log("DAILY REWARD DEBUG:", reward);
-
+        // 4. Cập nhật vào dữ liệu (Coins và Cooldown)
+        // Đảm bảo hàm addCoins của bạn đã xử lý việc lưu file fs.writeFileSync
         addCoins(userId, reward);
         dailyCooldown.set(userId, now);
 
-        return interaction.editReply(
-            `🎁 Bạn nhận được **${reward.toLocaleString()} coin**!`
-        );
+        // 5. Phản hồi thành công
+        const embed = new EmbedBuilder()
+            .setTitle("🎁 QUÀ TẶNG HÀNG NGÀY")
+            .setColor("Green")
+            .setDescription(`Chúc mừng <@${userId}>! Bạn đã nhận được **${reward.toLocaleString()} coin**.`)
+            .addFields({ name: "Số dư hiện tại", value: `💰 **${getCoins(userId).toLocaleString()} coin**` })
+            .setTimestamp();
+
+        return interaction.editReply({ embeds: [embed] });
 
     } catch (err) {
-        console.error("DAILY ERROR:", err);
-        return interaction.editReply("❌ Có lỗi xảy ra khi nhận daily!");
+        console.error("🚨 DAILY ERROR:", err);
+        // Kiểm tra xem đã defer chưa để có cách báo lỗi phù hợp
+        if (interaction.deferred || interaction.replied) {
+            return interaction.editReply("❌ Có lỗi xảy ra khi xử lý phần thưởng. Vui lòng thử lại!");
+        } else {
+            return interaction.reply({ content: "❌ Lỗi hệ thống!", ephemeral: true });
+        }
     }
 }
     // --- LỆNH TOPCOIN ---
@@ -1415,8 +1428,12 @@ if (interaction.customId.startsWith("bc_bet_")) {
     const userId = interaction.user.id;
 
     try {
+        // 1. Phải deferReply ngay lập tức để tránh lỗi "Interaction has already been acknowledged"
+        await interaction.deferReply();
+
         const choice = interaction.customId.split("_")[2];
-        const money = parseInt(interaction.fields.getTextInputValue("money"));
+        const moneyInput = interaction.fields.getTextInputValue("money");
+        const money = parseInt(moneyInput);
 
         const animals = ["bau", "cua", "tom", "ca", "ga", "nai"];
         const emojiMap = {
@@ -1428,31 +1445,27 @@ if (interaction.customId.startsWith("bc_bet_")) {
             nai: "🦌"
         };
 
+        // 2. Kiểm tra tính hợp lệ của tiền
         if (isNaN(money) || money <= 0) {
-            return interaction.reply({
-                content: "❌ Số tiền không hợp lệ!",
-                ephemeral: true
+            return interaction.editReply({
+                content: "❌ Số tiền cược không hợp lệ!"
             });
         }
 
+        // 3. Kiểm tra ví tiền
         const balance = getCoins(userId);
         if (balance < money) {
-            return interaction.reply({
-                content: `❌ Không đủ coin! Bạn có: ${balance}`,
-                ephemeral: true
+            return interaction.editReply({
+                content: `❌ Bạn không đủ coin! Số dư hiện tại: **${balance.toLocaleString()}**`
             });
         }
 
+        // 4. Trừ tiền cược và bắt đầu quay
         addCoins(userId, -money);
+        await interaction.editReply("🎲 Đang lắc bầu cua... Chờ chút nhé!");
 
-        // ⚠️ FIX QUAN TRỌNG: chỉ defer nếu CHƯA reply
-        if (!interaction.replied && !interaction.deferred) {
-            await interaction.deferReply();
-        }
-
-        await interaction.editReply("🎲 Đang lắc bầu cua...");
-
-        await new Promise(r => setTimeout(r, 1200));
+        // Hiệu ứng chờ 2 giây cho kịch tính
+        await new Promise(r => setTimeout(r, 2000));
 
         const result = [
             animals[Math.floor(Math.random() * animals.length)],
@@ -1471,34 +1484,32 @@ if (interaction.customId.startsWith("bc_bet_")) {
             addCoins(userId, winAmount);
         }
 
+        // 5. Trả kết quả cuối cùng
         return interaction.editReply({
+            content: null, // Xóa nội dung "Đang lắc..."
             embeds: [
                 new EmbedBuilder()
-                    .setTitle("🎲 BẦU CUA")
+                    .setTitle("🎲 KẾT QUẢ BẦU CUA")
                     .setColor(count > 0 ? "Green" : "Red")
                     .setDescription(
-                        `🎲 ${result.map(x => emojiMap[x]).join(" | ")}\n\n` +
+                        `Người đặt: <@${userId}>\n` +
+                        `Linh vật chọn: ${emojiMap[choice].toUpperCase()}\n\n` +
+                        `🎲 **KẾT QUẢ:** ${result.map(x => emojiMap[x]).join(" | ")}\n\n` +
                         (count > 0
-                            ? `🎉 THẮNG +${winAmount.toLocaleString()}`
-                            : `💀 THUA -${money.toLocaleString()}`)
+                            ? `🎉 **THẮNG!** Bạn nhận được **+${winAmount.toLocaleString()}** coin (x${count})`
+                            : `💀 **THUA!** Bạn đã mất **-${money.toLocaleString()}** coin.`)
                     )
+                    .setTimestamp()
             ]
         });
 
     } catch (err) {
-        console.error("❌ BẦU CUA ERROR FULL:", err);
-
-        try {
-            if (interaction.deferred || interaction.replied) {
-                return interaction.editReply("❌ Lỗi bầu cua (xem log console)");
-            } else {
-                return interaction.reply({
-                    content: "❌ Lỗi bầu cua!",
-                    ephemeral: true
-                });
-            }
-        } catch (e) {
-            console.error("❌ FAIL SAFE ERROR:", e);
+        console.error("❌ LỖI BẦU CUA:", err);
+        // Kiểm tra nếu đã defer thì dùng editReply, nếu chưa thì reply
+        if (interaction.deferred || interaction.replied) {
+            return interaction.editReply({ content: "❌ Đã xảy ra lỗi hệ thống khi xử lý kết quả!" });
+        } else {
+            return interaction.reply({ content: "❌ Lỗi khởi tạo trò chơi!", ephemeral: true });
         }
     }
 }
