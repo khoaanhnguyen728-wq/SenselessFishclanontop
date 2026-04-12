@@ -13,7 +13,21 @@ const express = require("express");
 const fs = require("fs");
 const cors = require("cors");
 const axios = require("axios");
-const { getCoins, addCoins, setCoins } = require("./coins");
+// Coin functions dùng trực tiếp biến coins + saveCoins (được định nghĩa bên dưới)
+// Các hàm này chỉ được GỌI trong event handlers, sau khi module load xong nên an toàn
+function getCoins(userId) {
+    return coins[userId] || 0;
+}
+function addCoins(userId, amount) {
+    if (!coins[userId]) coins[userId] = 0;
+    coins[userId] += amount;
+    if (coins[userId] < 0) coins[userId] = 0;
+    saveCoins();
+}
+function setCoins(userId, amount) {
+    coins[userId] = Math.max(0, amount);
+    saveCoins();
+}
 const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require("@google/generative-ai");
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const winStreak = new Map();
@@ -521,35 +535,40 @@ console.log("📍 GUILD:", interaction.guildId);
         const { commandName, options } = interaction;
 
 if (commandName === 'tungdongxu') {
-        await interaction.deferReply();
-        const money = options.getInteger('money');
-        const userId = interaction.user.id;
+        try {
+            await interaction.deferReply();
+            const money = options.getInteger('money');
+            const userId = interaction.user.id;
 
-        // 1. Kiểm tra tiền hợp lệ
-        if (!money || money <= 0) {
-            return interaction.editReply("❌ Số tiền cược không hợp lệ!");
+            if (!money || money <= 0) {
+                return interaction.editReply("❌ Số tiền cược không hợp lệ!");
+            }
+
+            const balance = getCoins(userId);
+            if (balance < money) {
+                return interaction.editReply(`❌ Bạn không đủ coin! Số dư hiện tại: **${balance.toLocaleString()} coin**`);
+            }
+            addCoins(userId, -money);
+
+            const embed = new EmbedBuilder()
+                .setTitle("🪙 TUNG ĐỒNG XU")
+                .setDescription(`Bạn đã cược **${money.toLocaleString()} coin**.\nChọn mặt muốn đặt:`)
+                .setColor("Gold")
+                .setFooter({ text: "Bạn có 30 giây để chọn!" });
+
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId(`tdx_sap_${money}`).setLabel("SẤP").setStyle(ButtonStyle.Primary),
+                new ButtonBuilder().setCustomId(`tdx_ngua_${money}`).setLabel("NGỬA").setStyle(ButtonStyle.Success)
+            );
+
+            return interaction.editReply({ embeds: [embed], components: [row] });
+        } catch (err) {
+            console.error("🚨 TUNGDONGXU ERROR:", err);
+            if (interaction.deferred || interaction.replied) {
+                return interaction.editReply("❌ Có lỗi xảy ra khi khởi động trò chơi. Thử lại!");
+            }
+            return interaction.reply({ content: "❌ Lỗi hệ thống!", ephemeral: true }).catch(() => {});
         }
-
-        // 2. Kiểm tra ví tiền đồng bộ (Giống Vault)
-        const balance = getCoins(userId);
-        if (balance < money) {
-            return interaction.editReply(`❌ Bạn không đủ coin! Số dư hiện tại: **${balance.toLocaleString()} coin**`);
-        }
-        addCoins(userId, -money);
-
-
-        const embed = new EmbedBuilder()
-            .setTitle("🪙 TUNG ĐỒNG XU")
-            .setDescription(`Bạn đã cược **${money.toLocaleString()} coin**.\nChọn mặt muốn đặt:`)
-            .setColor("Gold")
-            .setFooter({ text: "Bạn có 30 giây để chọn!" });
-
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId(`tdx_sap_${money}`).setLabel("SẤP").setStyle(ButtonStyle.Primary),
-            new ButtonBuilder().setCustomId(`tdx_ngua_${money}`).setLabel("NGỬA").setStyle(ButtonStyle.Success)
-        );
-
-        return interaction.editReply({ embeds: [embed], components: [row] });
     }
     
         /*BLACKLIST*/
@@ -1516,69 +1535,77 @@ if (interaction.customId.startsWith("bc_bet_")) {
     }
 }
 if (interaction.customId.startsWith("bet_")) {
-        const userId = interaction.user.id;
-        const choice = interaction.customId.split("_")[1];
-        const money = parseInt(interaction.fields.getTextInputValue("money"));
+        try {
+            const userId = interaction.user.id;
+            const choice = interaction.customId.split("_")[1]; // "tai" hoặc "xiu"
+            const money = parseInt(interaction.fields.getTextInputValue("money"));
 
-        // 1. Kiểm tra đầu vào
-        if (isNaN(money) || money <= 0) {
-            return interaction.reply({ content: "❌ Tiền cược không hợp lệ!", ephemeral: true });
-        }
-
-        // 2. Kiểm tra số dư (Đồng bộ ví)
-        const currentBalance = getCoins(userId);
-        if (currentBalance < money) {
-            return interaction.reply({ 
-                content: `❌ Không đủ tiền! (Bạn có: ${currentBalance.toLocaleString()} coin)`, 
-                ephemeral: true 
-            });
-        }
-
-        // 3. Xử lý đặt cược
-        await interaction.deferReply();
-
-        await interaction.editReply("🎲 Đang lắc xúc xắc...");
-        
-        setTimeout(async () => {
-            try {
-                const dice = [
-                    Math.floor(Math.random() * 6) + 1,
-                    Math.floor(Math.random() * 6) + 1,
-                    Math.floor(Math.random() * 6) + 1
-                ];
-                const total = dice.reduce((a, b) => a + b, 0);
-const chance = getWinChance(userId);
-
-// random theo tỷ lệ thắng
-const win = Math.random() < chance;
-
-updateStreak(userId, win);
-
-// đảm bảo kết quả theo win/lose
-const result = win ? choice : (choice === "tai" ? "xiu" : "tai");
-                
-                let resultEmbed = new EmbedBuilder()
-                    .setTitle("🎲 KẾT QUẢ TÀI XỈU")
-                    .setDescription(`Kết quả: **${dice.join(" - ")}** (Tổng: **${total}** => **${result.toUpperCase()}**)`)
-                    .setTimestamp();
-if (choice === result) {
-    const winMoney = Math.floor(money * 1.95); // ✅ sửa ở đây
-    addCoins(userId, winMoney);
-    resultEmbed.setColor("Green")
-        .addFields({ name: "Kết quả", value: `✅ Thắng! Nhận được **+${winMoney.toLocaleString()} coin**` });
-} else {
-    addCoins(userId, -money);
-    resultEmbed.setColor("Red")
-        .addFields({ name: "Kết quả", value: `❌ Thua! Bạn đã mất **-${money.toLocaleString()} coin**` });
-}
-
-                await interaction.editReply({ content: null, embeds: [resultEmbed] });
-            } catch (innerErr) {
-                console.error("Lỗi khi trả kết quả Tài Xỉu:", innerErr);
+            // 1. Kiểm tra đầu vào
+            if (isNaN(money) || money <= 0) {
+                return interaction.reply({ content: "❌ Tiền cược không hợp lệ!", ephemeral: true });
             }
-        }, 3000);
-        
-        return; // Kết thúc xử lý tại đây
+
+            // 2. Kiểm tra số dư
+            const currentBalance = getCoins(userId);
+            if (currentBalance < money) {
+                return interaction.reply({
+                    content: `❌ Không đủ tiền! (Bạn có: ${currentBalance.toLocaleString()} coin)`,
+                    ephemeral: true
+                });
+            }
+
+            // 3. Trừ tiền trước khi deferReply để tránh lỗi
+            addCoins(userId, -money);
+            await interaction.deferReply();
+            await interaction.editReply("🎲 Đang lắc xúc xắc...");
+
+            setTimeout(async () => {
+                try {
+                    const dice = [
+                        Math.floor(Math.random() * 6) + 1,
+                        Math.floor(Math.random() * 6) + 1,
+                        Math.floor(Math.random() * 6) + 1
+                    ];
+                    const total = dice.reduce((a, b) => a + b, 0);
+
+                    const chance = getWinChance(userId);
+                    const win = Math.random() < chance;
+                    updateStreak(userId, win);
+
+                    const result = win ? choice : (choice === "tai" ? "xiu" : "tai");
+                    const totalLabel = total >= 11 ? "TÀI" : "XỈU";
+
+                    let resultEmbed = new EmbedBuilder()
+                        .setTitle("🎲 KẾT QUẢ TÀI XỈU")
+                        .setDescription(`Xúc xắc: **${dice.join(" - ")}** (Tổng: **${total}** → **${totalLabel}**)`)
+                        .setTimestamp();
+
+                    if (win) {
+                        const winMoney = Math.floor(money * 1.95);
+                        addCoins(userId, money + winMoney); // hoàn lại vốn + tiền thắng
+                        resultEmbed.setColor("Green")
+                            .addFields({ name: "Kết quả", value: `✅ Thắng! Nhận được **+${winMoney.toLocaleString()} coin**` });
+                    } else {
+                        // Tiền đã trừ từ trước rồi
+                        resultEmbed.setColor("Red")
+                            .addFields({ name: "Kết quả", value: `❌ Thua! Bạn đã mất **-${money.toLocaleString()} coin**` });
+                    }
+
+                    await interaction.editReply({ content: null, embeds: [resultEmbed] });
+                } catch (innerErr) {
+                    console.error("Lỗi khi trả kết quả Tài Xỉu:", innerErr);
+                    await interaction.editReply({ content: "❌ Lỗi khi hiển thị kết quả!" }).catch(() => {});
+                }
+            }, 3000);
+
+            return;
+        } catch (err) {
+            console.error("🚨 BET_ MODAL ERROR:", err);
+            if (interaction.deferred || interaction.replied) {
+                return interaction.editReply("❌ Có lỗi xảy ra! Vui lòng thử lại.").catch(() => {});
+            }
+            return interaction.reply({ content: "❌ Có lỗi xảy ra! Vui lòng thử lại.", ephemeral: true }).catch(() => {});
+        }
     }
 }
     } catch (err) {
