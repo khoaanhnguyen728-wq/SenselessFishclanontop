@@ -761,43 +761,45 @@ if (commandName === 'tungdongxu') {
 // --- LỆNH DAILY ---
 if (commandName === 'daily') {
     try {
-        // 1. Phải deferReply ngay lập tức để giữ kết nối với Discord
         await interaction.deferReply();
 
         const userId = interaction.user.id;
         const now = Date.now();
         const lastDaily = dailyCooldown.get(userId) || 0;
-        const oneDay = 86400000; // 24 giờ tính bằng ms
+        const oneDay = 86400000;
 
-        // 2. Kiểm tra cooldown (24h)
+        // cooldown
         if (now - lastDaily < oneDay) {
             const remaining = oneDay - (now - lastDaily);
             const hours = Math.floor(remaining / 3600000);
-            const minutes = Math.floor((remaining % 3600000) / 60000;
-            return interaction.editReply(`⏳ Bạn đã nhận quà hôm nay rồi! Quay lại sau **${hours} giờ ${minutes} phút** nữa nhé.`);
+            const minutes = Math.floor((remaining % 3600000) / 60000);
+
+            return interaction.editReply(
+                `⏳ Bạn đã nhận quà hôm nay rồi! Quay lại sau **${hours} giờ ${minutes} phút** nữa nhé.`
+            );
         }
 
-        // 3. Tính toán phần thưởng (Random 500 - 2000)
+        // reward
         const reward = Math.floor(Math.random() * 1501) + 500;
 
-        // 4. Cập nhật vào dữ liệu (Coins và Cooldown)
-        // Đảm bảo hàm addCoins của bạn đã xử lý việc lưu file fs.writeFileSync
         addCoins(userId, reward);
         dailyCooldown.set(userId, now);
 
-        // 5. Phản hồi thành công
         const embed = new EmbedBuilder()
             .setTitle("🎁 QUÀ TẶNG HÀNG NGÀY")
             .setColor("Green")
             .setDescription(`Chúc mừng <@${userId}>! Bạn đã nhận được **${reward.toLocaleString()} coin**.`)
-            .addFields({ name: "Số dư hiện tại", value: `💰 **${getCoins(userId).toLocaleString()} coin**` })
+            .addFields({
+                name: "Số dư hiện tại",
+                value: `💰 **${getCoins(userId).toLocaleString()} coin**`
+            })
             .setTimestamp();
 
         return interaction.editReply({ embeds: [embed] });
 
     } catch (err) {
         console.error("🚨 DAILY ERROR:", err);
-        // Kiểm tra xem đã defer chưa để có cách báo lỗi phù hợp
+
         if (interaction.deferred || interaction.replied) {
             return interaction.editReply("❌ Có lỗi xảy ra khi xử lý phần thưởng. Vui lòng thử lại!");
         } else {
