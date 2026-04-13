@@ -553,11 +553,12 @@ if (interaction.commandName === "backup") {
     }
 
     // --- XỬ LÝ LỆNH: /backup create ---
-    if (subcommand === "create") {
+if (subcommand === "create") {
+        // 1. Phải deferReply ngay lập tức để tránh lỗi Interaction hết hạn (10062)
         await interaction.deferReply();
+
         console.log(`\n[BACKUP] 🔄 Đang khởi tạo sao lưu cho server: ${interaction.guild.name} (${interaction.guild.id})`);
 
-        // Embed "đang xử lý" — hiện avatar user + thông báo chờ
         const loadingEmbed = new EmbedBuilder()
             .setColor("#f0a500")
             .setAuthor({
@@ -571,68 +572,67 @@ if (interaction.commandName === "backup") {
 
         await interaction.editReply({ embeds: [loadingEmbed] });
 
-if (!fs.existsSync(backupPath)) {
-    fs.mkdirSync(backupPath, { recursive: true });
-}
+        const backupPath = path.resolve("./backups");
+        backup.setStorageFolder(backupPath);
 
-        try {
-            // Xóa toàn bộ file backup cũ trong folder trước khi tạo mới
-let deletedCount = 0;
-const files = fs.readdirSync(backupPath);
-
-for (const file of files) {
-    if (file.endsWith(".json")) {
-        try {
-            fs.unlinkSync(path.join(backupPath, file));
-            deletedCount++;
-        } catch (err) {
-            console.log("⚠️ Không xóa được:", file);
+        // Đảm bảo thư mục backups tồn tại
+        if (!fs.existsSync(backupPath)) {
+            fs.mkdirSync(backupPath, { recursive: true });
         }
-    }
-}
 
-console.log(`[BACKUP] 🗑️ Đã xóa ${deletedCount} file backup cũ`);
+        try {
+            // ✅ BƯỚC 1: TẠO BACKUP
+            const backupData = await backup.create(interaction.guild, {
+                maxMessagesPerChannel: 0,
+                jsonBeautify: true,
+                saveImages: null 
+            });
 
-// ✅ TẠO BACKUP
-const backupData = await backup.create(interaction.guild, {
-    maxMessagesPerChannel: 0,
-    jsonBeautify: true,
-    saveImages: "base64"
-});
-const filePath = path.join(backupPath, `${backupData.id}.json`);
+            const filePath = path.join(backupPath, `${backupData.id}.json`);
 
-let attempts = 0;
-while (!fs.existsSync(filePath) && attempts < 10) {
-    await new Promise(res => setTimeout(res, 500));
-    attempts++;
-}
-if (!fs.existsSync(filePath)) {
-    console.log("❌ Không tìm thấy file backup!");
-    return interaction.editReply("❌ Backup tạo nhưng không lưu file!");
-}
+            // ✅ BƯỚC 2: ĐỢI FILE GHI VÀO Ổ ĐĨA (Tối đa 30 giây)
+            let attempts = 0;
+            while (!fs.existsSync(filePath) && attempts < 60) {
+                await new Promise(res => setTimeout(res, 500));
+                attempts++;
+            }
 
-            // Đọc file backup vừa tạo để kiểm tra channel & role đã được lưu chưa
-            const backupFilePath = path.join(backupPath, `${backupData.id}.json`);
-            const backupJson = JSON.parse(fs.readFileSync(backupFilePath, "utf8"));
+            if (!fs.existsSync(filePath)) {
+                throw new Error("Hệ thống tạo ID thành công nhưng không tìm thấy file lưu trữ trên ổ đĩa.");
+            }
 
-            // discord-backup lưu channels dạng { categories: [...], others: [...] }
+            // ✅ BƯỚC 3: DỌN DẸP FILE CŨ (Trừ file vừa tạo)
+            let deletedCount = 0;
+            const files = fs.readdirSync(backupPath);
+            for (const file of files) {
+                if (file.endsWith(".json") && file !== `${backupData.id}.json`) {
+                    try {
+                        fs.unlinkSync(path.join(backupPath, file));
+                        deletedCount++;
+                    } catch (err) {
+                        console.log("⚠️ Không xóa được file cũ:", file);
+                    }
+                }
+            }
+
+            // ✅ BƯỚC 4: ĐỌC FILE VỪA TẠO ĐỂ LẤY THÔNG SỐ (Channels/Roles)
+            const backupJson = JSON.parse(fs.readFileSync(filePath, "utf8"));
             const channels = backupJson.channels || {};
             const categories = channels.categories || [];
             const others = channels.others || [];
-            // Đếm: mỗi category + các channel con bên trong + channel không thuộc category
+            
+            // Tính toán số lượng channel
             const channelCount = categories.reduce(
                 (acc, cat) => acc + 1 + (cat.children ? cat.children.length : 0), 0
             ) + others.length;
 
             const roleCount = (backupJson.roles || []).length;
 
-            console.log(`[BACKUP] ✅ Thành công!`);
-            console.log(`[BACKUP] 🆔 ID: ${backupData.id}`);
-            console.log(`[BACKUP] 📂 Đường dẫn: backups/${backupData.id}.json`);
-            console.log(`[BACKUP] 📌 Channels: ${channelCount} | Roles: ${roleCount}`);
-            console.log(`[BACKUP] 🕒 Thời gian: ${new Date().toLocaleString()}`);
+            // Log ra console để theo dõi
+            console.log(`[BACKUP] ✅ Thành công! ID: ${backupData.id}`);
+            console.log(`[BACKUP] 📌 Channels: ${channelCount} | Roles: ${roleCount} | 🗑️ Đã dọn: ${deletedCount}`);
 
-            // Embed kết quả từ bot
+            // ✅ BƯỚC 5: GỬI EMBED KẾT QUẢ CUỐI CÙNG
             const successEmbed = new EmbedBuilder()
                 .setColor("#00ff88")
                 .setAuthor({
@@ -654,7 +654,8 @@ if (!fs.existsSync(filePath)) {
                 })
                 .setTimestamp();
 
-            return interaction.editReply({ embeds: [successEmbed] });
+            return await interaction.editReply({ embeds: [successEmbed] });
+
         } catch (err) {
             console.error(`[BACKUP] ❌ LỖI KHI CREATE:`, err);
 
@@ -672,7 +673,7 @@ if (!fs.existsSync(filePath)) {
                 })
                 .setTimestamp();
 
-            return interaction.editReply({ embeds: [errorEmbed] });
+            return await interaction.editReply({ embeds: [errorEmbed] });
         }
     }
 
