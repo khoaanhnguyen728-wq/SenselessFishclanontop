@@ -574,6 +574,7 @@ if (subcommand === "create") {
 
         const backupPath = path.resolve("./backups");
         backup.setStorageFolder(backupPath);
+        console.log("📂 Backup path:", backupPath);
 
         // Đảm bảo thư mục backups tồn tại
         if (!fs.existsSync(backupPath)) {
@@ -587,19 +588,25 @@ if (subcommand === "create") {
                 jsonBeautify: true,
                 saveImages: null 
             });
+            console.log("📦 Backup ID:", backupData.id);
+            console.log("📁 Files hiện tại:", fs.readdirSync(backupPath));
 
             const filePath = path.join(backupPath, `${backupData.id}.json`);
 
             // ✅ BƯỚC 2: ĐỢI FILE GHI VÀO Ổ ĐĨA (Tối đa 30 giây)
-            let attempts = 0;
-            while (!fs.existsSync(filePath) && attempts < 60) {
-                await new Promise(res => setTimeout(res, 500));
-                attempts++;
-            }
+let attempts = 0;
+while (attempts < 100) {
+    const files = fs.readdirSync(backupPath);
+    if (files.includes(`${backupData.id}.json`)) break;
+
+    await new Promise(res => setTimeout(res, 300));
+    attempts++;
+}
 
             if (!fs.existsSync(filePath)) {
                 throw new Error("Hệ thống tạo ID thành công nhưng không tìm thấy file lưu trữ trên ổ đĩa.");
             }
+            console.log("📁 Files cuối:", fs.readdirSync(backupPath));
 
             // ✅ BƯỚC 3: DỌN DẸP FILE CŨ (Trừ file vừa tạo)
             let deletedCount = 0;
@@ -614,9 +621,15 @@ if (subcommand === "create") {
                     }
                 }
             }
+            console.log("🗑️ Đang xét file:", file);
 
             // ✅ BƯỚC 4: ĐỌC FILE VỪA TẠO ĐỂ LẤY THÔNG SỐ (Channels/Roles)
-            const backupJson = JSON.parse(fs.readFileSync(filePath, "utf8"));
+let backupJson;
+try {
+    backupJson = JSON.parse(fs.readFileSync(filePath, "utf8"));
+} catch {
+    backupJson = {};
+}
             const channels = backupJson.channels || {};
             const categories = channels.categories || [];
             const others = channels.others || [];
