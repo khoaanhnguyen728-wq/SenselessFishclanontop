@@ -110,17 +110,19 @@ const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildPresences
     ]
 });
 
 client.on("debug", console.log);
 client.on("warn", console.log);
 client.once("ready", () => {
-    console.log("✅ BOT ONLINE:", client.user.tag);
+    console.log("✅ BOT ONLINE:", client.user.username);
     setInterval(() => {
         console.log("⏳ Đang update AOV...");
-        console.log("🤖 BOT TAG:", client.user.tag);
+        console.log("🤖 BOT TAG:", client.user.username);
         console.log("🆔 CLIENT ID:", client.user.id);
         console.log("⚙️ PROCESS ID:", process.pid);
         console.log("🌍 ENV:", process.env.NODE_ENV || "unknown");
@@ -536,7 +538,7 @@ const result = await aiModel.generateContent(promptWithLanguageLock);
 client.on("interactionCreate", async interaction => {
     try {
 console.log("📩 INTERACTION:", interaction.commandName || interaction.customId);
-console.log("👤 USER:", interaction.user.tag);
+console.log("👤 USER:", interaction.user.username);
 console.log("📍 GUILD:", interaction.guildId);
 
     //SLASH COMMANDS
@@ -553,26 +555,52 @@ if (interaction.commandName === "backup") {
     // --- XỬ LÝ LỆNH: /backup create ---
     if (subcommand === "create") {
         console.log(`\n[BACKUP] 🔄 Đang khởi tạo sao lưu cho server: ${interaction.guild.name} (${interaction.guild.id})`);
-        await interaction.reply("⏳ Đang quét server và lưu thành file JSON...");
+        await interaction.deferReply();
 
-        backup.create(interaction.guild, {
-            maxMessagesPerChannel: 0,
-            jsonBeautify: true,
-            saveImages: "base64"
-        }).then((backupData) => {
-            // Hiện log ra terminal Termux
+        try {
+            // Xóa toàn bộ file backup cũ trong folder trước khi tạo mới
+            const oldFiles = fs.readdirSync(backupPath).filter(f => f.endsWith(".json"));
+            let deletedCount = 0;
+            for (const file of oldFiles) {
+                fs.unlinkSync(path.join(backupPath, file));
+                deletedCount++;
+            }
+            if (deletedCount > 0) {
+                console.log(`[BACKUP] 🗑️ Đã xóa ${deletedCount} file backup cũ`);
+            }
+
+            const backupData = await backup.create(interaction.guild, {
+                maxMessagesPerChannel: 0,
+                jsonBeautify: true,
+                saveImages: "base64"
+            });
+
+            // Đọc file backup vừa tạo để kiểm tra channel & role đã được lưu chưa
+            const backupFilePath = path.join(backupPath, `${backupData.id}.json`);
+            const backupJson = JSON.parse(fs.readFileSync(backupFilePath, "utf8"));
+            const channelCount = (backupJson.channels || []).length;
+            const roleCount = (backupJson.roles || []).length;
+
             console.log(`[BACKUP] ✅ Thành công!`);
             console.log(`[BACKUP] 🆔 ID: ${backupData.id}`);
             console.log(`[BACKUP] 📂 Đường dẫn: backups/${backupData.id}.json`);
+            console.log(`[BACKUP] 📌 Channels: ${channelCount} | Roles: ${roleCount}`);
             console.log(`[BACKUP] 🕒 Thời gian: ${new Date().toLocaleString()}`);
 
             return interaction.editReply({
-                content: `✅ **Đã sao lưu thành công!**\n🔑 ID: \`${backupData.id}\`\n📂 File đã được lưu vào thư mục \`backups/\``
+                content: [
+                    `✅ **Đã sao lưu thành công!**`,
+                    `🔑 ID: \`${backupData.id}\``,
+                    `📁 Channels đã lưu: **${channelCount}**`,
+                    `🎭 Roles đã lưu: **${roleCount}**`,
+                    `📂 File lưu tại: \`backups/${backupData.id}.json\``,
+                    deletedCount > 0 ? `🗑️ Đã xóa **${deletedCount}** backup cũ` : ""
+                ].filter(Boolean).join("\n")
             });
-        }).catch(err => {
-            console.log(`[BACKUP] ❌ LỖI KHI CREATE:`, err);
-            return interaction.editReply("❌ Có lỗi xảy ra khi tạo file JSON.");
-        });
+        } catch (err) {
+            console.error(`[BACKUP] ❌ LỖI KHI CREATE:`, err);
+            return interaction.editReply("❌ Có lỗi xảy ra khi tạo backup.");
+        }
     }
 
     // --- XỬ LÝ LỆNH: /backup load ---
@@ -584,16 +612,19 @@ if (interaction.commandName === "backup") {
         }
 
         console.log(`\n[BACKUP] 🚀 Bắt đầu khôi phục server từ ID: ${backupID}`);
-        await interaction.reply("⚠️ Đang khôi phục... Các kênh cũ sẽ bị xóa sạch.");
+        await interaction.deferReply();
 
-        backup.load(backupID, interaction.guild, {
-            clearGuildBeforeRestore: true
-        }).then(() => {
+        try {
+            await backup.load(backupID, interaction.guild, {
+                clearGuildBeforeRestore: true
+            });
             console.log(`[BACKUP] 🎊 Khôi phục hoàn tất cho server: ${interaction.guild.name}`);
-        }).catch(err => {
-            console.log(`[BACKUP] ❌ LỖI KHI LOAD:`, err);
-            return interaction.followUp("❌ Lỗi: ID không tồn tại hoặc bot thiếu quyền.");
-        });
+            await interaction.editReply("✅ Khôi phục hoàn tất!").catch(() => {});
+        } catch (err) {
+            console.error(`[BACKUP] ❌ LỖI KHI LOAD:`, err);
+            await interaction.followUp("❌ Lỗi: ID không tồn tại hoặc bot thiếu quyền.").catch(() => {});
+        }
+        return;
     }
 }
 
@@ -661,7 +692,7 @@ if (commandName === 'tungdongxu') {
                 .setTitle("🚫 BLACKLIST THÀNH CÔNG")
                 .setColor("#ff0000")
                 .addFields(
-                    { name: "User", value: `<@${user.id}> (${user.tag})`, inline: true },
+                    { name: "User", value: `<@${user.id}> (${user.username})`, inline: true },
                     { name: "Lý do", value: reason, inline: true }
                 )
                 .setTimestamp();
@@ -670,7 +701,7 @@ if (commandName === 'tungdongxu') {
 
             // Các tác vụ chạy ngầm
             await interaction.guild.members.ban(user.id, { reason: `Blacklist: ${reason}` })
-                .then(() => console.log(`Đã ban ${user.tag}`))
+                .then(() => console.log(`Đã ban ${user.username}`))
                 .catch(err => console.log("Lỗi ban:", err.message));
 
             const logChannel = interaction.guild.channels.cache.get(process.env.BLACKLIST_LOG_CHANNEL);
@@ -717,7 +748,7 @@ if (commandName === 'tungdongxu') {
             const embed = new EmbedBuilder()
                 .setTitle("✅ UNBLACKLIST THÀNH CÔNG")
                 .setColor("#00ffcc")
-                .addFields({ name: "User", value: `${user.tag}`, inline: true })
+                .addFields({ name: "User", value: `${user.username}`, inline: true })
                 .setTimestamp();
 
             const logChannel = interaction.guild.channels.cache.get(process.env.BLACKLIST_LOG_CHANNEL);
@@ -725,9 +756,9 @@ if (commandName === 'tungdongxu') {
                 const logEmbed = new EmbedBuilder()
                     .setTitle("✅ UNBLACKLIST LOG")
                     .setColor("#00ffcc")
-                    .setThumbnail(user.displayAvatarURL({ dynamic: true }))
+                    .setThumbnail(user.displayAvatarURL({ forceStatic: false }))
                     .addFields(
-                        { name: "User", value: `${user.tag}`, inline: true },
+                        { name: "User", value: `${user.username}`, inline: true },
                         { name: "Người thực hiện", value: `<@${interaction.user.id}>`, inline: true }
                     )
                     .setFooter({ text: `ID: ${user.id}` })
@@ -923,9 +954,7 @@ if (!interaction.deferred && !interaction.replied) {
     await interaction.deferReply();
 }
 
-const data = JSON.parse(fs.readFileSync("coins.json", "utf8") || "{}");
-
-const sorted = Object.entries(data)
+const sorted = Object.entries(coins)
         .sort(([, a], [, b]) => b - a)
         .slice(0, 10);
 
@@ -1173,7 +1202,7 @@ if (!interaction.deferred && !interaction.replied) {
                 const embed = new EmbedBuilder()
                     .setColor("#00ffcc")
                     .setTitle("📢 ROLE UPDATE")
-                    .setThumbnail(user.displayAvatarURL({ dynamic: true }))
+                    .setThumbnail(user.displayAvatarURL({ forceStatic: false }))
                     .addFields(
                         { name: " User", value: `<@${user.id}>`, inline: true },
                         { name: " Role", value: roleName, inline: true },
@@ -1216,7 +1245,7 @@ if (!interaction.deferred && !interaction.replied) {
                 const embed = new EmbedBuilder()
                     .setColor("#ff4d4d")
                     .setTitle("📢 ROLE REMOVED")
-                    .setThumbnail(user.displayAvatarURL({ dynamic: true }))
+                    .setThumbnail(user.displayAvatarURL({ forceStatic: false }))
                     .addFields(
                         { name: " User", value: `<@${user.id}>`, inline: true },
                         { name: " Action", value: "Demote", inline: true },
@@ -1426,6 +1455,7 @@ if (interaction.customId.startsWith("bc_")) {
             content: `💀 Kết quả là: **${resultText}**. Bạn đã mất **${money}** coin. Chúc may mắn lần sau!` 
         });
     }
+    return;
 }
 
         if (interaction.customId === "tai" || interaction.customId === "xiu") {
@@ -1663,7 +1693,7 @@ if (interaction.customId.startsWith("bet_")) {
                     const win = Math.random() < chance;
                     updateStreak(userId, win);
 
-                    const result = win ? choice : (choice === "tai" ? "xiu" : "tai");
+                    const actualResult = total >= 11 ? "tai" : "xiu";
                     const totalLabel = total >= 11 ? "TÀI" : "XỈU";
 
                     let resultEmbed = new EmbedBuilder()
@@ -1728,7 +1758,7 @@ app.get("/staff-realtime", async (req, res) => {
                 return {
                     id: member.user.id,
                     username: member.user.username,
-                    avatar: member.user.displayAvatarURL({ dynamic: true }),
+                    avatar: member.user.displayAvatarURL({ forceStatic: false }),
                     role: memberRole || "Member",
                     color,
                     profile: `https://discord.com/users/${member.user.id}`
