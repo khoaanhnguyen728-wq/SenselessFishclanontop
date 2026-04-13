@@ -16,14 +16,27 @@ const cors = require("cors");
 const axios = require("axios");
 const backup = require("discord-backup");
 
-const backupPath = path.resolve("./backups");
+const backupPath = path.join(__dirname, "backups");
 
-// Đảm bảo thư mục backups tồn tại
+// Tạo folder nếu chưa có
 if (!fs.existsSync(backupPath)) {
     fs.mkdirSync(backupPath, { recursive: true });
+    console.log("📁 Đã tạo folder backups");
 }
-backup.setStorageFolder(backupPath);
+
+// Tạo backup
+const backupData = await backup.create(interaction.guild, {
+    maxMessagesPerChannel: 0,
+    jsonSave: false
+});
+
+// Lưu file
+const filePath = path.join(backupPath, `${backupData.id}.json`);
+fs.writeFileSync(filePath, JSON.stringify(backupData, null, 2));
+
 console.log("📂 Backup path:", backupPath);
+console.log("💾 File đã lưu:", filePath);
+
 // Coin functions dùng trực tiếp biến coins + saveCoins (được định nghĩa bên dưới)
 // Các hàm này chỉ được GỌI trong event handlers, sau khi module load xong nên an toàn
 function getCoins(userId) {
@@ -539,7 +552,7 @@ const result = await aiModel.generateContent(promptWithLanguageLock);
         }
     }
 });
-client.on("interactionCreate", async interaction => {
+client.on("interactionCreate", async (interaction) => {
     try {
 console.log("📩 INTERACTION:", interaction.commandName || interaction.customId);
 console.log("👤 USER:", interaction.user.username);
@@ -548,7 +561,7 @@ console.log("📍 GUILD:", interaction.guildId);
     //SLASH COMMANDS
     if (interaction.isChatInputCommand()) {
         const { commandName, options } = interaction;
-if (commandName === "backup") {
+if (interaction.commandName === "backup") {
     // Bước 1: Defer duy nhất một lần ở đầu lệnh (Ẩn nội dung với ephemeral)
     await interaction.deferReply({ ephemeral: true });
     const subcommand = interaction.options.getSubcommand();
@@ -585,11 +598,11 @@ if (subcommand === "create") {
         }
 
         // 3. Tiến hành tạo Backup (Không lưu tin nhắn để chạy nhanh nhất)
-        const backupData = await backup.create(interaction.guild, {
-            maxMessagesPerChannel: 0,
-            jsonSave: true, // Để thư viện tự quản lý lưu file cơ bản
-            saveImages: "base64"
-        });
+const backupData = await backup.create(interaction.guild, {
+    maxMessagesPerChannel: 0,
+    jsonSave: false, // ⚠️ sửa lại
+    saveImages: "base64"
+});
 
         // 4. Ghi file thủ công để đảm bảo đường dẫn chuẩn xác tuyệt đối
         const filePath = path.join(backupPath, `${backupData.id}.json`);
@@ -696,11 +709,11 @@ if (subcommand === "load") {
             await interaction.editReply("❌ Lỗi: Bot thiếu quyền hoặc file backup bị hỏng.").catch(() => {});
         }
 
-        return; // <--- CÁI RETURN THỨ NHẤT (Đóng subcommand load)
+        return; 
     }
 
-    return; // <--- CÁI RETURN THỨ HAI (Đóng toàn bộ lệnh backup)
-}// Kết thúc if (commandName === "backup")
+    return; 
+}
 
 else if (commandName === 'tungdongxu') {
         try {
