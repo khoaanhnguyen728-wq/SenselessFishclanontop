@@ -1,8 +1,8 @@
 require("dotenv").config();
-const { REST, Routes, SlashCommandBuilder } = require("discord.js");
+const { REST, Routes, SlashCommandBuilder, PermissionFlagsBits } = require("discord.js");
 
 const commands = [
-  
+
 new SlashCommandBuilder()
     .setName("backup")
     .setDescription("Hệ thống sao lưu server")
