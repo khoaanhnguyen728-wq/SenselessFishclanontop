@@ -7,12 +7,19 @@ process.on("uncaughtException", err => {
     console.log("❌ CRASH:", err);
 });
 console.log("🚀 BOT ĐANG KHỞI ĐỘNG...");
+const backup = require("discord-backup");
+const path = require("path");
 const dns = require("dns");
 dns.setDefaultResultOrder("ipv4first");
 const express = require("express");
 const fs = require("fs");
 const cors = require("cors");
 const axios = require("axios");
+const backupPath = path.join(__dirname, "backups");
+if (!fs.existsSync(backupPath)) {
+    fs.mkdirSync(backupPath); // Tự động tạo folder nếu chưa có
+}
+backup.setStorageFolder(backupPath);
 // Coin functions dùng trực tiếp biến coins + saveCoins (được định nghĩa bên dưới)
 // Các hàm này chỉ được GỌI trong event handlers, sau khi module load xong nên an toàn
 function getCoins(userId) {
@@ -535,6 +542,60 @@ console.log("📍 GUILD:", interaction.guildId);
     //SLASH COMMANDS
     if (interaction.isChatInputCommand()) {
         const { commandName, options } = interaction;
+if (interaction.commandName === "backup") {
+    const subcommand = interaction.options.getSubcommand();
+
+    // Kiểm tra quyền Admin
+    if (!interaction.member.permissions.has("Administrator")) {
+        return interaction.reply({ content: "❌ Bạn không có quyền Admin!", ephemeral: true });
+    }
+
+    // --- XỬ LÝ LỆNH: /backup create ---
+    if (subcommand === "create") {
+        console.log(`\n[BACKUP] 🔄 Đang khởi tạo sao lưu cho server: ${interaction.guild.name} (${interaction.guild.id})`);
+        await interaction.reply("⏳ Đang quét server và lưu thành file JSON...");
+
+        backup.create(interaction.guild, {
+            maxMessagesPerChannel: 0,
+            jsonBeautify: true,
+            saveImages: "base64"
+        }).then((backupData) => {
+            // Hiện log ra terminal Termux
+            console.log(`[BACKUP] ✅ Thành công!`);
+            console.log(`[BACKUP] 🆔 ID: ${backupData.id}`);
+            console.log(`[BACKUP] 📂 Đường dẫn: backups/${backupData.id}.json`);
+            console.log(`[BACKUP] 🕒 Thời gian: ${new Date().toLocaleString()}`);
+
+            return interaction.editReply({
+                content: `✅ **Đã sao lưu thành công!**\n🔑 ID: \`${backupData.id}\`\n📂 File đã được lưu vào thư mục \`backups/\``
+            });
+        }).catch(err => {
+            console.log(`[BACKUP] ❌ LỖI KHI CREATE:`, err);
+            return interaction.editReply("❌ Có lỗi xảy ra khi tạo file JSON.");
+        });
+    }
+
+    // --- XỬ LÝ LỆNH: /backup load ---
+    if (subcommand === "load") {
+        const backupID = interaction.options.getString("id");
+
+        if (interaction.user.id !== interaction.guild.ownerId) {
+            return interaction.reply({ content: "❌ Chỉ Chủ Server mới có quyền load!", ephemeral: true });
+        }
+
+        console.log(`\n[BACKUP] 🚀 Bắt đầu khôi phục server từ ID: ${backupID}`);
+        await interaction.reply("⚠️ Đang khôi phục... Các kênh cũ sẽ bị xóa sạch.");
+
+        backup.load(backupID, interaction.guild, {
+            clearGuildBeforeRestore: true
+        }).then(() => {
+            console.log(`[BACKUP] 🎊 Khôi phục hoàn tất cho server: ${interaction.guild.name}`);
+        }).catch(err => {
+            console.log(`[BACKUP] ❌ LỖI KHI LOAD:`, err);
+            return interaction.followUp("❌ Lỗi: ID không tồn tại hoặc bot thiếu quyền.");
+        });
+    }
+}
 
 if (commandName === 'tungdongxu') {
         try {
