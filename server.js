@@ -570,23 +570,45 @@ if (interaction.commandName === "backup") {
 
         await interaction.reply({ embeds: [loadingEmbed] });
 
+if (!fs.existsSync(backupPath)) {
+    fs.mkdirSync(backupPath, { recursive: true });
+}
+
         try {
             // Xóa toàn bộ file backup cũ trong folder trước khi tạo mới
-            const oldFiles = fs.readdirSync(backupPath).filter(f => f.endsWith(".json"));
-            let deletedCount = 0;
-            for (const file of oldFiles) {
-                fs.unlinkSync(path.join(backupPath, file));
-                deletedCount++;
-            }
-            if (deletedCount > 0) {
-                console.log(`[BACKUP] 🗑️ Đã xóa ${deletedCount} file backup cũ`);
-            }
+let deletedCount = 0;
+const files = fs.readdirSync(backupPath);
 
-            const backupData = await backup.create(interaction.guild, {
-                maxMessagesPerChannel: 0,
-                jsonBeautify: true,
-                saveImages: "base64"
-            });
+for (const file of files) {
+    if (file.endsWith(".json")) {
+        try {
+            fs.unlinkSync(path.join(backupPath, file));
+            deletedCount++;
+        } catch (err) {
+            console.log("⚠️ Không xóa được:", file);
+        }
+    }
+}
+
+console.log(`[BACKUP] 🗑️ Đã xóa ${deletedCount} file backup cũ`);
+
+// ✅ TẠO BACKUP
+const backupData = await backup.create(interaction.guild, {
+    maxMessagesPerChannel: 0,
+    jsonBeautify: true,
+    saveImages: "base64"
+});
+const filePath = path.join(backupPath, `${backupData.id}.json`);
+
+let attempts = 0;
+while (!fs.existsSync(filePath) && attempts < 10) {
+    await new Promise(res => setTimeout(res, 500));
+    attempts++;
+}
+if (!fs.existsSync(filePath)) {
+    console.log("❌ Không tìm thấy file backup!");
+    return interaction.editReply("❌ Backup tạo nhưng không lưu file!");
+}
 
             // Đọc file backup vừa tạo để kiểm tra channel & role đã được lưu chưa
             const backupFilePath = path.join(backupPath, `${backupData.id}.json`);
