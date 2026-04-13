@@ -2,6 +2,35 @@ require("dotenv").config();
 const { REST, Routes, SlashCommandBuilder } = require("discord.js");
 
 const commands = [
+  
+new SlashCommandBuilder()
+    .setName("backup")
+    .setDescription("Hệ thống sao lưu server")
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .addSubcommand(sub =>
+      sub.setName("create")
+        .setDescription("Tạo một bản sao lưu mới cho server")
+    )
+    .addSubcommand(sub =>
+      sub.setName("load")
+        .setDescription("Khôi phục server từ ID bản sao lưu")
+        .addStringOption(opt => 
+          opt.setName("id")
+            .setDescription("Nhập mã ID bản sao lưu")
+            .setRequired(true)
+        )
+    ),
+  
+new SlashCommandBuilder()
+  .setName('baucua')
+  .setDescription('🎲 Chơi bầu cua'),
+
+new SlashCommandBuilder()
+.setName('tungdongxu')
+.setDescription('Mini-game Tung Đồng Xu (Ngửa/ÚP)')   
+.addIntegerOption(opt => opt
+  .setName('money').setDescription('Số tiền cược')
+  .setRequired(true)),
 
     new SlashCommandBuilder()
         .setName('daily')
