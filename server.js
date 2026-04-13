@@ -25,12 +25,7 @@ if (!fs.existsSync(backupPath)) {
 }
 
 
-// Lưu file
-const filePath = path.join(backupPath, `${backupData.id}.json`);
-fs.writeFileSync(filePath, JSON.stringify(backupData, null, 2));
-
 console.log("📂 Backup path:", backupPath);
-console.log("💾 File đã lưu:", filePath);
 
 // Coin functions dùng trực tiếp biến coins + saveCoins (được định nghĩa bên dưới)
 // Các hàm này chỉ được GỌI trong event handlers, sau khi module load xong nên an toàn
@@ -558,7 +553,7 @@ console.log("📍 GUILD:", interaction.guildId);
         const { commandName, options } = interaction;
 if (interaction.commandName === "backup") {
     // Bước 1: Defer duy nhất một lần ở đầu lệnh (Ẩn nội dung với ephemeral)
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply();
     const subcommand = interaction.options.getSubcommand();
 
     // Bước 2: Kiểm tra quyền Admin - Luôn dùng return để ngắt luồng ngay lập tức
@@ -587,11 +582,12 @@ if (subcommand === "create") {
 
         await interaction.editReply({ embeds: [loadingEmbed] });
 
-        // 2. Tạo backup
+        // 2. Tạo backup — doNotBackup: [] = quét toàn bộ roles, channels, categories, bans, emojis
         const backupData = await backup.create(interaction.guild, {
             maxMessagesPerChannel: 0,
             jsonSave: false, // tự lưu file thủ công
-            saveImages: "base64"
+            saveImages: "base64",
+            doNotBackup: [] // KHÔNG bỏ sót bất kỳ thứ gì
         });
 
         // 3. Tạo folder nếu chưa có
@@ -620,10 +616,10 @@ if (subcommand === "create") {
         }
 
         // 6. Thống kê dữ liệu từ bản backup vừa tạo
-        const roleCount = (backupData.roles || []).length;
-        const categoryCount = (backupData.channels.categories || []).length;
-        const othersCount = (backupData.channels.others || []).length;
-        const totalChannels = categoryCount + othersCount;
+        const roleCount      = (backupData.roles     || []).length;
+        const categoryCount  = (backupData.channels?.categories || []).length;
+        const othersCount    = (backupData.channels?.others     || []).length;
+        const totalChannels  = categoryCount + othersCount;
 
         // 7. Gửi kết quả cuối cùng - Dùng return để kết thúc nhánh xử lý này
         const successEmbed = new EmbedBuilder()
@@ -691,8 +687,12 @@ if (subcommand === "load") {
             // Gửi thông báo cuối cùng trước khi channel bị xóa
             await interaction.editReply({ embeds: [warningEmbed] });
 
+            // Đọc file JSON và truyền trực tiếp vào backup.load (không dùng ID string)
+            const rawData    = fs.readFileSync(filePath, "utf8");
+            const backupData = JSON.parse(rawData);
+
             // Tiến hành khôi phục (Lệnh này sẽ xóa sạch các channel cũ)
-            await backup.load(backupID, interaction.guild, {
+            await backup.load(backupData, interaction.guild, {
                 clearGuildBeforeRestore: true,
                 maxMessagesPerChannel: 0
             });
@@ -750,7 +750,7 @@ else if (commandName === 'tungdongxu') {
     
         /*BLACKLIST*/
         else if (commandName === "blacklist") {
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply();
 
             const user = options.getUser("user");
             const reason = options.getString("reason") || "Không có";
@@ -807,7 +807,7 @@ else if (commandName === 'tungdongxu') {
 
         /* ===== UNBLACKLIST ===== */
         else if (commandName === "unblacklist") {
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply();
 
             const user = options.getUser("user");
 
@@ -854,7 +854,7 @@ else if (commandName === 'tungdongxu') {
 
         /* ===== STRIKE ===== */
         else if (commandName === "strike") {
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply();
 
             const target = options.getUser("user");
             const reason = options.getString("reason");
@@ -907,7 +907,7 @@ else if (commandName === 'tungdongxu') {
 
         /* ===== UNSTRIKE ===== */
         else if (commandName === "unstrike") {
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply();
 
             const target = options.getUser("user");
             const strikeIndex = options.getInteger("strike") - 1;
@@ -1083,7 +1083,7 @@ if (!interaction.deferred && !interaction.replied) {
 
         /* ===== STAFFSTRIKE ===== */
         else if (commandName === "staffstrike") {
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply();
 
             const target = options.getUser("user");
             const reason = options.getString("reason");
@@ -1139,16 +1139,16 @@ if (!interaction.deferred && !interaction.replied) {
 
         /* ===== BXH ===== */
         else if (commandName === "bxh") {
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply();
             const sub = options.getSubcommand();
             if (sub === "kill" || sub === "chat") {
-                return interaction.editReply({ content: "Tính năng đang phát triển.", ephemeral: true });
+                return interaction.editReply({ content: "⚙️ Tính năng **BXH** đang được phát triển, vui lòng chờ!" });
             }
         }
 
         /* ===== LIST ===== */
         else if (commandName === "list") {
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply();
 
             const type = options.getString("type");
             let text = "";
@@ -1171,7 +1171,7 @@ if (!interaction.deferred && !interaction.replied) {
 
         /* ===== SETTOP ===== */
         else if (commandName === "settop") {
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply();
 
             const user = options.getUser("user");
             const rank = options.getInteger("top");
@@ -1208,7 +1208,7 @@ if (!interaction.deferred && !interaction.replied) {
 
         /* ===== DETOP ===== */
         else if (commandName === "detop") {
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply();
 
             const user = options.getUser("user");
             let found = false;
@@ -1231,7 +1231,7 @@ if (!interaction.deferred && !interaction.replied) {
 
         /* ===== PROMOTE ===== */
         else if (commandName === "promote") {
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply();
 
             const user = options.getUser("user");
             const roleName = options.getString("permission");
@@ -1302,7 +1302,7 @@ if (!interaction.deferred && !interaction.replied) {
 
         /* ===== DEMOTE ===== */
         else if (commandName === "demote") {
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply();
 
             const user = options.getUser("user");
 
@@ -1344,7 +1344,7 @@ if (!interaction.deferred && !interaction.replied) {
 
         /* ===== MAINER ===== */
         else if (commandName === "mainer") {
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply();
 
             const user = options.getUser("user");
             mainers = mainers.filter(m => m.id !== user.id);
@@ -1361,7 +1361,7 @@ if (!interaction.deferred && !interaction.replied) {
 
         /* ===== DEMAINER ===== */
         else if (commandName === "demainer") {
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply();
 
             const user = options.getUser("user");
             mainers = mainers.filter(m => m.id !== user.id);
@@ -1372,7 +1372,7 @@ if (!interaction.deferred && !interaction.replied) {
 
         /* ===== THIDAU ===== */
         else if (commandName === "thidau") {
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply();
 
             const team1 = options.getString("team1");
             const team2 = options.getString("team2");
@@ -1404,8 +1404,15 @@ if (!interaction.deferred && !interaction.replied) {
 
         /* ===== COIN ===== */
         else if (commandName === "coin") {
+            await interaction.deferReply();
             const userId = interaction.user.id;
-            return interaction.reply(`💰 Bạn có: **${getCoins(userId)} coin**`);
+            const balance = getCoins(userId);
+            const embed = new EmbedBuilder()
+                .setTitle("💰 SỐ DƯ CỦA BẠN")
+                .setDescription(`<@${userId}> đang có **${balance.toLocaleString()} coin** 🪙`)
+                .setColor("#f1c40f")
+                .setTimestamp();
+            return interaction.editReply({ embeds: [embed] });
         }
 
 else if (commandName === "baucua") {
@@ -1432,6 +1439,8 @@ else if (commandName === "baucua") {
 
         /* ===== TÀI XỈU ===== */
         else if (commandName === "taixiu") {
+            await interaction.deferReply();
+
             const embed = new EmbedBuilder()
                 .setTitle("🎲 TÀI XỈU")
                 .setDescription("👉 Chọn Tài hoặc Xỉu\n💰 Sau đó nhập tiền")
@@ -1448,7 +1457,7 @@ else if (commandName === "baucua") {
                     .setStyle(ButtonStyle.Primary)
             );
 
-            return interaction.reply({ embeds: [embed], components: [row] });
+            return interaction.editReply({ embeds: [embed], components: [row] });
         }
 
     }
@@ -1560,7 +1569,8 @@ if (interaction.customId.startsWith("bc_")) {
             if (!interaction.channel.name.startsWith("ai-ticket-")) {
                 return interaction.reply({ content: "❌ Không thể đóng kênh này!", ephemeral: true });
             }
-            await interaction.editReply({ content: "🔒 Đang đóng ticket..." });
+            await interaction.deferUpdate();
+            await interaction.followUp({ content: "🔒 Đang đóng ticket...", ephemeral: true });
             setTimeout(() => interaction.channel.delete().catch(() => {}), 3000);
             return;
         }
@@ -1614,7 +1624,7 @@ if (interaction.customId.startsWith("bc_")) {
     else if (interaction.isStringSelectMenu()) {
 
         if (interaction.customId === "match_info") {
-            return interaction.reply({ content: `📌 Thông tin: ${interaction.values[0]}`, ephemeral: true });
+            return interaction.reply({ content: `📌 Thông tin: ${interaction.values[0]}` });
         }
 
         if (interaction.customId === "select_stage") {
@@ -1645,8 +1655,7 @@ if (interaction.customId.startsWith("bc_")) {
             const stage = selected.get(interaction.user.id) || "Unknown";
 
             return interaction.reply({
-                content: `✅ Đã gửi!\nStage: **${stage}**\nScore: **${score}**`,
-                ephemeral: true
+                content: `✅ Đã gửi!\nStage: **${stage}**\nScore: **${score}**`
             });
         }
 if (interaction.customId.startsWith("bc_bet_")) {
@@ -1833,7 +1842,7 @@ if (interaction.customId.startsWith("bet_")) {
                 await interaction.editReply(errorEmbed).catch(() => {});
             } else {
                 // Nếu chưa làm gì cả thì dùng reply
-                await interaction.editReply(errorEmbed).catch(() => {});
+                await interaction.reply(errorEmbed).catch(() => {});
             }
         } catch (finalErr) {
             console.error("🔥 Không thể gửi thông báo lỗi cho User:", finalErr.message);
