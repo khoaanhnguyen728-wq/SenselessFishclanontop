@@ -549,23 +549,23 @@ console.log("📍 GUILD:", interaction.guildId);
     if (interaction.isChatInputCommand()) {
         const { commandName, options } = interaction;
 if (commandName === "backup") {
+    // Bước 1: Defer duy nhất một lần ở đầu lệnh (Ẩn nội dung với ephemeral)
     await interaction.deferReply({ ephemeral: true });
     const subcommand = interaction.options.getSubcommand();
 
-    // 1. Kiểm tra quyền Admin sớm nhất (Chỉ Admin mới được dùng lệnh này)
+    // Bước 2: Kiểm tra quyền Admin - Luôn dùng return để ngắt luồng ngay lập tức
     if (!interaction.member.permissions.has("Administrator")) {
-        return interaction.editReply({ 
+        return await interaction.editReply({ 
             content: "❌ Bạn không có quyền Administrator để sử dụng hệ thống backup!", 
         });
     }
 
 // --- XỬ LÝ LỆNH PHỤ: /backup create ---
 if (subcommand === "create") {
-    // 1. Phải deferReply ngay lập tức vì quá trình quét server thường tốn hơn 3 giây
-
     try {
         console.log(`\n[BACKUP] 🔄 Đang khởi tạo sao lưu cho server: ${interaction.guild.name}`);
 
+        // 1. Gửi phản hồi tạm thời để người dùng biết Bot đang làm việc
         const loadingEmbed = new EmbedBuilder()
             .setColor("#f0a500")
             .setAuthor({
@@ -577,27 +577,26 @@ if (subcommand === "create") {
             .setThumbnail(interaction.guild.iconURL({ dynamic: true }))
             .setTimestamp();
 
-        // Gửi thông báo đang xử lý
         await interaction.editReply({ embeds: [loadingEmbed] });
 
-        // 2. Đảm bảo thư mục backups tồn tại (sử dụng biến backupPath đã khai báo ở đầu file)
+        // 2. Đảm bảo thư mục lưu trữ tồn tại
         if (!fs.existsSync(backupPath)) {
             fs.mkdirSync(backupPath, { recursive: true });
         }
 
-        // 3. Tiến hành tạo Backup (discord-backup tự lưu vào backupPath đã set)
+        // 3. Tiến hành tạo Backup (Không lưu tin nhắn để chạy nhanh nhất)
         const backupData = await backup.create(interaction.guild, {
-            maxMessagesPerChannel: 0 // Không lưu tin nhắn để tốc độ chạy là nhanh nhất
+            maxMessagesPerChannel: 0,
+            jsonSave: true, // Để thư viện tự quản lý lưu file cơ bản
+            saveImages: "base64"
         });
 
-        // 4. Ghi file thủ công để đảm bảo lưu đúng vào thư mục backups/
+        // 4. Ghi file thủ công để đảm bảo đường dẫn chuẩn xác tuyệt đối
         const filePath = path.join(backupPath, `${backupData.id}.json`);
-        if (!fs.existsSync(filePath)) {
-            fs.writeFileSync(filePath, JSON.stringify(backupData, null, 2), "utf8");
-            console.log(`[BACKUP] 📝 Đã ghi file thủ công: ${filePath}`);
-        }
+        fs.writeFileSync(filePath, JSON.stringify(backupData, null, 2), "utf8");
+        console.log(`[BACKUP] 📝 Đã lưu file: ${filePath}`);
 
-        // 5. Dọn dẹp: Chỉ giữ lại file vừa tạo, xóa các file backup cũ (.json) để tiết kiệm dung lượng
+        // 5. Dọn dẹp: Chỉ giữ lại 1 file vừa tạo, xóa các file cũ để tránh đầy bộ nhớ
         let deletedCount = 0;
         const files = fs.readdirSync(backupPath);
         for (const file of files) {
@@ -606,24 +605,18 @@ if (subcommand === "create") {
                     fs.unlinkSync(path.join(backupPath, file));
                     deletedCount++;
                 } catch (err) {
-                    console.log("⚠️ Không xóa được file cũ:", file);
+                    console.log("⚠️ Lỗi dọn dẹp file cũ:", file);
                 }
             }
         }
 
-        // 6. Đọc file vừa tạo để lấy thống kê chính xác
-        const backupJson = JSON.parse(fs.readFileSync(filePath, "utf8"));
-        const categories = backupJson.channels?.categories || [];
-        const others = backupJson.channels?.others || [];
-        
-        // Tính tổng số channel (bao gồm cả channel con trong category)
-        const channelCount = categories.reduce(
-            (acc, cat) => acc + 1 + (cat.children ? cat.children.length : 0), 0
-        ) + others.length;
+        // 6. Thống kê dữ liệu từ bản backup vừa tạo
+        const roleCount = (backupData.roles || []).length;
+        const categoryCount = (backupData.channels.categories || []).length;
+        const othersCount = (backupData.channels.others || []).length;
+        const totalChannels = categoryCount + othersCount;
 
-        const roleCount = (backupJson.roles || []).length;
-
-        // 7. Gửi kết quả cuối cùng
+        // 7. Gửi kết quả cuối cùng - Dùng return để kết thúc nhánh xử lý này
         const successEmbed = new EmbedBuilder()
             .setColor("#00ff88")
             .setAuthor({
@@ -634,12 +627,12 @@ if (subcommand === "create") {
             .setThumbnail(interaction.guild.iconURL({ dynamic: true }))
             .addFields(
                 { name: "🔑 Backup ID", value: `\`${backupData.id}\``, inline: false },
-                { name: "📁 Kênh đã lưu", value: `**${channelCount}** kênh`, inline: true },
+                { name: "📁 Kênh đã lưu", value: `**${totalChannels}** kênh`, inline: true },
                 { name: "🎭 Vai trò đã lưu", value: `**${roleCount}** vai trò`, inline: true },
-                { name: "📂 Đường dẫn file", value: `\`backups/${backupData.id}.json\``, inline: false }
+                { name: "📂 Lưu trữ", value: `\`backups/${backupData.id}.json\``, inline: false }
             )
             .setFooter({
-                text: `Đã dọn dẹp ${deletedCount} bản sao lưu cũ | ID: ${interaction.user.id}`,
+                text: `Đã dọn dẹp ${deletedCount} bản cũ | ID: ${interaction.user.id}`,
                 iconURL: interaction.user.displayAvatarURL()
             })
             .setTimestamp();
@@ -656,25 +649,18 @@ if (subcommand === "create") {
             .setDescription(`Chi tiết lỗi: \`\`\`${err.message}\`\`\``)
             .setTimestamp();
 
-        // Kiểm tra xem interaction đã được phản hồi chưa để tránh lỗi lặp reply
-        if (interaction.deferred || interaction.replied) {
-            return await interaction.editReply({ embeds: [errorEmbed] });
-        } else {
-            return await interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
-        }
+        // Sử dụng return và catch phụ để tránh lỗi 40060 nếu Discord gặp sự cố
+        return await interaction.editReply({ embeds: [errorEmbed] }).catch(() => {});
     }
-    return; // Đã xử lý create, không fall-through vào load
 }
 
-    // --- XỬ LÝ LỆNH: /backup load ---
-    if (subcommand === "load") {
+if (subcommand === "load") {
         const backupID = interaction.options.getString("id");
 
-        // Chỉ cho phép Server Owner thực hiện
+        // 1. Chỉ cho phép Server Owner thực hiện
         if (interaction.user.id !== interaction.guild.ownerId) {
             return await interaction.editReply({ 
-                content: "❌ **CẢNH BÁO NGUY HIỂM:** Chỉ **Chủ sở hữu máy chủ (Server Owner)** mới có quyền khôi phục dữ liệu để tránh bị phá hoại server!", 
-                ephemeral: true 
+                content: "❌ **CẢNH BÁO NGUY HIỂM:** Chỉ **Chủ sở hữu máy chủ (Server Owner)** mới có quyền khôi phục dữ liệu!", 
             });
         }
 
@@ -682,40 +668,39 @@ if (subcommand === "create") {
             const filePath = path.join(backupPath, `${backupID}.json`);
             
             if (!fs.existsSync(filePath)) {
-                return await interaction.editReply(`❌ Không tìm thấy bản sao lưu nào có ID là: \`${backupID}\`. Vui lòng kiểm tra lại!`);
+                return await interaction.editReply(`❌ Không tìm thấy bản sao lưu nào có ID là: \`${backupID}\`.`);
             }
 
-            console.log(`[BACKUP] 🚀 Bắt đầu khôi phục bởi Owner cho server: ${interaction.guild.name} (ID: ${backupID})`);
+            console.log(`[BACKUP] 🚀 Bắt đầu khôi phục cho server: ${interaction.guild.name}`);
 
             const warningEmbed = new EmbedBuilder()
                 .setColor("#ffcc00")
                 .setTitle("⚠️ Đang khôi phục dữ liệu...")
-                .setDescription("Hệ thống bắt đầu dọn dẹp server và nạp dữ liệu từ bản backup. Quá trình này có thể làm bot bị ngắt kết nối tạm thời.")
-                .setFooter({ text: "Vui lòng không tắt bot lúc này!" });
+                .setDescription("Hệ thống bắt đầu dọn dẹp server và nạp dữ liệu. Kênh này sắp bị xóa. Vui lòng không tắt bot!")
+                .setFooter({ text: "Tiến trình đang chạy ngầm..." });
 
+            // Gửi thông báo cuối cùng trước khi channel bị xóa
             await interaction.editReply({ embeds: [warningEmbed] });
 
+            // Tiến hành khôi phục (Lệnh này sẽ xóa sạch các channel cũ)
             await backup.load(backupID, interaction.guild, {
                 clearGuildBeforeRestore: true,
                 maxMessagesPerChannel: 0
             });
 
-            console.log(`[BACKUP] ✅ Khôi phục hoàn tất thành công cho server: ${interaction.guild.name}`);
+            console.log(`[BACKUP] ✅ Khôi phục hoàn tất thành công.`);
 
         } catch (err) {
             console.error(`[BACKUP LOAD ERROR]:`, err);
-
-            const errorMsg = "❌ Lỗi: Bot thiếu quyền hoặc file backup bị hỏng.";
-            if (interaction.deferred || interaction.replied) {
-                await interaction.editReply(errorMsg).catch(() => console.log("Không thể gửi thông báo lỗi do channel đã bị xóa."));
-            } else {
-                await interaction.editReply({ content: errorMsg, ephemeral: true }).catch(() => {});
-            }
+            // Catch lỗi của editReply nếu channel đã bị xóa mất tích
+            await interaction.editReply("❌ Lỗi: Bot thiếu quyền hoặc file backup bị hỏng.").catch(() => {});
         }
-        return; // Đã xử lý load
+
+        return; // <--- CÁI RETURN THỨ NHẤT (Đóng subcommand load)
     }
-    return; // Đã xử lý backup command
-} // Kết thúc if (commandName === "backup")
+
+    return; // <--- CÁI RETURN THỨ HAI (Đóng toàn bộ lệnh backup)
+}// Kết thúc if (commandName === "backup")
 
 else if (commandName === 'tungdongxu') {
         try {
