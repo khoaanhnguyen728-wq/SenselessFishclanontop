@@ -586,24 +586,16 @@ if (subcommand === "create") {
             fs.mkdirSync(backupPath, { recursive: true });
         }
 
-        // 3. Tiến hành tạo Backup
+        // 3. Tiến hành tạo Backup (discord-backup tự lưu vào backupPath đã set)
         const backupData = await backup.create(interaction.guild, {
-            maxMessagesPerChannel: 0, // Không lưu tin nhắn để tốc độ chạy là nhanh nhất
-            jsonBeautify: true,
-            saveImages: null // Không encode ảnh sang base64 để tránh nặng file JSON
+            maxMessagesPerChannel: 0 // Không lưu tin nhắn để tốc độ chạy là nhanh nhất
         });
 
+        // 4. Ghi file thủ công để đảm bảo lưu đúng vào thư mục backups/
         const filePath = path.join(backupPath, `${backupData.id}.json`);
-
-        // 4. Cơ chế kiểm tra file đã ghi xong xuống ổ đĩa chưa (Tối đa 30 giây)
-        let attempts = 0;
-        while (!fs.existsSync(filePath) && attempts < 60) {
-            await new Promise(res => setTimeout(res, 500));
-            attempts++;
-        }
-
         if (!fs.existsSync(filePath)) {
-            throw new Error("Hệ thống không tìm thấy file backup trên ổ đĩa sau khi tạo.");
+            fs.writeFileSync(filePath, JSON.stringify(backupData, null, 2), "utf8");
+            console.log(`[BACKUP] 📝 Đã ghi file thủ công: ${filePath}`);
         }
 
         // 5. Dọn dẹp: Chỉ giữ lại file vừa tạo, xóa các file backup cũ (.json) để tiết kiệm dung lượng
@@ -672,6 +664,7 @@ if (subcommand === "create") {
             return await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
         }
     }
+    return; // Đã xử lý create, không fall-through vào load
 }
 
     // --- XỬ LÝ LỆNH: /backup load ---
@@ -717,12 +710,14 @@ if (subcommand === "create") {
 
             const errorMsg = "❌ Lỗi: Bot thiếu quyền hoặc file backup bị hỏng.";
             if (interaction.deferred || interaction.replied) {
-                return await interaction.editReply(errorMsg).catch(() => console.log("Không thể gửi thông báo lỗi do channel đã bị xóa."));
+                await interaction.editReply(errorMsg).catch(() => console.log("Không thể gửi thông báo lỗi do channel đã bị xóa."));
             } else {
-                return await interaction.reply({ content: errorMsg, ephemeral: true }).catch(() => {});
+                await interaction.reply({ content: errorMsg, ephemeral: true }).catch(() => {});
             }
         }
+        return; // Đã xử lý load
     }
+    return; // Đã xử lý backup command
 } // Kết thúc if (commandName === "backup")
 
 else if (commandName === 'tungdongxu') {
@@ -1819,7 +1814,7 @@ if (interaction.customId.startsWith("bet_")) {
             return interaction.reply({ content: "❌ Có lỗi xảy ra! Vui lòng thử lại.", ephemeral: true }).catch(() => {});
         }
     }
-    } // Kết thúc isModalSubmit
+    } // đóng isModalSubmit
 
     } catch (err) {
         // 1. Bỏ qua lỗi Unknown interaction (10062)
@@ -1828,6 +1823,11 @@ if (interaction.customId.startsWith("bet_")) {
             return;
         }
 
+        // Bỏ qua lỗi 40060 (already acknowledged) — không cần thông báo người dùng
+        if (err?.code === 40060 || err?.message?.includes("already been acknowledged")) {
+            console.warn("⚠️ Interaction đã acknowledged trước đó (40060), bỏ qua.");
+            return;
+        }
         console.error("🚨 LỖI HỆ THỐNG INTERACTION:", err);
 
         // 2. Xử lý phản hồi lỗi cho người dùng một cách an toàn
