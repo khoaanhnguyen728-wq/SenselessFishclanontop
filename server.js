@@ -554,16 +554,14 @@ if (commandName === "backup") {
 
     // 1. Kiểm tra quyền Admin sớm nhất (Chỉ Admin mới được dùng lệnh này)
     if (!interaction.member.permissions.has("Administrator")) {
-        return interaction.reply({ 
+        return interaction.editReply({ 
             content: "❌ Bạn không có quyền Administrator để sử dụng hệ thống backup!", 
-            ephemeral: true 
         });
     }
 
 // --- XỬ LÝ LỆNH PHỤ: /backup create ---
 if (subcommand === "create") {
     // 1. Phải deferReply ngay lập tức vì quá trình quét server thường tốn hơn 3 giây
-    await interaction.deferReply();
 
     try {
         console.log(`\n[BACKUP] 🔄 Đang khởi tạo sao lưu cho server: ${interaction.guild.name}`);
@@ -674,13 +672,11 @@ if (subcommand === "create") {
 
         // Chỉ cho phép Server Owner thực hiện
         if (interaction.user.id !== interaction.guild.ownerId) {
-            return interaction.reply({ 
+            return await interaction.editReply({ 
                 content: "❌ **CẢNH BÁO NGUY HIỂM:** Chỉ **Chủ sở hữu máy chủ (Server Owner)** mới có quyền khôi phục dữ liệu để tránh bị phá hoại server!", 
                 ephemeral: true 
             });
         }
-
-        await interaction.deferReply();
 
         try {
             const filePath = path.join(backupPath, `${backupID}.json`);
