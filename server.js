@@ -24,11 +24,6 @@ if (!fs.existsSync(backupPath)) {
     console.log("📁 Đã tạo folder backups");
 }
 
-// Tạo backup
-const backupData = await backup.create(interaction.guild, {
-    maxMessagesPerChannel: 0,
-    jsonSave: false
-});
 
 // Lưu file
 const filePath = path.join(backupPath, `${backupData.id}.json`);
@@ -578,7 +573,7 @@ if (subcommand === "create") {
     try {
         console.log(`\n[BACKUP] 🔄 Đang khởi tạo sao lưu cho server: ${interaction.guild.name}`);
 
-        // 1. Gửi phản hồi tạm thời để người dùng biết Bot đang làm việc
+        // 1. Tạo embed loading
         const loadingEmbed = new EmbedBuilder()
             .setColor("#f0a500")
             .setAuthor({
@@ -586,42 +581,53 @@ if (subcommand === "create") {
                 iconURL: interaction.user.displayAvatarURL({ dynamic: true })
             })
             .setTitle("🔄 Đang tạo bản sao lưu...")
-            .setDescription("Vui lòng chờ, quá trình này có thể mất vài giây tùy vào quy mô server.")
+            .setDescription("Vui lòng chờ, quá trình này có thể mất vài giây...")
             .setThumbnail(interaction.guild.iconURL({ dynamic: true }))
             .setTimestamp();
 
+        // ✅ QUAN TRỌNG: PHẢI gửi trước
         await interaction.editReply({ embeds: [loadingEmbed] });
 
-        // 2. Đảm bảo thư mục lưu trữ tồn tại
+        // 2. Tạo backup
+        const backupData = await backup.create(interaction.guild, {
+            maxMessagesPerChannel: 0,
+            jsonSave: false,
+            saveImages: "base64"
+        });
+
+        // 3. Tạo folder nếu chưa có
         if (!fs.existsSync(backupPath)) {
             fs.mkdirSync(backupPath, { recursive: true });
         }
 
-        // 3. Tiến hành tạo Backup (Không lưu tin nhắn để chạy nhanh nhất)
-const backupData = await backup.create(interaction.guild, {
-    maxMessagesPerChannel: 0,
-    jsonSave: false, // ⚠️ sửa lại
-    saveImages: "base64"
-});
-
-        // 4. Ghi file thủ công để đảm bảo đường dẫn chuẩn xác tuyệt đối
+        // 4. Lưu file
         const filePath = path.join(backupPath, `${backupData.id}.json`);
         fs.writeFileSync(filePath, JSON.stringify(backupData, null, 2), "utf8");
-        console.log(`[BACKUP] 📝 Đã lưu file: ${filePath}`);
 
-        // 5. Dọn dẹp: Chỉ giữ lại 1 file vừa tạo, xóa các file cũ để tránh đầy bộ nhớ
+        // 5. Xóa file cũ
         let deletedCount = 0;
         const files = fs.readdirSync(backupPath);
+
         for (const file of files) {
             if (file.endsWith(".json") && file !== `${backupData.id}.json`) {
                 try {
                     fs.unlinkSync(path.join(backupPath, file));
                     deletedCount++;
-                } catch (err) {
-                    console.log("⚠️ Lỗi dọn dẹp file cũ:", file);
-                }
+                } catch {}
             }
         }
+
+        // 6. Gửi kết quả
+        return interaction.editReply({
+            content: `✅ Backup thành công!\nID: \`${backupData.id}\`\n🗑️ Đã xóa ${deletedCount} file cũ`
+        });
+
+    } catch (err) {
+        console.error(err);
+        return interaction.editReply("❌ Lỗi khi tạo backup!");
+    }
+}
+}
 
         // 6. Thống kê dữ liệu từ bản backup vừa tạo
         const roleCount = (backupData.roles || []).length;
