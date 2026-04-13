@@ -555,7 +555,20 @@ if (interaction.commandName === "backup") {
     // --- XỬ LÝ LỆNH: /backup create ---
     if (subcommand === "create") {
         console.log(`\n[BACKUP] 🔄 Đang khởi tạo sao lưu cho server: ${interaction.guild.name} (${interaction.guild.id})`);
-        await interaction.deferReply();
+
+        // Embed "đang xử lý" — hiện avatar user + thông báo chờ
+        const loadingEmbed = new EmbedBuilder()
+            .setColor("#f0a500")
+            .setAuthor({
+                name: `${interaction.user.username} yêu cầu sao lưu server`,
+                iconURL: interaction.user.displayAvatarURL({ dynamic: true })
+            })
+            .setTitle("🔄 Đang tạo Backup...")
+            .setDescription("Vui lòng chờ, quá trình này có thể mất vài giây.")
+            .setThumbnail(interaction.guild.iconURL({ dynamic: true }))
+            .setTimestamp();
+
+        await interaction.reply({ embeds: [loadingEmbed] });
 
         try {
             // Xóa toàn bộ file backup cũ trong folder trước khi tạo mới
@@ -596,19 +609,47 @@ if (interaction.commandName === "backup") {
             console.log(`[BACKUP] 📌 Channels: ${channelCount} | Roles: ${roleCount}`);
             console.log(`[BACKUP] 🕒 Thời gian: ${new Date().toLocaleString()}`);
 
-            return interaction.editReply({
-                content: [
-                    `✅ **Đã sao lưu thành công!**`,
-                    `🔑 ID: \`${backupData.id}\``,
-                    `📁 Channels đã lưu: **${channelCount}**`,
-                    `🎭 Roles đã lưu: **${roleCount}**`,
-                    `📂 File lưu tại: \`backups/${backupData.id}.json\``,
-                    deletedCount > 0 ? `🗑️ Đã xóa **${deletedCount}** backup cũ` : ""
-                ].filter(Boolean).join("\n")
-            });
+            // Embed kết quả từ bot
+            const successEmbed = new EmbedBuilder()
+                .setColor("#00ff88")
+                .setAuthor({
+                    name: `${client.user.username} · Backup hoàn tất`,
+                    iconURL: client.user.displayAvatarURL({ dynamic: true })
+                })
+                .setTitle("✅ Sao lưu Server thành công!")
+                .setThumbnail(interaction.guild.iconURL({ dynamic: true }))
+                .addFields(
+                    { name: "🔑 Backup ID", value: `\`${backupData.id}\``, inline: false },
+                    { name: "📁 Channels đã lưu", value: `**${channelCount}** channels`, inline: true },
+                    { name: "🎭 Roles đã lưu", value: `**${roleCount}** roles`, inline: true },
+                    { name: "📂 File lưu tại", value: `\`backups/${backupData.id}.json\``, inline: false },
+                    ...(deletedCount > 0 ? [{ name: "🗑️ Đã dọn backup cũ", value: `${deletedCount} file đã xóa`, inline: true }] : [])
+                )
+                .setFooter({
+                    text: `Yêu cầu bởi ${interaction.user.username}`,
+                    iconURL: interaction.user.displayAvatarURL({ dynamic: true })
+                })
+                .setTimestamp();
+
+            return interaction.editReply({ embeds: [successEmbed] });
         } catch (err) {
             console.error(`[BACKUP] ❌ LỖI KHI CREATE:`, err);
-            return interaction.editReply("❌ Có lỗi xảy ra khi tạo backup.");
+
+            const errorEmbed = new EmbedBuilder()
+                .setColor("#ff3333")
+                .setAuthor({
+                    name: `${client.user.username} · Backup thất bại`,
+                    iconURL: client.user.displayAvatarURL({ dynamic: true })
+                })
+                .setTitle("❌ Có lỗi xảy ra khi tạo Backup!")
+                .setDescription(`\`\`\`${err.message}\`\`\``)
+                .setFooter({
+                    text: `Yêu cầu bởi ${interaction.user.username}`,
+                    iconURL: interaction.user.displayAvatarURL({ dynamic: true })
+                })
+                .setTimestamp();
+
+            return interaction.editReply({ embeds: [errorEmbed] });
         }
     }
 
@@ -617,21 +658,74 @@ if (interaction.commandName === "backup") {
         const backupID = interaction.options.getString("id");
 
         if (interaction.user.id !== interaction.guild.ownerId) {
-            return interaction.reply({ content: "❌ Chỉ Chủ Server mới có quyền load!", ephemeral: true });
+            const noPermEmbed = new EmbedBuilder()
+                .setColor("#ff3333")
+                .setTitle("❌ Không có quyền!")
+                .setDescription("Chỉ **Chủ Server** mới có quyền thực hiện lệnh này.")
+                .setFooter({ text: interaction.user.username, iconURL: interaction.user.displayAvatarURL({ dynamic: true }) });
+            return interaction.reply({ embeds: [noPermEmbed], ephemeral: true });
         }
 
+        // Embed "đang xử lý" load
+        const loadingEmbed = new EmbedBuilder()
+            .setColor("#f0a500")
+            .setAuthor({
+                name: `${interaction.user.username} yêu cầu khôi phục server`,
+                iconURL: interaction.user.displayAvatarURL({ dynamic: true })
+            })
+            .setTitle("🔄 Đang khôi phục Backup...")
+            .setDescription(`Đang load ID: \`${backupID}\`\nVui lòng không tắt bot trong quá trình này.`)
+            .setThumbnail(interaction.guild.iconURL({ dynamic: true }))
+            .setTimestamp();
+
+        await interaction.reply({ embeds: [loadingEmbed] });
+
         console.log(`\n[BACKUP] 🚀 Bắt đầu khôi phục server từ ID: ${backupID}`);
-        await interaction.deferReply();
 
         try {
             await backup.load(backupID, interaction.guild, {
                 clearGuildBeforeRestore: true
             });
             console.log(`[BACKUP] 🎊 Khôi phục hoàn tất cho server: ${interaction.guild.name}`);
-            await interaction.editReply("✅ Khôi phục hoàn tất!").catch(() => {});
+
+            const doneEmbed = new EmbedBuilder()
+                .setColor("#00ff88")
+                .setAuthor({
+                    name: `${client.user.username} · Khôi phục hoàn tất`,
+                    iconURL: client.user.displayAvatarURL({ dynamic: true })
+                })
+                .setTitle("✅ Khôi phục Server thành công!")
+                .addFields(
+                    { name: "🔑 Backup ID đã dùng", value: `\`${backupID}\``, inline: false },
+                    { name: "🏠 Server", value: interaction.guild.name, inline: true }
+                )
+                .setThumbnail(interaction.guild.iconURL({ dynamic: true }))
+                .setFooter({
+                    text: `Thực hiện bởi ${interaction.user.username}`,
+                    iconURL: interaction.user.displayAvatarURL({ dynamic: true })
+                })
+                .setTimestamp();
+
+            await interaction.editReply({ embeds: [doneEmbed] }).catch(() => {});
         } catch (err) {
             console.error(`[BACKUP] ❌ LỖI KHI LOAD:`, err);
-            await interaction.followUp("❌ Lỗi: ID không tồn tại hoặc bot thiếu quyền.").catch(() => {});
+
+            const errorEmbed = new EmbedBuilder()
+                .setColor("#ff3333")
+                .setAuthor({
+                    name: `${client.user.username} · Khôi phục thất bại`,
+                    iconURL: client.user.displayAvatarURL({ dynamic: true })
+                })
+                .setTitle("❌ Lỗi khi khôi phục Backup!")
+                .setDescription("ID không tồn tại hoặc bot thiếu quyền.")
+                .addFields({ name: "🔑 ID đã thử", value: `\`${backupID}\``, inline: true })
+                .setFooter({
+                    text: `Yêu cầu bởi ${interaction.user.username}`,
+                    iconURL: interaction.user.displayAvatarURL({ dynamic: true })
+                })
+                .setTimestamp();
+
+            await interaction.editReply({ embeds: [errorEmbed] }).catch(() => {});
         }
         return;
     }
@@ -1670,65 +1764,59 @@ if (interaction.customId.startsWith("bet_")) {
             const choice = interaction.customId.split("_")[1]; // "tai" hoặc "xiu"
             const money = parseInt(interaction.fields.getTextInputValue("money"));
 
-            // 1. Kiểm tra đầu vào
+            // 1. deferReply NGAY LẬP TỨC — phải là thao tác đầu tiên để tránh timeout 3 giây
+            await interaction.deferReply();
+
+            // 2. Kiểm tra đầu vào
             if (isNaN(money) || money <= 0) {
-                return interaction.reply({ content: "❌ Tiền cược không hợp lệ!", ephemeral: true });
+                return interaction.editReply({ content: "❌ Tiền cược không hợp lệ!" });
             }
 
-            // 2. Kiểm tra số dư
+            // 3. Kiểm tra số dư
             const currentBalance = getCoins(userId);
             if (currentBalance < money) {
-                return interaction.reply({
-                    content: `❌ Không đủ tiền! (Bạn có: ${currentBalance.toLocaleString()} coin)`,
-                    ephemeral: true
+                return interaction.editReply({
+                    content: `❌ Không đủ tiền! (Bạn có: ${currentBalance.toLocaleString()} coin)`
                 });
             }
 
-            // 3. Trừ tiền trước khi deferReply để tránh lỗi
+            // 4. Trừ tiền và báo đang lắc
             addCoins(userId, -money);
-            await interaction.deferReply();
             await interaction.editReply("🎲 Đang lắc xúc xắc...");
 
-            setTimeout(async () => {
-                try {
-                    const dice = [
-                        Math.floor(Math.random() * 6) + 1,
-                        Math.floor(Math.random() * 6) + 1,
-                        Math.floor(Math.random() * 6) + 1
-                    ];
-                    const total = dice.reduce((a, b) => a + b, 0);
+            // 5. Dùng await thay vì setTimeout để tránh lỗi interaction expired
+            await new Promise(r => setTimeout(r, 3000));
 
-                    const chance = getWinChance(userId);
-                    const win = Math.random() < chance;
-                    updateStreak(userId, win);
+            const dice = [
+                Math.floor(Math.random() * 6) + 1,
+                Math.floor(Math.random() * 6) + 1,
+                Math.floor(Math.random() * 6) + 1
+            ];
+            const total = dice.reduce((a, b) => a + b, 0);
 
-                    const actualResult = total >= 11 ? "tai" : "xiu";
-                    const totalLabel = total >= 11 ? "TÀI" : "XỈU";
+            const chance = getWinChance(userId);
+            const win = Math.random() < chance;
+            updateStreak(userId, win);
 
-                    let resultEmbed = new EmbedBuilder()
-                        .setTitle("🎲 KẾT QUẢ TÀI XỈU")
-                        .setDescription(`Xúc xắc: **${dice.join(" - ")}** (Tổng: **${total}** → **${totalLabel}**)`)
-                        .setTimestamp();
+            const totalLabel = total >= 11 ? "TÀI" : "XỈU";
 
-                    if (win) {
-                        const winMoney = Math.floor(money * 1.95);
-                        addCoins(userId, money + winMoney); // hoàn lại vốn + tiền thắng
-                        resultEmbed.setColor("Green")
-                            .addFields({ name: "Kết quả", value: `✅ Thắng! Nhận được **+${winMoney.toLocaleString()} coin**` });
-                    } else {
-                        // Tiền đã trừ từ trước rồi
-                        resultEmbed.setColor("Red")
-                            .addFields({ name: "Kết quả", value: `❌ Thua! Bạn đã mất **-${money.toLocaleString()} coin**` });
-                    }
+            let resultEmbed = new EmbedBuilder()
+                .setTitle("🎲 KẾT QUẢ TÀI XỈU")
+                .setDescription(`Xúc xắc: **${dice.join(" - ")}** (Tổng: **${total}** → **${totalLabel}**)`)
+                .setTimestamp();
 
-                    await interaction.editReply({ content: null, embeds: [resultEmbed] });
-                } catch (innerErr) {
-                    console.error("Lỗi khi trả kết quả Tài Xỉu:", innerErr);
-                    await interaction.editReply({ content: "❌ Lỗi khi hiển thị kết quả!" }).catch(() => {});
-                }
-            }, 3000);
+            if (win) {
+                const winMoney = Math.floor(money * 1.95);
+                addCoins(userId, money + winMoney); // hoàn lại vốn + tiền thắng
+                resultEmbed.setColor("Green")
+                    .addFields({ name: "Kết quả", value: `✅ Thắng! Nhận được **+${winMoney.toLocaleString()} coin**` });
+            } else {
+                resultEmbed.setColor("Red")
+                    .addFields({ name: "Kết quả", value: `❌ Thua! Bạn đã mất **-${money.toLocaleString()} coin**` });
+            }
 
-            return;
+            return interaction.editReply({ content: null, embeds: [resultEmbed] });
+
         } catch (err) {
             console.error("🚨 BET_ MODAL ERROR:", err);
             if (interaction.deferred || interaction.replied) {
@@ -1739,13 +1827,24 @@ if (interaction.customId.startsWith("bet_")) {
     }
 }
     } catch (err) {
+        // Bỏ qua lỗi Unknown interaction (10062) — xảy ra khi interaction đã hết hạn
+        // hoặc bot restart trong khi user đang dùng button/modal cũ.
+        if (err?.code === 10062) {
+            console.warn("⚠️ Interaction đã hết hạn (10062), bỏ qua.");
+            return;
+        }
+
         console.error("LỖI HỆ THỐNG INTERACTION:", err);
 
         const errorMsg = { content: "❌ Đã có lỗi xảy ra!", ephemeral: true };
-        if (interaction.deferred || interaction.replied) {
-            interaction.editReply(errorMsg).catch(() => {});
-        } else {
-            interaction.reply(errorMsg).catch(() => {});
+        try {
+            if (interaction.deferred || interaction.replied) {
+                await interaction.editReply(errorMsg).catch(() => {});
+            } else {
+                await interaction.reply(errorMsg).catch(() => {});
+            }
+        } catch (_) {
+            // Không làm gì thêm nếu vẫn không reply được
         }
     }
 });
