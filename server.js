@@ -554,6 +554,7 @@ if (interaction.commandName === "backup") {
 
     // --- XỬ LÝ LỆNH: /backup create ---
     if (subcommand === "create") {
+        await interaction.deferReply();
         console.log(`\n[BACKUP] 🔄 Đang khởi tạo sao lưu cho server: ${interaction.guild.name} (${interaction.guild.id})`);
 
         // Embed "đang xử lý" — hiện avatar user + thông báo chờ
@@ -568,7 +569,7 @@ if (interaction.commandName === "backup") {
             .setThumbnail(interaction.guild.iconURL({ dynamic: true }))
             .setTimestamp();
 
-        await interaction.reply({ embeds: [loadingEmbed] });
+        await interaction.editReply({ embeds: [loadingEmbed] });
 
 if (!fs.existsSync(backupPath)) {
     fs.mkdirSync(backupPath, { recursive: true });
