@@ -552,8 +552,8 @@ if (interaction.commandName === "backup") {
         return interaction.reply({ content: "❌ Bạn không có quyền Admin!", ephemeral: true });
     }
 
-    // --- XỬ LÝ LỆNH: /backup create ---
 if (subcommand === "create") {
+    console.log("🔥 ĐÃ VÀO CREATE");
         // 1. Phải deferReply ngay lập tức để tránh lỗi Interaction hết hạn (10062)
         await interaction.deferReply();
 
@@ -588,6 +588,7 @@ if (subcommand === "create") {
                 jsonBeautify: true,
                 saveImages: null 
             });
+            console.log("📁 Sau create:", fs.readdirSync(backupPath));
             console.log("📦 Backup ID:", backupData.id);
             console.log("📁 Files hiện tại:", fs.readdirSync(backupPath));
 
@@ -596,32 +597,38 @@ if (subcommand === "create") {
             // ✅ BƯỚC 2: ĐỢI FILE GHI VÀO Ổ ĐĨA (Tối đa 30 giây)
 let attempts = 0;
 while (attempts < 100) {
-    const files = fs.readdirSync(backupPath);
-    if (files.includes(`${backupData.id}.json`)) break;
+    const filesBefore = fs.readdirSync(backupPath);
+
+    console.log(`⏳ Lần ${attempts} | Files:`, filesBefore);
+
+    if (filesBefore.includes(`${backupData.id}.json`)) break;
 
     await new Promise(res => setTimeout(res, 300));
     attempts++;
 }
 
-            if (!fs.existsSync(filePath)) {
-                throw new Error("Hệ thống tạo ID thành công nhưng không tìm thấy file lưu trữ trên ổ đĩa.");
-            }
-            console.log("📁 Files cuối:", fs.readdirSync(backupPath));
+if (!fs.existsSync(filePath)) {
+    throw new Error("Hệ thống tạo ID thành công nhưng không tìm thấy file lưu trữ trên ổ đĩa.");
+}
 
-            // ✅ BƯỚC 3: DỌN DẸP FILE CŨ (Trừ file vừa tạo)
-            let deletedCount = 0;
-            const files = fs.readdirSync(backupPath);
-            for (const file of files) {
-                if (file.endsWith(".json") && file !== `${backupData.id}.json`) {
-                    try {
-                        fs.unlinkSync(path.join(backupPath, file));
-                        deletedCount++;
-                    } catch (err) {
-                        console.log("⚠️ Không xóa được file cũ:", file);
-                    }
-                }
-            }
-            console.log("🗑️ Đang xét file:", file);
+console.log("📁 Files cuối:", fs.readdirSync(backupPath));
+
+// ✅ BƯỚC 3: DỌN DẸP FILE CŨ
+let deletedCount = 0;
+const filesAfter = fs.readdirSync(backupPath);
+
+for (const file of filesAfter) {
+    console.log("🗑️ Đang xét file:", file);
+
+    if (file.endsWith(".json") && file !== `${backupData.id}.json`) {
+        try {
+            fs.unlinkSync(path.join(backupPath, file));
+            deletedCount++;
+        } catch (err) {
+            console.log("⚠️ Không xóa được file cũ:", file);
+        }
+    }
+}
 
             // ✅ BƯỚC 4: ĐỌC FILE VỪA TẠO ĐỂ LẤY THÔNG SỐ (Channels/Roles)
 let backupJson;
