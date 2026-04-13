@@ -578,7 +578,16 @@ if (interaction.commandName === "backup") {
             // Đọc file backup vừa tạo để kiểm tra channel & role đã được lưu chưa
             const backupFilePath = path.join(backupPath, `${backupData.id}.json`);
             const backupJson = JSON.parse(fs.readFileSync(backupFilePath, "utf8"));
-            const channelCount = (backupJson.channels || []).length;
+
+            // discord-backup lưu channels dạng { categories: [...], others: [...] }
+            const channels = backupJson.channels || {};
+            const categories = channels.categories || [];
+            const others = channels.others || [];
+            // Đếm: mỗi category + các channel con bên trong + channel không thuộc category
+            const channelCount = categories.reduce(
+                (acc, cat) => acc + 1 + (cat.children ? cat.children.length : 0), 0
+            ) + others.length;
+
             const roleCount = (backupJson.roles || []).length;
 
             console.log(`[BACKUP] ✅ Thành công!`);
