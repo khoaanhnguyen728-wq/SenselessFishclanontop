@@ -573,7 +573,7 @@ if (subcommand === "create") {
     try {
         console.log(`\n[BACKUP] 🔄 Đang khởi tạo sao lưu cho server: ${interaction.guild.name}`);
 
-        // 1. Tạo embed loading
+        // 1. Gửi trạng thái loading trước (QUAN TRỌNG)
         const loadingEmbed = new EmbedBuilder()
             .setColor("#f0a500")
             .setAuthor({
@@ -585,13 +585,12 @@ if (subcommand === "create") {
             .setThumbnail(interaction.guild.iconURL({ dynamic: true }))
             .setTimestamp();
 
-        // ✅ QUAN TRỌNG: PHẢI gửi trước
         await interaction.editReply({ embeds: [loadingEmbed] });
 
         // 2. Tạo backup
         const backupData = await backup.create(interaction.guild, {
             maxMessagesPerChannel: 0,
-            jsonSave: false,
+            jsonSave: false, // tự lưu file thủ công
             saveImages: "base64"
         });
 
@@ -600,11 +599,12 @@ if (subcommand === "create") {
             fs.mkdirSync(backupPath, { recursive: true });
         }
 
-        // 4. Lưu file
+        // 4. Lưu file backup
         const filePath = path.join(backupPath, `${backupData.id}.json`);
         fs.writeFileSync(filePath, JSON.stringify(backupData, null, 2), "utf8");
+        console.log(`[BACKUP] 📝 Đã lưu file: ${filePath}`);
 
-        // 5. Xóa file cũ
+        // 5. Xóa file cũ (chỉ giữ 1 bản)
         let deletedCount = 0;
         const files = fs.readdirSync(backupPath);
 
@@ -613,21 +613,11 @@ if (subcommand === "create") {
                 try {
                     fs.unlinkSync(path.join(backupPath, file));
                     deletedCount++;
-                } catch {}
+                } catch (err) {
+                    console.log("⚠️ Lỗi xóa file:", file);
+                }
             }
         }
-
-        // 6. Gửi kết quả
-        return interaction.editReply({
-            content: `✅ Backup thành công!\nID: \`${backupData.id}\`\n🗑️ Đã xóa ${deletedCount} file cũ`
-        });
-
-    } catch (err) {
-        console.error(err);
-        return interaction.editReply("❌ Lỗi khi tạo backup!");
-    }
-}
-}
 
         // 6. Thống kê dữ liệu từ bản backup vừa tạo
         const roleCount = (backupData.roles || []).length;
