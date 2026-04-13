@@ -549,6 +549,7 @@ console.log("📍 GUILD:", interaction.guildId);
     if (interaction.isChatInputCommand()) {
         const { commandName, options } = interaction;
 if (commandName === "backup") {
+    await interaction.deferReply({ ephemeral: true });
     const subcommand = interaction.options.getSubcommand();
 
     // 1. Kiểm tra quyền Admin sớm nhất (Chỉ Admin mới được dùng lệnh này)
@@ -661,7 +662,7 @@ if (subcommand === "create") {
         if (interaction.deferred || interaction.replied) {
             return await interaction.editReply({ embeds: [errorEmbed] });
         } else {
-            return await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+            return await interaction.editReply({ embeds: [errorEmbed], ephemeral: true });
         }
     }
     return; // Đã xử lý create, không fall-through vào load
@@ -712,7 +713,7 @@ if (subcommand === "create") {
             if (interaction.deferred || interaction.replied) {
                 await interaction.editReply(errorMsg).catch(() => console.log("Không thể gửi thông báo lỗi do channel đã bị xóa."));
             } else {
-                await interaction.reply({ content: errorMsg, ephemeral: true }).catch(() => {});
+                await interaction.editReply({ content: errorMsg, ephemeral: true }).catch(() => {});
             }
         }
         return; // Đã xử lý load
@@ -1569,7 +1570,7 @@ if (interaction.customId.startsWith("bc_")) {
             if (!interaction.channel.name.startsWith("ai-ticket-")) {
                 return interaction.reply({ content: "❌ Không thể đóng kênh này!", ephemeral: true });
             }
-            await interaction.reply({ content: "🔒 Đang đóng ticket..." });
+            await interaction.editReply({ content: "🔒 Đang đóng ticket..." });
             setTimeout(() => interaction.channel.delete().catch(() => {}), 3000);
             return;
         }
@@ -1842,7 +1843,7 @@ if (interaction.customId.startsWith("bet_")) {
                 await interaction.editReply(errorEmbed).catch(() => {});
             } else {
                 // Nếu chưa làm gì cả thì dùng reply
-                await interaction.reply(errorEmbed).catch(() => {});
+                await interaction.editReply(errorEmbed).catch(() => {});
             }
         } catch (finalErr) {
             console.error("🔥 Không thể gửi thông báo lỗi cho User:", finalErr.message);
