@@ -718,19 +718,32 @@ if (subcommand === "create") {
             channels: channelsData
         };
 
-        if (!fs.existsSync(backupPath)) fs.mkdirSync(backupPath, { recursive: true });
+        // Dùng path tuyệt đối để tránh lỗi __dirname trên container
+        const absoluteBackupPath = path.resolve(process.cwd(), "backups");
+        if (!fs.existsSync(absoluteBackupPath)) fs.mkdirSync(absoluteBackupPath, { recursive: true });
+
+        // Log để debug path thực tế trên server
+        console.log("[BACKUP] 📂 Thư mục backup:", absoluteBackupPath);
+        console.log("[BACKUP] 📋 File hiện có:", fs.readdirSync(absoluteBackupPath));
 
         // Xóa TẤT CẢ file cũ TRƯỚC — sau đó mới ghi file mới
         let deletedCount = 0;
-        for (const file of fs.readdirSync(backupPath)) {
+        for (const file of fs.readdirSync(absoluteBackupPath)) {
             if (file.endsWith(".json")) {
-                try { fs.unlinkSync(path.join(backupPath, file)); deletedCount++; } catch {}
+                try {
+                    fs.unlinkSync(path.join(absoluteBackupPath, file));
+                    deletedCount++;
+                    console.log("[BACKUP] 🗑️ Đã xóa:", file);
+                } catch (unlinkErr) {
+                    console.error("[BACKUP] ❌ Không xóa được:", file, unlinkErr.message);
+                }
             }
         }
 
         // Ghi file backup mới sau khi đã dọn sạch
-        const filePath = path.join(backupPath, `${backupData.id}.json`);
+        const filePath = path.join(absoluteBackupPath, `${backupData.id}.json`);
         fs.writeFileSync(filePath, JSON.stringify(backupData, null, 2), "utf8");
+        console.log("[BACKUP] 💾 Đã ghi file mới:", filePath);
 
         console.log(`[BACKUP] ✅ ID: ${backupData.id} | Roles: ${rolesData.length} | Cats: ${categoriesData.length} | Channels: ${channelsData.length}`);
 
@@ -778,7 +791,7 @@ if (subcommand === "load") {
     }
 
     const backupID = interaction.options.getString("id");
-    const filePath = path.join(backupPath, `${backupID}.json`);
+    const filePath = path.join(path.resolve(process.cwd(), "backups"), `${backupID}.json`);
 
     // Kiểm tra file tồn tại TRƯỚC khi defer
     if (!fs.existsSync(filePath)) {
