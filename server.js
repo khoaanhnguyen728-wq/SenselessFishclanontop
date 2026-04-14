@@ -583,6 +583,7 @@ async function safeDeferUpdate(interaction) {
 //         Fix: Set handledInteractions chặn duplicate theo ID
 // ============================================================
 const handledInteractions = new Set();
+let backupRunning = false; // Lock chống backup chạy 2 lần cùng lúc
 
 client.on("interactionCreate", async (interaction) => {
 
@@ -633,6 +634,12 @@ if (subcommand === "create") {
     if (!interaction.member.permissions.has("Administrator")) {
         return await interaction.reply({ content: "❌ Bạn không có quyền Administrator!", flags: MessageFlags.Ephemeral });
     }
+
+    // Chặn chạy 2 lần cùng lúc (duplicate interaction hoặc user bấm 2 lần)
+    if (backupRunning) {
+        return await interaction.reply({ content: "⏳ Đang có backup đang chạy, vui lòng chờ!", flags: MessageFlags.Ephemeral });
+    }
+    backupRunning = true;
 
     // Defer + reply "đang sao lưu" NGAY LẬP TỨC — trả về Discord trong 3s
     await safeDeferReply(interaction);
@@ -774,6 +781,8 @@ if (subcommand === "create") {
                     .setDescription(`\`\`\`${err.message}\`\`\``)
                     .setTimestamp()
             );
+        } finally {
+            backupRunning = false; // Luôn giải phóng lock dù thành công hay lỗi
         }
     });
 
