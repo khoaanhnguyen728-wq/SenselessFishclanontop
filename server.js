@@ -629,131 +629,130 @@ if (interaction.commandName === "backup") {
 
 // ===== BACKUP CREATE =====
 if (subcommand === "create") {
-    try {
-        // Kiểm tra quyền TRƯỚC khi defer — tránh lãng phí 3s window
-        if (!interaction.member.permissions.has("Administrator")) {
-            return await interaction.reply({ content: "❌ Bạn không có quyền Administrator!", flags: MessageFlags.Ephemeral });
-        }
+    // Kiểm tra quyền TRƯỚC khi defer — tránh lãng phí 3s window
+    if (!interaction.member.permissions.has("Administrator")) {
+        return await interaction.reply({ content: "❌ Bạn không có quyền Administrator!", flags: MessageFlags.Ephemeral });
+    }
 
-        // Defer + reply "đang sao lưu" NGAY LẬP TỨC — trước mọi fetch nặng
-        await safeDeferReply(interaction);
-        await safeReply({
-            embeds: [new EmbedBuilder()
-                .setColor("#f1c40f")
-                .setTitle("🔄 Đang sao lưu server...")
-                .setDescription(`Đang quét **${interaction.guild.name}**, vui lòng chờ...`)
-                .setTimestamp()]
-        });
+    // Defer + reply "đang sao lưu" NGAY LẬP TỨC — trả về Discord trong 3s
+    await safeDeferReply(interaction);
+    await safeReply({
+        embeds: [new EmbedBuilder()
+            .setColor("#f1c40f")
+            .setTitle("🔄 Đang sao lưu server...")
+            .setDescription(`Đang quét **${interaction.guild.name}**...\nKết quả sẽ gửi qua **DM** khi xong!`)
+            .setTimestamp()]
+    });
 
-        console.log(`\n[BACKUP] 🔄 Bắt đầu sao lưu: ${interaction.guild.name}`);
-
-        const guild = interaction.guild;
-        // Không fetch members — không cần cho backup, ngốn RAM Wispbyte free 500MB
-        // Roles và channels đã có trong cache từ khi bot khởi động
-        if (guild.roles.cache.size < 2) await guild.roles.fetch();
-        if (guild.channels.cache.size < 2) await guild.channels.fetch();
-
-        // ROLES: màu, permissions bitfield, hoist, mentionable, position
-        const rolesData = [...guild.roles.cache.values()]
-            .filter(r => r.id !== guild.id)
-            .sort((a, b) => a.position - b.position)
-            .map(r => ({
-                id: r.id,
-                name: r.name,
-                color: r.hexColor,
-                hoist: r.hoist,
-                mentionable: r.mentionable,
-                position: r.position,
-                permissions: r.permissions.bitfield.toString(),
-                managed: r.managed
-            }));
-
-        // CATEGORIES
-        const categoriesData = [...guild.channels.cache.values()]
-            .filter(c => c.type === 4)
-            .sort((a, b) => a.position - b.position)
-            .map(cat => ({
-                id: cat.id,
-                name: cat.name,
-                position: cat.position,
-                permissionOverwrites: [...cat.permissionOverwrites.cache.values()].map(ow => ({
-                    id: ow.id,
-                    type: ow.type,
-                    allow: ow.allow.bitfield.toString(),
-                    deny: ow.deny.bitfield.toString()
-                }))
-            }));
-
-        // CHANNELS (text, voice, forum, stage, announcement...)
-        const channelsData = [...guild.channels.cache.values()]
-            .filter(c => c.type !== 4)
-            .sort((a, b) => a.position - b.position)
-            .map(ch => ({
-                id: ch.id,
-                name: ch.name,
-                type: ch.type,
-                position: ch.position,
-                parentId: ch.parentId || null,
-                topic: ch.topic || null,
-                nsfw: ch.nsfw || false,
-                rateLimitPerUser: ch.rateLimitPerUser || 0,
-                bitrate: ch.bitrate || null,
-                userLimit: ch.userLimit || null,
-                permissionOverwrites: [...(ch.permissionOverwrites?.cache?.values() || [])].map(ow => ({
-                    id: ow.id,
-                    type: ow.type,
-                    allow: ow.allow.bitfield.toString(),
-                    deny: ow.deny.bitfield.toString()
-                }))
-            }));
-
-        const backupData = {
-            id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-            guildId: guild.id,
-            guildName: guild.name,
-            guildIcon: guild.iconURL({ extension: "png" }) || null,
-            createdAt: new Date().toISOString(),
-            roles: rolesData,
-            categories: categoriesData,
-            channels: channelsData
+    // Toàn bộ xử lý nặng chạy ngầm — KHÔNG await để tránh 10062
+    const _guild = interaction.guild;
+    const _user = interaction.user;
+    setImmediate(async () => {
+        const notify = async (embed) => {
+            await _user.send({ embeds: [embed] }).catch(() => {});
         };
+        try {
+            console.log(`\n[BACKUP] 🔄 Bắt đầu sao lưu: ${_guild.name}`);
 
-        // Dùng path tuyệt đối để tránh lỗi __dirname trên container
-        const absoluteBackupPath = path.resolve(process.cwd(), "backups");
-        if (!fs.existsSync(absoluteBackupPath)) fs.mkdirSync(absoluteBackupPath, { recursive: true });
+            if (_guild.roles.cache.size < 2) await _guild.roles.fetch();
+            if (_guild.channels.cache.size < 2) await _guild.channels.fetch();
 
-        // Log để debug path thực tế trên server
-        console.log("[BACKUP] 📂 Thư mục backup:", absoluteBackupPath);
-        console.log("[BACKUP] 📋 File hiện có:", fs.readdirSync(absoluteBackupPath));
+            // ROLES
+            const rolesData = [..._guild.roles.cache.values()]
+                .filter(r => r.id !== _guild.id)
+                .sort((a, b) => a.position - b.position)
+                .map(r => ({
+                    id: r.id,
+                    name: r.name,
+                    color: r.hexColor,
+                    hoist: r.hoist,
+                    mentionable: r.mentionable,
+                    position: r.position,
+                    permissions: r.permissions.bitfield.toString(),
+                    managed: r.managed
+                }));
 
-        // Xóa TẤT CẢ file cũ TRƯỚC — sau đó mới ghi file mới
-        let deletedCount = 0;
-        for (const file of fs.readdirSync(absoluteBackupPath)) {
-            if (file.endsWith(".json")) {
-                try {
-                    fs.unlinkSync(path.join(absoluteBackupPath, file));
-                    deletedCount++;
-                    console.log("[BACKUP] 🗑️ Đã xóa:", file);
-                } catch (unlinkErr) {
-                    console.error("[BACKUP] ❌ Không xóa được:", file, unlinkErr.message);
+            // CATEGORIES
+            const categoriesData = [..._guild.channels.cache.values()]
+                .filter(c => c.type === 4)
+                .sort((a, b) => a.position - b.position)
+                .map(cat => ({
+                    id: cat.id,
+                    name: cat.name,
+                    position: cat.position,
+                    permissionOverwrites: [...cat.permissionOverwrites.cache.values()].map(ow => ({
+                        id: ow.id,
+                        type: ow.type,
+                        allow: ow.allow.bitfield.toString(),
+                        deny: ow.deny.bitfield.toString()
+                    }))
+                }));
+
+            // CHANNELS
+            const channelsData = [..._guild.channels.cache.values()]
+                .filter(c => c.type !== 4)
+                .sort((a, b) => a.position - b.position)
+                .map(ch => ({
+                    id: ch.id,
+                    name: ch.name,
+                    type: ch.type,
+                    position: ch.position,
+                    parentId: ch.parentId || null,
+                    topic: ch.topic || null,
+                    nsfw: ch.nsfw || false,
+                    rateLimitPerUser: ch.rateLimitPerUser || 0,
+                    bitrate: ch.bitrate || null,
+                    userLimit: ch.userLimit || null,
+                    permissionOverwrites: [...(ch.permissionOverwrites?.cache?.values() || [])].map(ow => ({
+                        id: ow.id,
+                        type: ow.type,
+                        allow: ow.allow.bitfield.toString(),
+                        deny: ow.deny.bitfield.toString()
+                    }))
+                }));
+
+            const backupData = {
+                id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+                guildId: _guild.id,
+                guildName: _guild.name,
+                guildIcon: _guild.iconURL({ extension: "png" }) || null,
+                createdAt: new Date().toISOString(),
+                roles: rolesData,
+                categories: categoriesData,
+                channels: channelsData
+            };
+
+            const absoluteBackupPath = path.resolve(process.cwd(), "backups");
+            if (!fs.existsSync(absoluteBackupPath)) fs.mkdirSync(absoluteBackupPath, { recursive: true });
+
+            console.log("[BACKUP] 📂 Thư mục backup:", absoluteBackupPath);
+            console.log("[BACKUP] 📋 File hiện có:", fs.readdirSync(absoluteBackupPath));
+
+            // Xóa TẤT CẢ file cũ TRƯỚC
+            let deletedCount = 0;
+            for (const file of fs.readdirSync(absoluteBackupPath)) {
+                if (file.endsWith(".json")) {
+                    try {
+                        fs.unlinkSync(path.join(absoluteBackupPath, file));
+                        deletedCount++;
+                        console.log("[BACKUP] 🗑️ Đã xóa:", file);
+                    } catch (unlinkErr) {
+                        console.error("[BACKUP] ❌ Không xóa được:", file, unlinkErr.message);
+                    }
                 }
             }
-        }
 
-        // Ghi file backup mới sau khi đã dọn sạch
-        const filePath = path.join(absoluteBackupPath, `${backupData.id}.json`);
-        fs.writeFileSync(filePath, JSON.stringify(backupData, null, 2), "utf8");
-        console.log("[BACKUP] 💾 Đã ghi file mới:", filePath);
+            // Ghi file mới
+            const filePath = path.join(absoluteBackupPath, `${backupData.id}.json`);
+            fs.writeFileSync(filePath, JSON.stringify(backupData, null, 2), "utf8");
+            console.log("[BACKUP] 💾 Đã ghi file mới:", filePath);
+            console.log(`[BACKUP] ✅ ID: ${backupData.id} | Roles: ${rolesData.length} | Cats: ${categoriesData.length} | Channels: ${channelsData.length}`);
 
-        console.log(`[BACKUP] ✅ ID: ${backupData.id} | Roles: ${rolesData.length} | Cats: ${categoriesData.length} | Channels: ${channelsData.length}`);
-
-        return await safeReply({
-            content: null,
-            embeds: [
+            await notify(
                 new EmbedBuilder()
                     .setColor("#00ff88")
                     .setTitle("✅ Sao lưu Server thành công!")
-                    .setThumbnail(guild.iconURL({ dynamic: true }))
+                    .setThumbnail(_guild.iconURL({ dynamic: true }))
                     .addFields(
                         { name: "🔑 Backup ID", value: `\`${backupData.id}\``, inline: false },
                         { name: "🎭 Roles", value: `**${rolesData.length}**`, inline: true },
@@ -761,23 +760,22 @@ if (subcommand === "create") {
                         { name: "📁 Channels", value: `**${channelsData.length}**`, inline: true },
                         { name: "💾 File", value: `\`backups/${backupData.id}.json\``, inline: false }
                     )
-                    .setFooter({ text: `Dọn ${deletedCount} bản cũ | By: ${interaction.user.username}` })
+                    .setFooter({ text: `Dọn ${deletedCount} bản cũ | By: ${_user.username}` })
                     .setTimestamp()
-            ]
-        });
-
-    } catch (err) {
-        console.error(`[BACKUP CREATE ERROR]:`, err);
-        return await safeReply({
-            embeds: [
+            );
+        } catch (err) {
+            console.error(`[BACKUP CREATE ERROR]:`, err);
+            await notify(
                 new EmbedBuilder()
                     .setColor("#ff3333")
                     .setTitle("❌ Lỗi khi tạo bản sao lưu!")
                     .setDescription(`\`\`\`${err.message}\`\`\``)
                     .setTimestamp()
-            ]
-        });
-    }
+            );
+        }
+    });
+
+    return;
 }
 
 // ===== BACKUP LOAD =====
