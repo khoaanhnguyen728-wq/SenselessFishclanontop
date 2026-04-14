@@ -583,123 +583,153 @@ if (interaction.commandName === "backup") {
 
 // ===== BACKUP CREATE =====
 if (subcommand === "create") {
-    try {
-        console.log(`\n[BACKUP] 🔄 Bắt đầu sao lưu: ${interaction.guild.name}`);
-        await interaction.editReply({ content: "🔄 Đang quét server, vui lòng chờ..." });
+    const guild = interaction.guild;
 
-        const guild = interaction.guild;
-        await guild.members.fetch();
-        await guild.roles.fetch();
-        await guild.channels.fetch();
+    // Ack ngay lập tức — tránh 40060 hoàn toàn
+    await interaction.editReply({
+        embeds: [
+            new EmbedBuilder()
+                .setColor("#f0a500")
+                .setTitle("⏳ Đang sao lưu server...")
+                .setDescription(
+                    "```\n" +
+                    "🔍 Đang quét toàn bộ server...\n" +
+                    "📦 Thu thập Roles, Categories, Channels\n" +
+                    "💾 Kết quả sẽ hiện trong tin nhắn này!\n" +
+                    "```"
+                )
+                .setThumbnail(guild.iconURL({ dynamic: true }))
+                .setFooter({ text: `Yêu cầu bởi: ${interaction.user.username}` })
+                .setTimestamp()
+        ]
+    });
 
-        // ROLES: màu, permissions bitfield, hoist, mentionable, position
-        const rolesData = [...guild.roles.cache.values()]
-            .filter(r => r.id !== guild.id)
-            .sort((a, b) => a.position - b.position)
-            .map(r => ({
-                id: r.id,
-                name: r.name,
-                color: r.hexColor,
-                hoist: r.hoist,
-                mentionable: r.mentionable,
-                position: r.position,
-                permissions: r.permissions.bitfield.toString(),
-                managed: r.managed
-            }));
+    // Chạy ngầm — KHÔNG block interaction
+    setImmediate(async () => {
+        try {
+            console.log(`\n[BACKUP] 🔄 Bắt đầu sao lưu: ${guild.name}`);
 
-        // CATEGORIES
-        const categoriesData = [...guild.channels.cache.values()]
-            .filter(c => c.type === 4)
-            .sort((a, b) => a.position - b.position)
-            .map(cat => ({
-                id: cat.id,
-                name: cat.name,
-                position: cat.position,
-                permissionOverwrites: [...cat.permissionOverwrites.cache.values()].map(ow => ({
-                    id: ow.id,
-                    type: ow.type,
-                    allow: ow.allow.bitfield.toString(),
-                    deny: ow.deny.bitfield.toString()
-                }))
-            }));
+            await guild.members.fetch();
+            await guild.roles.fetch();
+            await guild.channels.fetch();
 
-        // CHANNELS (text, voice, forum, stage, announcement...)
-        const channelsData = [...guild.channels.cache.values()]
-            .filter(c => c.type !== 4)
-            .sort((a, b) => a.position - b.position)
-            .map(ch => ({
-                id: ch.id,
-                name: ch.name,
-                type: ch.type,
-                position: ch.position,
-                parentId: ch.parentId || null,
-                topic: ch.topic || null,
-                nsfw: ch.nsfw || false,
-                rateLimitPerUser: ch.rateLimitPerUser || 0,
-                bitrate: ch.bitrate || null,
-                userLimit: ch.userLimit || null,
-                permissionOverwrites: [...(ch.permissionOverwrites?.cache?.values() || [])].map(ow => ({
-                    id: ow.id,
-                    type: ow.type,
-                    allow: ow.allow.bitfield.toString(),
-                    deny: ow.deny.bitfield.toString()
-                }))
-            }));
+            // ROLES
+            const rolesData = [...guild.roles.cache.values()]
+                .filter(r => r.id !== guild.id)
+                .sort((a, b) => a.position - b.position)
+                .map(r => ({
+                    id: r.id,
+                    name: r.name,
+                    color: r.hexColor,
+                    hoist: r.hoist,
+                    mentionable: r.mentionable,
+                    position: r.position,
+                    permissions: r.permissions.bitfield.toString(),
+                    managed: r.managed
+                }));
 
-        const backupData = {
-            id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-            guildName: guild.name,
-            guildIcon: guild.iconURL({ extension: "png" }) || null,
-            createdAt: new Date().toISOString(),
-            roles: rolesData,
-            categories: categoriesData,
-            channels: channelsData
-        };
+            // CATEGORIES
+            const categoriesData = [...guild.channels.cache.values()]
+                .filter(c => c.type === 4)
+                .sort((a, b) => a.position - b.position)
+                .map(cat => ({
+                    id: cat.id,
+                    name: cat.name,
+                    position: cat.position,
+                    permissionOverwrites: [...cat.permissionOverwrites.cache.values()].map(ow => ({
+                        id: ow.id,
+                        type: ow.type,
+                        allow: ow.allow.bitfield.toString(),
+                        deny: ow.deny.bitfield.toString()
+                    }))
+                }));
 
-        if (!fs.existsSync(backupPath)) fs.mkdirSync(backupPath, { recursive: true });
-        const filePath = path.join(backupPath, `${backupData.id}.json`);
-        fs.writeFileSync(filePath, JSON.stringify(backupData, null, 2), "utf8");
+            // CHANNELS
+            const channelsData = [...guild.channels.cache.values()]
+                .filter(c => c.type !== 4)
+                .sort((a, b) => a.position - b.position)
+                .map(ch => ({
+                    id: ch.id,
+                    name: ch.name,
+                    type: ch.type,
+                    position: ch.position,
+                    parentId: ch.parentId || null,
+                    topic: ch.topic || null,
+                    nsfw: ch.nsfw || false,
+                    rateLimitPerUser: ch.rateLimitPerUser || 0,
+                    bitrate: ch.bitrate || null,
+                    userLimit: ch.userLimit || null,
+                    permissionOverwrites: [...(ch.permissionOverwrites?.cache?.values() || [])].map(ow => ({
+                        id: ow.id,
+                        type: ow.type,
+                        allow: ow.allow.bitfield.toString(),
+                        deny: ow.deny.bitfield.toString()
+                    }))
+                }));
 
-        let deletedCount = 0;
-        for (const file of fs.readdirSync(backupPath)) {
-            if (file.endsWith(".json") && file !== `${backupData.id}.json`) {
-                try { fs.unlinkSync(path.join(backupPath, file)); deletedCount++; } catch {}
+            const backupData = {
+                id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+                guildName: guild.name,
+                guildIcon: guild.iconURL({ extension: "png" }) || null,
+                createdAt: new Date().toISOString(),
+                roles: rolesData,
+                categories: categoriesData,
+                channels: channelsData
+            };
+
+            if (!fs.existsSync(backupPath)) fs.mkdirSync(backupPath, { recursive: true });
+            const filePath = path.join(backupPath, `${backupData.id}.json`);
+            fs.writeFileSync(filePath, JSON.stringify(backupData, null, 2), "utf8");
+
+            let deletedCount = 0;
+            for (const file of fs.readdirSync(backupPath)) {
+                if (file.endsWith(".json") && file !== `${backupData.id}.json`) {
+                    try { fs.unlinkSync(path.join(backupPath, file)); deletedCount++; } catch {}
+                }
             }
+
+            console.log(`[BACKUP] ✅ ID: ${backupData.id} | Roles: ${rolesData.length} | Cats: ${categoriesData.length} | Channels: ${channelsData.length}`);
+
+            // Edit lại message ban đầu — an toàn vì interaction đã được defer
+            await safeReply({
+                content: null,
+                embeds: [
+                    new EmbedBuilder()
+                        .setColor("#00ff88")
+                        .setTitle("✅ Sao lưu Server thành công!")
+                        .setDescription(
+                            `> 🗄️ Server **${guild.name}** đã được sao lưu hoàn toàn!\n` +
+                            `> 📅 Thời gian: <t:${Math.floor(Date.now() / 1000)}:F>`
+                        )
+                        .setThumbnail(guild.iconURL({ dynamic: true }))
+                        .addFields(
+                            { name: "🔑 Backup ID", value: `\`\`\`${backupData.id}\`\`\``, inline: false },
+                            { name: "🎭 Roles", value: `**${rolesData.length}**`, inline: true },
+                            { name: "📂 Categories", value: `**${categoriesData.length}**`, inline: true },
+                            { name: "📁 Channels", value: `**${channelsData.length}**`, inline: true },
+                            { name: "🗑️ Bản cũ đã xóa", value: `**${deletedCount}** file`, inline: true },
+                            { name: "💾 Lưu tại", value: `\`backups/${backupData.id}.json\``, inline: false }
+                        )
+                        .setFooter({ text: `✦ By: ${interaction.user.username} • SenselessFish Backup System` })
+                        .setTimestamp()
+                ]
+            });
+
+        } catch (err) {
+            console.error(`[BACKUP CREATE ERROR]:`, err);
+            await safeReply({
+                embeds: [
+                    new EmbedBuilder()
+                        .setColor("#ff3333")
+                        .setTitle("❌ Lỗi khi tạo bản sao lưu!")
+                        .setDescription(`\`\`\`${err.message}\`\`\``)
+                        .setTimestamp()
+                ]
+            }).catch(() => {});
         }
+    });
 
-        console.log(`[BACKUP] ✅ ID: ${backupData.id} | Roles: ${rolesData.length} | Cats: ${categoriesData.length} | Channels: ${channelsData.length}`);
-
-        return await safeReply({
-            content: null,
-            embeds: [
-                new EmbedBuilder()
-                    .setColor("#00ff88")
-                    .setTitle("✅ Sao lưu Server thành công!")
-                    .setThumbnail(guild.iconURL({ dynamic: true }))
-                    .addFields(
-                        { name: "🔑 Backup ID", value: `\`${backupData.id}\``, inline: false },
-                        { name: "🎭 Roles", value: `**${rolesData.length}**`, inline: true },
-                        { name: "📂 Categories", value: `**${categoriesData.length}**`, inline: true },
-                        { name: "📁 Channels", value: `**${channelsData.length}**`, inline: true },
-                        { name: "💾 File", value: `\`backups/${backupData.id}.json\``, inline: false }
-                    )
-                    .setFooter({ text: `Dọn ${deletedCount} bản cũ | By: ${interaction.user.username}` })
-                    .setTimestamp()
-            ]
-        });
-
-    } catch (err) {
-        console.error(`[BACKUP CREATE ERROR]:`, err);
-        return await safeReply({
-            embeds: [
-                new EmbedBuilder()
-                    .setColor("#ff3333")
-                    .setTitle("❌ Lỗi khi tạo bản sao lưu!")
-                    .setDescription(`\`\`\`${err.message}\`\`\``)
-                    .setTimestamp()
-            ]
-        });
-    }
+    return; // Trả về ngay, không await
 }
 
 // ===== BACKUP LOAD =====
