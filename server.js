@@ -123,8 +123,8 @@ const client = new Client({
         GatewayIntentBits.GuildPresences
     ],
     rest: {
-        timeout: 30000,      // 30 giây là đủ
-        retries: 0           // KHÔNG retry — retry gây ra 40060 (interaction đã ack nhưng response bị mất)
+        timeout: 15000,      // 15s là đủ cho Wispbyte
+        retries: 0           // KHÔNG retry — retry gây 40060 (ack thành công nhưng response bị mất, retry lên bị báo đã ack)
     },
     ws: {
         large_threshold: 50
@@ -551,19 +551,17 @@ const result = await aiModel.generateContent(promptWithLanguageLock);
     }
 });
 // ============================================================
-// HELPER: safeDeferReply / safeUpdate
-// Lý do cần: retries=0 fix được root cause, nhưng trong một số trường hợp
-// (network hiccup cực hiếm), deferReply vẫn có thể báo 40060.
-// Hàm này bắt 40060 ngay tại nguồn và tiếp tục bình thường
-// (vì interaction ĐÃ được ack thành công trên Discord, chỉ là response bị mất)
+// SAFE DEFER HELPERS
+// Bắt 40060 ngay tại nguồn — nếu deferReply ném 40060 (đã ack nhưng response bị mất)
+// thì tiếp tục bình thường thay vì abort cả flow backup
 // ============================================================
 async function safeDeferReply(interaction, options = {}) {
     if (interaction.deferred || interaction.replied) return;
     try {
         await interaction.deferReply(options);
     } catch (err) {
-        if (err?.code === 40060) return; // Đã ack rồi → tiếp tục bình thường
-        throw err; // Lỗi khác → ném lên để xử lý
+        if (err?.code === 40060) return; // Đã ack → tiếp tục
+        throw err;
     }
 }
 
@@ -612,20 +610,18 @@ console.log("📍 GUILD:", interaction.guildId);
     if (interaction.isChatInputCommand()) {
         const { commandName, options } = interaction;
 if (interaction.commandName === "backup") {
-    // safeDeferReply tự handle mọi trường hợp đã ack rồi — không cần guard thủ công
-    await safeDeferReply(interaction); // Không ephemeral → embed hiện public
-
     const subcommand = interaction.options.getSubcommand();
 
-    if (!interaction.member.permissions.has("Administrator")) {
-        return await interaction.editReply({ content: "❌ Bạn không có quyền Administrator!" });
-    }
-
-    // HELPER: editReply an toàn, fallback DM nếu interaction chết
+    // HELPER: gửi reply an toàn — kiểm tra deferred trước, fallback DM nếu không được
     const safeReply = async (payload) => {
         const data = typeof payload === "string" ? { content: payload } : payload;
         try {
-            await interaction.editReply(data);
+            if (interaction.deferred || interaction.replied) {
+                await interaction.editReply(data);
+            } else {
+                // Defer chưa xong — gửi DM trực tiếp
+                await interaction.user.send(data).catch(() => {});
+            }
         } catch {
             await interaction.user.send(data).catch(() => {});
         }
@@ -634,8 +630,15 @@ if (interaction.commandName === "backup") {
 // ===== BACKUP CREATE =====
 if (subcommand === "create") {
     try {
+        // Defer TRONG try-catch để nếu thất bại thì safeReply fallback DM được
+        await safeDeferReply(interaction);
+
+        if (!interaction.member.permissions.has("Administrator")) {
+            return await safeReply({ content: "❌ Bạn không có quyền Administrator!" });
+        }
+
         console.log(`\n[BACKUP] 🔄 Bắt đầu sao lưu: ${interaction.guild.name}`);
-        await interaction.editReply({
+        await safeReply({
             embeds: [new EmbedBuilder()
                 .setColor("#f1c40f")
                 .setTitle("🔄 Đang sao lưu server...")
@@ -644,8 +647,8 @@ if (subcommand === "create") {
         });
 
         const guild = interaction.guild;
-        // Không fetch members — không cần cho backup và ngốn RAM Wispbyte free
-        // roles và channels đã có trong cache đủ để backup
+        // Không fetch members — không cần cho backup, ngốn RAM Wispbyte free 500MB
+        // Roles và channels đã có trong cache từ khi bot khởi động
         if (guild.roles.cache.size < 2) await guild.roles.fetch();
         if (guild.channels.cache.size < 2) await guild.channels.fetch();
 
@@ -761,22 +764,29 @@ if (subcommand === "create") {
 
 // ===== BACKUP LOAD =====
 if (subcommand === "load") {
+    // Defer ngay trong block load
+    await safeDeferReply(interaction);
+
     const backupID = interaction.options.getString("id");
 
     if (interaction.user.id !== interaction.guild.ownerId) {
-        return await interaction.editReply({
+        return await safeReply({
             content: "❌ **NGUY HIỂM:** Chỉ **Server Owner** mới được phép khôi phục dữ liệu!"
         });
     }
 
     const filePath = path.join(backupPath, `${backupID}.json`);
     if (!fs.existsSync(filePath)) {
-        return await interaction.editReply(`❌ Không tìm thấy backup ID: \`${backupID}\`.`);
+        return await safeReply({ content: `❌ Không tìm thấy backup ID: \`${backupID}\`.` });
     }
 
     // Báo ngay, sau đó chạy ngầm — KHÔNG await restore để tránh interaction timeout
-    await interaction.editReply({
-        content: "⚠️ Đang bắt đầu khôi phục server...\nKết quả sẽ được gửi qua **DM** khi hoàn tất. Đừng tắt bot!"
+    await safeReply({
+        embeds: [new EmbedBuilder()
+            .setColor("#f1c40f")
+            .setTitle("⚠️ Đang khôi phục server...")
+            .setDescription("Kết quả sẽ được gửi qua **DM** khi hoàn tất. Đừng tắt bot!")
+            .setTimestamp()]
     });
 
     // Chạy ngầm hoàn toàn — không liên quan đến interaction nữa
@@ -2005,12 +2015,14 @@ if (interaction.customId.startsWith("bet_")) {
     } // đóng isModalSubmit
 
     } catch (err) {
-        // Lớp bảo vệ cuối — với retries:0 và safeDeferReply, những lỗi này gần như không còn xảy ra
+        // Lớp bảo vệ cuối — nếu 10062/40060 vẫn lọt (rất hiếm), bỏ qua im lặng
         if (err?.code === 10062 || err?.message?.includes("Unknown Interaction")) {
-            return; // Interaction cũ, bỏ qua im lặng
+            console.warn("[FALLBACK] 10062 lọt qua guard — bỏ qua");
+            return;
         }
         if (err?.code === 40060 || err?.message?.includes("already been acknowledged")) {
-            return; // Đã ack — safeDeferReply đã handle, lọt đây là edge case cực hiếm
+            console.warn("[FALLBACK] 40060 lọt qua guard — bỏ qua");
+            return;
         }
         console.error("🚨 LỖI HỆ THỐNG INTERACTION:", err);
 
