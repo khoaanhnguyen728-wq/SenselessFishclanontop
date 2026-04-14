@@ -588,7 +588,7 @@ client.on("interactionCreate", async (interaction) => {
 
     // --- FIX 10062 ---
     const interactionAge = Date.now() - interaction.createdTimestamp;
-    if (interactionAge > 2500) {
+    if (interactionAge > 2800) {
         console.warn(`⚠️ [SKIP] Interaction quá hạn (${interactionAge}ms) — bỏ qua tránh 10062`);
         return;
     }
@@ -630,14 +630,13 @@ if (interaction.commandName === "backup") {
 // ===== BACKUP CREATE =====
 if (subcommand === "create") {
     try {
-        // Defer TRONG try-catch để nếu thất bại thì safeReply fallback DM được
-        await safeDeferReply(interaction);
-
+        // Kiểm tra quyền TRƯỚC khi defer — tránh lãng phí 3s window
         if (!interaction.member.permissions.has("Administrator")) {
-            return await safeReply({ content: "❌ Bạn không có quyền Administrator!" });
+            return await interaction.reply({ content: "❌ Bạn không có quyền Administrator!", flags: MessageFlags.Ephemeral });
         }
 
-        console.log(`\n[BACKUP] 🔄 Bắt đầu sao lưu: ${interaction.guild.name}`);
+        // Defer + reply "đang sao lưu" NGAY LẬP TỨC — trước mọi fetch nặng
+        await safeDeferReply(interaction);
         await safeReply({
             embeds: [new EmbedBuilder()
                 .setColor("#f1c40f")
@@ -645,6 +644,8 @@ if (subcommand === "create") {
                 .setDescription(`Đang quét **${interaction.guild.name}**, vui lòng chờ...`)
                 .setTimestamp()]
         });
+
+        console.log(`\n[BACKUP] 🔄 Bắt đầu sao lưu: ${interaction.guild.name}`);
 
         const guild = interaction.guild;
         // Không fetch members — không cần cho backup, ngốn RAM Wispbyte free 500MB
