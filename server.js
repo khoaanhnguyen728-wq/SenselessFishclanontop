@@ -131,7 +131,8 @@ const client = new Client({
     }
 });
 
-client.on("warn", console.log);
+// client.on("debug", console.log); // ĐÃ TẮT — quá verbose, ngốn RAM Wispbyte free
+client.on("warn", (msg) => console.warn("⚠️ WARN:", msg));
 client.once("ready", () => {
     console.log("✅ BOT ONLINE:", client.user.username);
     setInterval(() => {
@@ -549,19 +550,30 @@ const result = await aiModel.generateContent(promptWithLanguageLock);
         }
     }
 });
-// ===== GUARD CHỐNG 40060: chặn cùng interaction được xử lý 2 lần =====
-// Nguyên nhân gốc của 40060: bot chạy nhiều instance (process cũ + mới cùng lúc)
-// hoặc Discord retry gửi lại interaction. Set này đảm bảo mỗi ID chỉ được xử lý 1 lần.
+// ============================================================
+// FIX TRIỆT ĐỂ 10062 + 40060
+// 10062 = Bot restart, Discord gửi lại interaction cũ (>3s) -> timeout
+//         Fix: check tuổi interaction, >2500ms thì bỏ qua
+// 40060 = Cùng interaction bị xử lý 2 lần (WebSocket reconnect)
+//         Fix: Set handledInteractions chặn duplicate theo ID
+// ============================================================
 const handledInteractions = new Set();
 
 client.on("interactionCreate", async (interaction) => {
-    // --- CHẶN DUPLICATE INTERACTION (fix triệt để 40060) ---
+
+    // --- FIX 10062 ---
+    const interactionAge = Date.now() - interaction.createdTimestamp;
+    if (interactionAge > 2500) {
+        console.warn(`⚠️ [SKIP] Interaction quá hạn (${interactionAge}ms) — bỏ qua tránh 10062`);
+        return;
+    }
+
+    // --- FIX 40060 ---
     if (handledInteractions.has(interaction.id)) {
-        console.warn(`⚠️ [GUARD] Duplicate interaction ${interaction.id} — bỏ qua để tránh 40060.`);
+        console.warn(`⚠️ [SKIP] Duplicate interaction ${interaction.id} — bỏ qua tránh 40060`);
         return;
     }
     handledInteractions.add(interaction.id);
-    // Tự dọn sau 5 phút để tránh memory leak
     setTimeout(() => handledInteractions.delete(interaction.id), 300_000);
 
     try {
@@ -575,7 +587,7 @@ console.log("📍 GUILD:", interaction.guildId);
 if (interaction.commandName === "backup") {
     // Guard: chỉ defer nếu chưa acknowledge — tránh 40060 tuyệt đối
     if (!interaction.deferred && !interaction.replied) {
-        await interaction.deferReply(); // Không Ephemeral → embed sẽ hiện public
+        await interaction.deferReply(); // Không ephemeral → embed hiện public
     }
 
     const subcommand = interaction.options.getSubcommand();
@@ -599,13 +611,11 @@ if (subcommand === "create") {
     try {
         console.log(`\n[BACKUP] 🔄 Bắt đầu sao lưu: ${interaction.guild.name}`);
         await interaction.editReply({
-            embeds: [
-                new EmbedBuilder()
-                    .setColor("#f1c40f")
-                    .setTitle("🔄 Đang sao lưu server...")
-                    .setDescription(`Đang quét **${interaction.guild.name}**, vui lòng chờ...`)
-                    .setTimestamp()
-            ]
+            embeds: [new EmbedBuilder()
+                .setColor("#f1c40f")
+                .setTitle("🔄 Đang sao lưu server...")
+                .setDescription(`Đang quét **${interaction.guild.name}**, vui lòng chờ...`)
+                .setTimestamp()]
         });
 
         const guild = interaction.guild;
@@ -1969,35 +1979,34 @@ if (interaction.customId.startsWith("bet_")) {
     } // đóng isModalSubmit
 
     } catch (err) {
-        // 1. Bỏ qua lỗi Unknown interaction (10062)
+        // Lớp bảo vệ cuối — nếu 10062/40060 vẫn lọt (rất hiếm), bỏ qua im lặng
         if (err?.code === 10062 || err?.message?.includes("Unknown Interaction")) {
-            console.warn("⚠️ Interaction đã hết hạn hoặc không tồn tại (10062), bỏ qua.");
+            console.warn("[FALLBACK] 10062 lọt qua guard — bỏ qua");
             return;
         }
-
-        // Bỏ qua lỗi 40060 (already acknowledged) — lớp bảo vệ thứ 2 (lớp 1 là Set guard ở trên)
         if (err?.code === 40060 || err?.message?.includes("already been acknowledged")) {
-            console.warn("⚠️ [FALLBACK] 40060 vẫn lọt qua — kiểm tra xem bot có đang chạy nhiều instance không!");
+            console.warn("[FALLBACK] 40060 lọt qua guard — bỏ qua");
             return;
         }
         console.error("🚨 LỖI HỆ THỐNG INTERACTION:", err);
 
-        // 2. Xử lý phản hồi lỗi cho người dùng một cách an toàn
         const errorEmbed = {
-            content: "❌ **Đã có lỗi xảy ra khi thực hiện lệnh!**\nVui lòng thử lại sau hoặc liên hệ Admin.",
-            flags: MessageFlags.Ephemeral 
+            embeds: [new EmbedBuilder()
+                .setColor("#ff3333")
+                .setTitle("❌ Có lỗi xảy ra!")
+                .setDescription("Vui lòng thử lại sau hoặc liên hệ Admin.")
+                .setTimestamp()],
+            flags: MessageFlags.Ephemeral
         };
 
         try {
             if (interaction.deferred || interaction.replied) {
-                // Nếu đã defer hoặc đã reply rồi thì dùng edit
                 await interaction.editReply(errorEmbed).catch(() => {});
             } else {
-                // Nếu chưa làm gì cả thì dùng reply
                 await interaction.reply(errorEmbed).catch(() => {});
             }
         } catch (finalErr) {
-            console.error("🔥 Không thể gửi thông báo lỗi cho User:", finalErr.message);
+            console.error("🔥 Không thể gửi thông báo lỗi:", finalErr.message);
         }
     }
 }); 
