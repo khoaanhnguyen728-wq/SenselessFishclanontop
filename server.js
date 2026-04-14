@@ -647,6 +647,8 @@ if (subcommand === "create") {
     // Toàn bộ xử lý nặng chạy ngầm — KHÔNG await để tránh 10062
     const _guild = interaction.guild;
     const _user = interaction.user;
+    // Tạo ID CỐ ĐỊNH ngay đây — truyền vào setImmediate để console và DM dùng cùng 1 ID
+    const _backupId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     setImmediate(async () => {
         const notify = async (embed) => {
             await _user.send({ embeds: [embed] }).catch(() => {});
@@ -712,7 +714,7 @@ if (subcommand === "create") {
                 }));
 
             const backupData = {
-                id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+                id: _backupId,
                 guildId: _guild.id,
                 guildName: _guild.name,
                 guildIcon: _guild.iconURL({ extension: "png" }) || null,
