@@ -123,8 +123,8 @@ const client = new Client({
         GatewayIntentBits.GuildPresences
     ],
     rest: {
-        timeout: 60000,      // tăng REST timeout lên 60 giây
-        retries: 5           // tự retry 5 lần nếu fail
+        timeout: 30000,      // 30 giây là đủ
+        retries: 0           // KHÔNG retry — retry gây ra 40060 (interaction đã ack nhưng response bị mất)
     },
     ws: {
         large_threshold: 50
@@ -551,6 +551,33 @@ const result = await aiModel.generateContent(promptWithLanguageLock);
     }
 });
 // ============================================================
+// HELPER: safeDeferReply / safeUpdate
+// Lý do cần: retries=0 fix được root cause, nhưng trong một số trường hợp
+// (network hiccup cực hiếm), deferReply vẫn có thể báo 40060.
+// Hàm này bắt 40060 ngay tại nguồn và tiếp tục bình thường
+// (vì interaction ĐÃ được ack thành công trên Discord, chỉ là response bị mất)
+// ============================================================
+async function safeDeferReply(interaction, options = {}) {
+    if (interaction.deferred || interaction.replied) return;
+    try {
+        await interaction.deferReply(options);
+    } catch (err) {
+        if (err?.code === 40060) return; // Đã ack rồi → tiếp tục bình thường
+        throw err; // Lỗi khác → ném lên để xử lý
+    }
+}
+
+async function safeDeferUpdate(interaction) {
+    if (interaction.deferred || interaction.replied) return;
+    try {
+        await interaction.deferUpdate();
+    } catch (err) {
+        if (err?.code === 40060) return;
+        throw err;
+    }
+}
+
+// ============================================================
 // FIX TRIỆT ĐỂ 10062 + 40060
 // 10062 = Bot restart, Discord gửi lại interaction cũ (>3s) -> timeout
 //         Fix: check tuổi interaction, >2500ms thì bỏ qua
@@ -585,10 +612,8 @@ console.log("📍 GUILD:", interaction.guildId);
     if (interaction.isChatInputCommand()) {
         const { commandName, options } = interaction;
 if (interaction.commandName === "backup") {
-    // Guard: chỉ defer nếu chưa acknowledge — tránh 40060 tuyệt đối
-    if (!interaction.deferred && !interaction.replied) {
-        await interaction.deferReply(); // Không ephemeral → embed hiện public
-    }
+    // safeDeferReply tự handle mọi trường hợp đã ack rồi — không cần guard thủ công
+    await safeDeferReply(interaction); // Không ephemeral → embed hiện public
 
     const subcommand = interaction.options.getSubcommand();
 
@@ -619,9 +644,10 @@ if (subcommand === "create") {
         });
 
         const guild = interaction.guild;
-        await guild.members.fetch();
-        await guild.roles.fetch();
-        await guild.channels.fetch();
+        // Không fetch members — không cần cho backup và ngốn RAM Wispbyte free
+        // roles và channels đã có trong cache đủ để backup
+        if (guild.roles.cache.size < 2) await guild.roles.fetch();
+        if (guild.channels.cache.size < 2) await guild.channels.fetch();
 
         // ROLES: màu, permissions bitfield, hoist, mentionable, position
         const rolesData = [...guild.roles.cache.values()]
@@ -875,7 +901,7 @@ if (subcommand === "load") {
 
 else if (commandName === 'tungdongxu') {
         try {
-            await interaction.deferReply();
+            await safeDeferReply(interaction);
             const money = options.getInteger('money');
             const userId = interaction.user.id;
 
@@ -912,7 +938,7 @@ else if (commandName === 'tungdongxu') {
     
         /*BLACKLIST*/
         else if (commandName === "blacklist") {
-            await interaction.deferReply();
+            await safeDeferReply(interaction);
 
             const user = options.getUser("user");
             const reason = options.getString("reason") || "Không có";
@@ -969,7 +995,7 @@ else if (commandName === 'tungdongxu') {
 
         /* ===== UNBLACKLIST ===== */
         else if (commandName === "unblacklist") {
-            await interaction.deferReply();
+            await safeDeferReply(interaction);
 
             const user = options.getUser("user");
 
@@ -1016,7 +1042,7 @@ else if (commandName === 'tungdongxu') {
 
         /* ===== STRIKE ===== */
         else if (commandName === "strike") {
-            await interaction.deferReply();
+            await safeDeferReply(interaction);
 
             const target = options.getUser("user");
             const reason = options.getString("reason");
@@ -1069,7 +1095,7 @@ else if (commandName === 'tungdongxu') {
 
         /* ===== UNSTRIKE ===== */
         else if (commandName === "unstrike") {
-            await interaction.deferReply();
+            await safeDeferReply(interaction);
 
             const target = options.getUser("user");
             const strikeIndex = options.getInteger("strike") - 1;
@@ -1119,7 +1145,7 @@ else if (commandName === 'tungdongxu') {
 // --- LỆNH DAILY ---
 else if (commandName === 'daily') {
     try {
-        await interaction.deferReply();
+        await safeDeferReply(interaction);
 
         const userId = interaction.user.id;
         const now = Date.now();
@@ -1196,7 +1222,7 @@ else if (commandName === 'daily') {
     // --- LỆNH TOPCOIN ---
 else if (commandName === 'topcoin') {
 if (!interaction.deferred && !interaction.replied) {
-    await interaction.deferReply();
+    await safeDeferReply(interaction);
 }
 
 const sorted = Object.entries(coins)
@@ -1218,7 +1244,7 @@ const sorted = Object.entries(coins)
     // --- LỆNH PAY ---
 else if (commandName === 'pay') {
 if (!interaction.deferred && !interaction.replied) {
-    await interaction.deferReply();
+    await safeDeferReply(interaction);
 }
 
     const userId = interaction.user.id;
@@ -1245,7 +1271,7 @@ if (!interaction.deferred && !interaction.replied) {
 
         /* ===== STAFFSTRIKE ===== */
         else if (commandName === "staffstrike") {
-            await interaction.deferReply();
+            await safeDeferReply(interaction);
 
             const target = options.getUser("user");
             const reason = options.getString("reason");
@@ -1301,7 +1327,7 @@ if (!interaction.deferred && !interaction.replied) {
 
         /* ===== BXH ===== */
         else if (commandName === "bxh") {
-            await interaction.deferReply();
+            await safeDeferReply(interaction);
             const sub = options.getSubcommand();
             if (sub === "kill" || sub === "chat") {
                 return interaction.editReply({ content: "⚙️ Tính năng **BXH** đang được phát triển, vui lòng chờ!" });
@@ -1310,7 +1336,7 @@ if (!interaction.deferred && !interaction.replied) {
 
         /* ===== LIST ===== */
         else if (commandName === "list") {
-            await interaction.deferReply();
+            await safeDeferReply(interaction);
 
             const type = options.getString("type");
             let text = "";
@@ -1333,7 +1359,7 @@ if (!interaction.deferred && !interaction.replied) {
 
         /* ===== SETTOP ===== */
         else if (commandName === "settop") {
-            await interaction.deferReply();
+            await safeDeferReply(interaction);
 
             const user = options.getUser("user");
             const rank = options.getInteger("top");
@@ -1370,7 +1396,7 @@ if (!interaction.deferred && !interaction.replied) {
 
         /* ===== DETOP ===== */
         else if (commandName === "detop") {
-            await interaction.deferReply();
+            await safeDeferReply(interaction);
 
             const user = options.getUser("user");
             let found = false;
@@ -1393,7 +1419,7 @@ if (!interaction.deferred && !interaction.replied) {
 
         /* ===== PROMOTE ===== */
         else if (commandName === "promote") {
-            await interaction.deferReply();
+            await safeDeferReply(interaction);
 
             const user = options.getUser("user");
             const roleName = options.getString("permission");
@@ -1464,7 +1490,7 @@ if (!interaction.deferred && !interaction.replied) {
 
         /* ===== DEMOTE ===== */
         else if (commandName === "demote") {
-            await interaction.deferReply();
+            await safeDeferReply(interaction);
 
             const user = options.getUser("user");
 
@@ -1506,7 +1532,7 @@ if (!interaction.deferred && !interaction.replied) {
 
         /* ===== MAINER ===== */
         else if (commandName === "mainer") {
-            await interaction.deferReply();
+            await safeDeferReply(interaction);
 
             const user = options.getUser("user");
             mainers = mainers.filter(m => m.id !== user.id);
@@ -1523,7 +1549,7 @@ if (!interaction.deferred && !interaction.replied) {
 
         /* ===== DEMAINER ===== */
         else if (commandName === "demainer") {
-            await interaction.deferReply();
+            await safeDeferReply(interaction);
 
             const user = options.getUser("user");
             mainers = mainers.filter(m => m.id !== user.id);
@@ -1534,7 +1560,7 @@ if (!interaction.deferred && !interaction.replied) {
 
         /* ===== THIDAU ===== */
         else if (commandName === "thidau") {
-            if (!interaction.deferred && !interaction.replied) await interaction.deferReply();
+            if (!interaction.deferred && !interaction.replied) await safeDeferReply(interaction);
 
             const team1 = options.getString("team1");
             const team2 = options.getString("team2");
@@ -1566,7 +1592,7 @@ if (!interaction.deferred && !interaction.replied) {
 
         /* ===== COIN ===== */
         else if (commandName === "coin") {
-            await interaction.deferReply();
+            await safeDeferReply(interaction);
             const userId = interaction.user.id;
             const balance = getCoins(userId);
             const embed = new EmbedBuilder()
@@ -1578,7 +1604,7 @@ if (!interaction.deferred && !interaction.replied) {
         }
 
 else if (commandName === "baucua") {
-    await interaction.deferReply();
+    await safeDeferReply(interaction);
 
     const embed = new EmbedBuilder()
         .setTitle("🎲 BẦU CUA")
@@ -1601,7 +1627,7 @@ else if (commandName === "baucua") {
 
         /* ===== TÀI XỈU ===== */
         else if (commandName === "taixiu") {
-            await interaction.deferReply();
+            await safeDeferReply(interaction);
 
             const embed = new EmbedBuilder()
                 .setTitle("🎲 TÀI XỈU")
@@ -1685,7 +1711,7 @@ if (interaction.customId.startsWith("bc_")) {
         return interaction.reply({ content: "❌ Nút này không phải của bạn!", flags: MessageFlags.Ephemeral });
     }
 
-    await interaction.deferUpdate();
+    await safeDeferUpdate(interaction);
 
     // Hiệu ứng Animation 3 bước
     const frames = ["⌛ Đang tung...", "🪙 Đang xoay...", "✨ Đang hạ xuống..."];
@@ -1731,7 +1757,7 @@ if (interaction.customId.startsWith("bc_")) {
             if (!interaction.channel.name.startsWith("ai-ticket-")) {
                 return interaction.reply({ content: "❌ Không thể đóng kênh này!", flags: MessageFlags.Ephemeral });
             }
-            await interaction.deferUpdate();
+            await safeDeferUpdate(interaction);
             await interaction.followUp({ content: "🔒 Đang đóng ticket...", flags: MessageFlags.Ephemeral });
             setTimeout(() => interaction.channel.delete().catch(() => {}), 3000);
             return;
@@ -1745,7 +1771,7 @@ if (interaction.customId.startsWith("bc_")) {
             }
             ticketCooldown.set(interaction.user.id, now);
 
-            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+            await safeDeferReply(interaction, { flags: MessageFlags.Ephemeral });
 
             try {
                 const ticketChannel = await interaction.guild.channels.create({
@@ -1825,7 +1851,7 @@ if (interaction.customId.startsWith("bc_bet_")) {
 
     try {
         // 1. Phải deferReply ngay lập tức để tránh lỗi "Interaction has already been acknowledged"
-        if (!interaction.deferred && !interaction.replied) await interaction.deferReply();
+        if (!interaction.deferred && !interaction.replied) await safeDeferReply(interaction);
 
         const choice = interaction.customId.split("_")[2];
         const moneyInput = interaction.fields.getTextInputValue("money");
@@ -1916,7 +1942,7 @@ if (interaction.customId.startsWith("bet_")) {
             const money = parseInt(interaction.fields.getTextInputValue("money"));
 
             // 1. deferReply NGAY LẬP TỨC — phải là thao tác đầu tiên để tránh timeout 3 giây
-            if (!interaction.deferred && !interaction.replied) await interaction.deferReply();
+            if (!interaction.deferred && !interaction.replied) await safeDeferReply(interaction);
 
             // 2. Kiểm tra đầu vào
             if (isNaN(money) || money <= 0) {
@@ -1979,14 +2005,12 @@ if (interaction.customId.startsWith("bet_")) {
     } // đóng isModalSubmit
 
     } catch (err) {
-        // Lớp bảo vệ cuối — nếu 10062/40060 vẫn lọt (rất hiếm), bỏ qua im lặng
+        // Lớp bảo vệ cuối — với retries:0 và safeDeferReply, những lỗi này gần như không còn xảy ra
         if (err?.code === 10062 || err?.message?.includes("Unknown Interaction")) {
-            console.warn("[FALLBACK] 10062 lọt qua guard — bỏ qua");
-            return;
+            return; // Interaction cũ, bỏ qua im lặng
         }
         if (err?.code === 40060 || err?.message?.includes("already been acknowledged")) {
-            console.warn("[FALLBACK] 40060 lọt qua guard — bỏ qua");
-            return;
+            return; // Đã ack — safeDeferReply đã handle, lọt đây là edge case cực hiếm
         }
         console.error("🚨 LỖI HỆ THỐNG INTERACTION:", err);
 
