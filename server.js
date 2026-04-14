@@ -630,9 +630,9 @@ if (interaction.commandName === "backup") {
 
 // ===== BACKUP CREATE =====
 if (subcommand === "create") {
-    // Kiểm tra quyền TRƯỚC khi defer — tránh lãng phí 3s window
-    if (!interaction.member.permissions.has("Administrator")) {
-        return await interaction.reply({ content: "❌ Bạn không có quyền Administrator!", flags: MessageFlags.Ephemeral });
+    // Kiểm tra quyền TRƯỚC khi defer — chỉ ADMIN_ROLE trong .env mới dùng được
+    if (!hasPermission(interaction.member)) {
+        return await interaction.reply({ content: "❌ Bạn không có quyền dùng lệnh này!", flags: MessageFlags.Ephemeral });
     }
 
     // Chặn chạy 2 lần cùng lúc (duplicate interaction hoặc user bấm 2 lần)
@@ -654,10 +654,13 @@ if (subcommand === "create") {
     // Toàn bộ xử lý nặng chạy ngầm — KHÔNG await để tránh 10062
     const _guild = interaction.guild;
     const _user = interaction.user;
+    const _interaction = interaction; // Giữ ref để editReply cập nhật embed trên server
     // Tạo ID CỐ ĐỊNH ngay đây — truyền vào setImmediate để console và DM dùng cùng 1 ID
     const _backupId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     setImmediate(async () => {
+        // Gửi kết quả cả lên server (editReply) lẫn DM
         const notify = async (embed) => {
+            await _interaction.editReply({ embeds: [embed] }).catch(() => {});
             await _user.send({ embeds: [embed] }).catch(() => {});
         };
         try {
@@ -791,10 +794,10 @@ if (subcommand === "create") {
 
 // ===== BACKUP LOAD =====
 if (subcommand === "load") {
-    // Kiểm tra quyền TRƯỚC khi defer — tránh lãng phí 3s window
-    if (interaction.user.id !== interaction.guild.ownerId) {
+    // Kiểm tra quyền TRƯỚC khi defer — chỉ ADMIN_ROLE trong .env mới dùng được
+    if (!hasPermission(interaction.member)) {
         return await interaction.reply({
-            content: "❌ **NGUY HIỂM:** Chỉ **Server Owner** mới được phép khôi phục dữ liệu!",
+            content: "❌ Bạn không có quyền dùng lệnh này!",
             flags: MessageFlags.Ephemeral
         });
     }
