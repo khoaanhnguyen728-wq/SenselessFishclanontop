@@ -709,6 +709,7 @@ if (subcommand === "create") {
 
         const backupData = {
             id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+            guildId: guild.id,
             guildName: guild.name,
             guildIcon: guild.iconURL({ extension: "png" }) || null,
             createdAt: new Date().toISOString(),
@@ -718,15 +719,18 @@ if (subcommand === "create") {
         };
 
         if (!fs.existsSync(backupPath)) fs.mkdirSync(backupPath, { recursive: true });
-        const filePath = path.join(backupPath, `${backupData.id}.json`);
-        fs.writeFileSync(filePath, JSON.stringify(backupData, null, 2), "utf8");
 
+        // Xóa TẤT CẢ file cũ TRƯỚC — sau đó mới ghi file mới
         let deletedCount = 0;
         for (const file of fs.readdirSync(backupPath)) {
-            if (file.endsWith(".json") && file !== `${backupData.id}.json`) {
+            if (file.endsWith(".json")) {
                 try { fs.unlinkSync(path.join(backupPath, file)); deletedCount++; } catch {}
             }
         }
+
+        // Ghi file backup mới sau khi đã dọn sạch
+        const filePath = path.join(backupPath, `${backupData.id}.json`);
+        fs.writeFileSync(filePath, JSON.stringify(backupData, null, 2), "utf8");
 
         console.log(`[BACKUP] ✅ ID: ${backupData.id} | Roles: ${rolesData.length} | Cats: ${categoriesData.length} | Channels: ${channelsData.length}`);
 
@@ -765,21 +769,24 @@ if (subcommand === "create") {
 
 // ===== BACKUP LOAD =====
 if (subcommand === "load") {
-    // Defer ngay trong block load
-    await safeDeferReply(interaction);
-
-    const backupID = interaction.options.getString("id");
-
+    // Kiểm tra quyền TRƯỚC khi defer — tránh lãng phí 3s window
     if (interaction.user.id !== interaction.guild.ownerId) {
-        return await safeReply({
-            content: "❌ **NGUY HIỂM:** Chỉ **Server Owner** mới được phép khôi phục dữ liệu!"
+        return await interaction.reply({
+            content: "❌ **NGUY HIỂM:** Chỉ **Server Owner** mới được phép khôi phục dữ liệu!",
+            flags: MessageFlags.Ephemeral
         });
     }
 
+    const backupID = interaction.options.getString("id");
     const filePath = path.join(backupPath, `${backupID}.json`);
+
+    // Kiểm tra file tồn tại TRƯỚC khi defer
     if (!fs.existsSync(filePath)) {
-        return await safeReply({ content: `❌ Không tìm thấy backup ID: \`${backupID}\`.` });
+        return await interaction.reply({ content: `❌ Không tìm thấy backup ID: \`${backupID}\`.`, flags: MessageFlags.Ephemeral });
     }
+
+    // Defer sau khi đã validate xong
+    await safeDeferReply(interaction);
 
     // Báo ngay, sau đó chạy ngầm — KHÔNG await restore để tránh interaction timeout
     await safeReply({
@@ -832,12 +839,23 @@ if (subcommand === "load") {
             }
 
             // Helper map overwrite IDs sang role mới
-            const mapOW = (overwrites) => overwrites.map(ow => ({
-                id: roleIdMap[ow.id]?.id || ow.id,
-                type: ow.type,
-                allow: BigInt(ow.allow),
-                deny: BigInt(ow.deny)
-            }));
+            // - Nếu OW là @everyone (ID = guild cũ) → map sang guild.id (server hiện tại)
+            // - Nếu OW là role đã được tạo lại → dùng ID mới
+            // - Nếu OW là member (type=1) → giữ nguyên user ID
+            const mapOW = (overwrites) => overwrites.map(ow => {
+                let resolvedId;
+                if (ow.id === backupData.guildId) {
+                    resolvedId = guild.id; // @everyone của server mới
+                } else {
+                    resolvedId = roleIdMap[ow.id]?.id || ow.id;
+                }
+                return {
+                    id: resolvedId,
+                    type: ow.type,
+                    allow: BigInt(ow.allow),
+                    deny: BigInt(ow.deny)
+                };
+            });
 
             // 4. Tái tạo CATEGORIES
             const catIdMap = {};
