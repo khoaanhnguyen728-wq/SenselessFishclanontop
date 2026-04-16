@@ -10,7 +10,7 @@ console.log("🚀 BOT ĐANG KHỞI ĐỘNG...");
 const path = require("path");
 const fs = require("fs");
 const dns = require("dns");
-// dns.setDefaultResultOrder("ipv4first"); // ✅ FIX: Bỏ comment này — Wispbyte dùng dual-stack, ép IPv4 làm WebSocket Discord bị timeout
+dns.setDefaultResultOrder("ipv4first");
 const express = require("express");
 const cors = require("cors");
 const axios = require("axios");
@@ -123,8 +123,8 @@ const client = new Client({
         GatewayIntentBits.GuildPresences
     ],
     rest: {
-        timeout: 30000,      // ✅ FIX: Tăng 15s → 30s — Wispbyte cold start chậm, 15s không đủ
-        retries: 1           // ✅ FIX: Cho phép retry 1 lần — 40060 chỉ xảy ra khi bot đang online, lúc login không bị
+        timeout: 15000,      // 15s là đủ cho Wispbyte
+        retries: 0           // KHÔNG retry — retry gây 40060 (ack thành công nhưng response bị mất, retry lên bị báo đã ack)
     },
     ws: {
         large_threshold: 50
@@ -152,6 +152,7 @@ client.once("ready", () => {
             m.presence && ["online", "idle", "dnd"].includes(m.presence.status)
         ).size;
     }, 10000);
+    setTimeout(() => restoreGiveawayTimers(), 3000);
 });
 client.on("shardDisconnect", () => {
     console.log("❌ BOT DISCONNECTED");
@@ -224,6 +225,100 @@ const RULE_CHANNEL = process.env.RULE_CHANNEL;
 const ADMIN_ROLE = process.env.ADMIN_ROLE;
 const STAFF_ROLE_ID = process.env.STAFF_ROLE_ID;
 const TICKET_CATEGORY_ID = process.env.TICKET_CATEGORY_ID;
+
+if (!fs.existsSync("giveaways.json")) fs.writeFileSync("giveaways.json", "[]");
+let giveaways = JSON.parse(fs.readFileSync("giveaways.json", "utf8"));
+const saveGiveaways = () => fs.writeFileSync("giveaways.json", JSON.stringify(giveaways, null, 2));
+
+// Khi bot khởi động lại — khôi phục timers cho giveaways chưa hết hạn
+function restoreGiveawayTimers() {
+    const now = Date.now();
+    for (const gw of giveaways.filter(g => !g.ended)) {
+        const remaining = gw.endsAt - now;
+        if (remaining <= 0) {
+            endGiveaway(gw.messageId, gw.channelId).catch(console.error);
+        } else {
+            setTimeout(() => endGiveaway(gw.messageId, gw.channelId).catch(console.error), remaining);
+        }
+    }
+}
+
+async function endGiveaway(messageId, channelId) {
+    const gw = giveaways.find(g => g.messageId === messageId && !g.ended);
+    if (!gw) return;
+    gw.ended = true;
+    saveGiveaways();
+
+    try {
+        const channel = await client.channels.fetch(channelId).catch(() => null);
+        if (!channel) return;
+        const message = await channel.messages.fetch(messageId).catch(() => null);
+        if (!message) return;
+
+        const participants = gw.participants || [];
+        const winnerCount = gw.winnerCount || 1;
+
+        // Xáo trộn và chọn người thắng
+        const shuffled = [...participants].sort(() => Math.random() - 0.5);
+        const winners = shuffled.slice(0, Math.min(winnerCount, shuffled.length));
+
+        // ── Embed kết quả đẹp ──
+        const endedEmbed = new EmbedBuilder()
+            .setTitle("🎊 GIVEAWAY KẾT THÚC!")
+            .setColor(winners.length > 0 ? "#FFD700" : "#555555")
+            .setDescription(
+                `> 🏆 **Giải thưởng:** ${gw.prize}\n` +
+                `> 👥 **Tham gia:** ${participants.length} người\n` +
+                `> 🎖 **Số người thắng:** ${winnerCount}\n\n` +
+                (winners.length > 0
+                    ? `🎉 **NGƯỜI THẮNG:**\n${winners.map(id => `> <@${id}>`).join("\n")}`
+                    : `> 😢 Không có ai tham gia...`)
+            )
+            .setFooter({ text: `Tổ chức bởi ${gw.hostedBy} • Đã kết thúc` })
+            .setTimestamp();
+
+        // Disable nút tham gia
+        const disabledRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId("giveaway_ended")
+                .setLabel(`🎁 Đã kết thúc • ${participants.length} người tham gia`)
+                .setStyle(ButtonStyle.Secondary)
+                .setDisabled(true)
+        );
+
+        await message.edit({ embeds: [endedEmbed], components: [disabledRow] });
+
+        // Thông báo winner
+        if (winners.length > 0) {
+            const winnerPing = winners.map(id => `<@${id}>`).join(", ");
+            await channel.send({
+                content: `🎊 Chúc mừng ${winnerPing}! Bạn đã thắng **${gw.prize}**! 🎉`,
+                embeds: [
+                    new EmbedBuilder()
+                        .setColor("#FFD700")
+                        .setTitle("🏆 NGƯỜI CHIẾN THẮNG!")
+                        .setDescription(
+                            winners.map(id => `🥇 <@${id}>`).join("\n") +
+                            `\n\n**Giải thưởng:** ${gw.prize}\n` +
+                            `Liên hệ <@${gw.hostId}> để nhận thưởng!`
+                        )
+                        .setTimestamp()
+                ]
+            });
+
+            // Thưởng coin nếu prize là số coin
+            const coinMatch = gw.prize.match(/(\d+)\s*(coin|🪙)/i);
+            if (coinMatch) {
+                const coinAmount = parseInt(coinMatch[1]);
+                for (const wId of winners) {
+                    addCoins(wId, coinAmount);
+                }
+            }
+        }
+    } catch (err) {
+        console.error("❌ Lỗi kết thúc giveaway:", err);
+    }
+}
 
 function hasPermission(member) {
     if (!process.env.ADMIN_ROLE) return false;
@@ -625,6 +720,8 @@ const CMD_COOLDOWNS = {
     "bet_":        10_000,   // prefix — tài xỉu nhập tiền
     "submit_score":30_000,   // 30 giây
     "match_info":   5_000,
+    "giveaway":    10_000,   // 10 giây
+    "giveaway_join": 2_000, // 2 giây (prefix check đã xử lý)
 };
 
 const _cmdCooldownStore = new Map();
@@ -1045,6 +1142,190 @@ if (subcommand === "load") {
 
     return;
 }
+        else if (commandName === "giveaway") {
+            const subCmd = options.getSubcommand();
+
+            // Kiểm tra quyền ADMIN
+            const member = await interaction.guild.members.fetch(interaction.user.id);
+            if (!hasPermission(member)) {
+                return interaction.reply({ content: "❌ Bạn không có quyền tổ chức giveaway!", flags: MessageFlags.Ephemeral });
+            }
+
+            // ── /giveaway start ──
+            if (subCmd === "start") {
+                await safeDeferReply(interaction);
+
+                const prize = options.getString("prize");
+                const timeInput = options.getString("time");
+                const winnerCount = options.getInteger("winners") || 1;
+                const channel = options.getChannel("channel") || interaction.channel;
+
+                // Parse thời gian: 10m, 1h, 2h30m, 1d
+                const parseTime = (str) => {
+                    let ms = 0;
+                    const d = str.match(/(\d+)d/); if (d) ms += parseInt(d[1]) * 86400000;
+                    const h = str.match(/(\d+)h/); if (h) ms += parseInt(h[1]) * 3600000;
+                    const m = str.match(/(\d+)m/); if (m) ms += parseInt(m[1]) * 60000;
+                    const s = str.match(/(\d+)s/); if (s) ms += parseInt(s[1]) * 1000;
+                    return ms;
+                };
+
+                const duration = parseTime(timeInput);
+                if (!duration || duration < 10000) {
+                    return interaction.editReply("❌ Thời gian không hợp lệ! Ví dụ: `10m`, `1h`, `2h30m`, `1d`");
+                }
+
+                const endsAt = Date.now() + duration;
+                const endsAtDate = new Date(endsAt);
+
+                // Format thời gian đếm ngược đẹp
+                const formatDuration = (ms) => {
+                    const d = Math.floor(ms / 86400000);
+                    const h = Math.floor((ms % 86400000) / 3600000);
+                    const m = Math.floor((ms % 3600000) / 60000);
+                    const s = Math.floor((ms % 60000) / 1000);
+                    let out = "";
+                    if (d) out += `${d} ngày `;
+                    if (h) out += `${h} giờ `;
+                    if (m) out += `${m} phút `;
+                    if (s && !d) out += `${s} giây`;
+                    return out.trim();
+                };
+
+                // ── Embed giveaway đẹp ──
+                const giveawayEmbed = new EmbedBuilder()
+                    .setTitle("🎉 GIVEAWAY 🎉")
+                    .setColor("#FF6B9D")
+                    .setDescription(
+                        `## 🏆 ${prize}\n\n` +
+                        `> 🎖 **Số người thắng:** ${winnerCount}\n` +
+                        `> ⏰ **Kết thúc:** <t:${Math.floor(endsAt / 1000)}:R> (<t:${Math.floor(endsAt / 1000)}:F>)\n` +
+                        `> ⌛ **Thời gian:** ${formatDuration(duration)}\n` +
+                        `> 👤 **Tổ chức:** <@${interaction.user.id}>\n\n` +
+                        `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                        `🎁 **Nhấn nút bên dưới để tham gia!**\n` +
+                        `━━━━━━━━━━━━━━━━━━━━━━`
+                    )
+                    .setThumbnail("https://i.imgur.com/wSTFkRM.png")
+                    .setFooter({ text: `Kết thúc lúc` })
+                    .setTimestamp(endsAtDate);
+
+                const joinRow = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId("giveaway_join")
+                        .setLabel("🎁 Tham gia (0)")
+                        .setStyle(ButtonStyle.Success),
+                    new ButtonBuilder()
+                        .setCustomId("giveaway_list")
+                        .setLabel("👥 Xem danh sách")
+                        .setStyle(ButtonStyle.Secondary)
+                );
+
+                const targetChannel = channel.isTextBased() ? channel : interaction.channel;
+                const sentMsg = await targetChannel.send({
+                    content: "🎉 **GIVEAWAY MỚI!** 🎉 @everyone",
+                    embeds: [giveawayEmbed],
+                    components: [joinRow]
+                });
+
+                // Lưu giveaway
+                const gwData = {
+                    messageId: sentMsg.id,
+                    channelId: targetChannel.id,
+                    prize,
+                    winnerCount,
+                    endsAt,
+                    hostId: interaction.user.id,
+                    hostedBy: interaction.user.username,
+                    participants: [],
+                    ended: false
+                };
+                giveaways.push(gwData);
+                saveGiveaways();
+
+                // Set timer
+                setTimeout(() => endGiveaway(sentMsg.id, targetChannel.id).catch(console.error), duration);
+
+                return interaction.editReply({
+                    embeds: [
+                        new EmbedBuilder()
+                            .setColor("#00ff88")
+                            .setTitle("✅ Giveaway đã được tạo!")
+                            .setDescription(
+                                `**Giải thưởng:** ${prize}\n` +
+                                `**Channel:** <#${targetChannel.id}>\n` +
+                                `**Kết thúc:** <t:${Math.floor(endsAt / 1000)}:R>`
+                            )
+                    ]
+                });
+            }
+
+            // ── /giveaway end ──
+            else if (subCmd === "end") {
+                await safeDeferReply(interaction);
+                const msgId = options.getString("id");
+                const gw = giveaways.find(g => g.messageId === msgId && !g.ended);
+                if (!gw) return interaction.editReply("❌ Không tìm thấy giveaway hoặc đã kết thúc!");
+                await endGiveaway(gw.messageId, gw.channelId);
+                return interaction.editReply("✅ Đã kết thúc giveaway!");
+            }
+
+            // ── /giveaway reroll ──
+            else if (subCmd === "reroll") {
+                await safeDeferReply(interaction);
+                const msgId = options.getString("id");
+                const gw = giveaways.find(g => g.messageId === msgId && g.ended);
+                if (!gw) return interaction.editReply("❌ Không tìm thấy giveaway đã kết thúc!");
+
+                const { participants, winnerCount, prize, channelId } = gw;
+                if (!participants.length) return interaction.editReply("❌ Không có người tham gia để reroll!");
+
+                const shuffled = [...participants].sort(() => Math.random() - 0.5);
+                const newWinners = shuffled.slice(0, Math.min(winnerCount, shuffled.length));
+
+                const channel = await client.channels.fetch(channelId).catch(() => null);
+                if (channel) {
+                    await channel.send({
+                        embeds: [
+                            new EmbedBuilder()
+                                .setColor("#FF6B9D")
+                                .setTitle("🔄 GIVEAWAY REROLL!")
+                                .setDescription(
+                                    `**Người thắng mới:**\n` +
+                                    newWinners.map(id => `🥇 <@${id}>`).join("\n") +
+                                    `\n\n**Giải thưởng:** ${prize}`
+                                )
+                                .setTimestamp()
+                        ]
+                    });
+                }
+
+                return interaction.editReply(`✅ Đã reroll! Người thắng mới: ${newWinners.map(id => `<@${id}>`).join(", ")}`);
+            }
+
+            // ── /giveaway list ──
+            else if (subCmd === "list") {
+                await safeDeferReply(interaction);
+                const active = giveaways.filter(g => !g.ended);
+                if (!active.length) return interaction.editReply("📭 Không có giveaway nào đang diễn ra!");
+
+                const list = active.map((gw, i) =>
+                    `**${i+1}.** ${gw.prize}\n` +
+                    `> 👥 ${gw.participants.length} người • Kết thúc <t:${Math.floor(gw.endsAt / 1000)}:R>\n` +
+                    `> 📌 ID: \`${gw.messageId}\``
+                ).join("\n\n");
+
+                return interaction.editReply({
+                    embeds: [
+                        new EmbedBuilder()
+                            .setTitle("🎉 DANH SÁCH GIVEAWAY ĐANG DIỄN RA")
+                            .setDescription(list)
+                            .setColor("#FF6B9D")
+                            .setFooter({ text: `${active.length} giveaway đang hoạt động` })
+                    ]
+                });
+            }
+        }
 
 else if (commandName === 'tungdongxu') {
         try {
@@ -1800,86 +2081,180 @@ else if (commandName === "baucua") {
     // ===== BUTTON INTERACTIONS =====
     else if (interaction.isButton()) {
 
-if (interaction.customId.startsWith("tdx_")) {
-        const parts = interaction.customId.split("_");
-        const userChoice = parts[1]; // "sap" hoặc "ngua"
-        const betAmount = parseInt(parts[2]);
+    // ── Nút tham gia giveaway ──
+    if (interaction.customId === "giveaway_join") {
+        const msgId = interaction.message.id;
+        const gw = giveaways.find(g => g.messageId === msgId && !g.ended);
+
+        if (!gw) {
+            return interaction.reply({ content: "❌ Giveaway này đã kết thúc!", flags: MessageFlags.Ephemeral });
+        }
+
         const userId = interaction.user.id;
+        const alreadyJoined = gw.participants.includes(userId);
 
-        // Tỉ lệ 50/50
-        const result = Math.random() < 0.5 ? "sap" : "ngua";
-        const resultText = result === "sap" ? "SẤP" : "NGỬA";
+        if (alreadyJoined) {
+            // Rời giveaway
+            gw.participants = gw.participants.filter(id => id !== userId);
+            saveGiveaways();
 
-        if (userChoice === result) {
-            const winMoney = Math.floor(betAmount * 2);
-            addCoins(userId, winMoney); 
-            
-            await interaction.update({ 
-                content: `✅ Kết quả là **${resultText}**. Bạn thắng **${winMoney.toLocaleString()} coin**!`, 
-                embeds: [], 
-                components: [] 
+            // Cập nhật nút
+            const updatedRow = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId("giveaway_join")
+                    .setLabel(`🎁 Tham gia (${gw.participants.length})`)
+                    .setStyle(ButtonStyle.Success),
+                new ButtonBuilder()
+                    .setCustomId("giveaway_list")
+                    .setLabel("👥 Xem danh sách")
+                    .setStyle(ButtonStyle.Secondary)
+            );
+            // FIX: dùng update() để vừa acknowledge interaction vừa cập nhật message trong 1 lần gọi
+            await interaction.update({ components: [updatedRow] });
+
+            return interaction.followUp({
+                content: "😢 Bạn đã **rời** khỏi giveaway!",
+                flags: MessageFlags.Ephemeral
             });
         } else {
-            // Không cần trừ tiền nữa vì đã trừ lúc dùng lệnh rồi
-            await interaction.update({ 
-                content: `❌ Kết quả là **${resultText}**. Bạn đã thua mất **${betAmount.toLocaleString()} coin**!`, 
-                embeds: [], 
-                components: [] 
+            // Tham gia giveaway
+            gw.participants.push(userId);
+            saveGiveaways();
+
+            // Cập nhật nút
+            const updatedRow = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId("giveaway_join")
+                    .setLabel(`🎁 Tham gia (${gw.participants.length})`)
+                    .setStyle(ButtonStyle.Success),
+                new ButtonBuilder()
+                    .setCustomId("giveaway_list")
+                    .setLabel("👥 Xem danh sách")
+                    .setStyle(ButtonStyle.Secondary)
+            );
+            // FIX: dùng update() để vừa acknowledge interaction vừa cập nhật message trong 1 lần gọi
+            await interaction.update({ components: [updatedRow] });
+
+            return interaction.followUp({
+                embeds: [
+                    new EmbedBuilder()
+                        .setColor("#00ff88")
+                        .setDescription(
+                            `🎉 **Bạn đã tham gia giveaway!**\n\n` +
+                            `🏆 **Giải thưởng:** ${gw.prize}\n` +
+                            `👥 **Tổng tham gia:** ${gw.participants.length} người\n` +
+                            `⏰ **Kết thúc:** <t:${Math.floor(gw.endsAt / 1000)}:R>\n\n` +
+                            `_Nhấn nút lại để rời giveaway_`
+                        )
+                ],
+                flags: MessageFlags.Ephemeral
             });
         }
-        return; // Quan trọng để ngắt thực thi
     }
 
-if (interaction.customId.startsWith("bc_")) {
-    const choice = interaction.customId.split("_")[1];
+    // ── Nút xem danh sách giveaway ──
+    if (interaction.customId === "giveaway_list") {
+        const msgId = interaction.message.id;
+        const gw = giveaways.find(g => g.messageId === msgId);
+        if (!gw) return interaction.reply({ content: "❌ Không tìm thấy dữ liệu!", flags: MessageFlags.Ephemeral });
 
-    const modal = new ModalBuilder()
-        .setCustomId(`bc_bet_${choice}`)
-        .setTitle("Nhập tiền cược");
+        const list = gw.participants.length
+            ? gw.participants.slice(0, 30).map((id, i) => `${i+1}. <@${id}>`).join("\n") +
+              (gw.participants.length > 30 ? `\n... và ${gw.participants.length - 30} người nữa` : "")
+            : "Chưa có ai tham gia";
 
-    const input = new TextInputBuilder()
-        .setCustomId("money")
-        .setLabel("Số coin cược")
-        .setStyle(TextInputStyle.Short)
-        .setRequired(true);
+        return interaction.reply({
+            embeds: [
+                new EmbedBuilder()
+                    .setTitle(`👥 Danh sách tham gia — ${gw.prize}`)
+                    .setDescription(list)
+                    .setColor("#FF6B9D")
+                    .setFooter({ text: `${gw.participants.length} người tham gia` })
+            ],
+            flags: MessageFlags.Ephemeral
+        });
+    }
 
-    modal.addComponents(new ActionRowBuilder().addComponents(input));
-    return interaction.showModal(modal);
-}
-
- if (interaction.customId.startsWith("cf_")) {
-    const [_, betSide, betMoney] = interaction.customId.split("_");
-    const money = parseInt(betMoney);
+if (interaction.customId.startsWith("tdx_")) {
+    const parts = interaction.customId.split("_");
+    const userChoice = parts[1]; // "sap" hoặc "ngua"
+    const betAmount = parseInt(parts[2]);
     const userId = interaction.user.id;
-
-    // Chỉ người bấm lệnh mới được chọn - dùng optional chaining đề phòng bot restart
-    const originalUserId = interaction.message.interaction?.user?.id ?? interaction.message.mentions?.users?.first()?.id;
-    if (originalUserId && originalUserId !== userId) {
-        return interaction.reply({ content: "❌ Nút này không phải của bạn!", flags: MessageFlags.Ephemeral });
-    }
 
     await safeDeferUpdate(interaction);
 
-    // Hiệu ứng Animation 3 bước
-    const frames = ["⌛ Đang tung...", "🪙 Đang xoay...", "✨ Đang hạ xuống..."];
-    for (const frame of frames) {
-        await interaction.editReply({ content: `**${frame}**`, embeds: [], components: [] });
-        await new Promise(r => setTimeout(r, 800));
+    // 🪙 Animation tung đồng xu — 5 frames
+    const coinFrames = [
+        { coin: "🪙", status: "Tung lên..." },
+        { coin: "✨", status: "Đang xoay..." },
+        { coin: "🌀", status: "Đang bay..." },
+        { coin: "💫", status: "Sắp rơi xuống..." },
+        { coin: "🪙", status: "Đang hạ xuống..." },
+    ];
+
+    const choiceLabel = userChoice === "sap" ? "SẤP" : "NGỬA";
+
+    for (const frame of coinFrames) {
+        await interaction.editReply({
+            content: null,
+            embeds: [
+                new EmbedBuilder()
+                    .setTitle("🪙 TUNG ĐỒNG XU")
+                    .setColor("#f1c40f")
+                    .setDescription(
+                        `## ${frame.coin}\n\n` +
+                        `\`\`\`\n${frame.status}\n\`\`\`` +
+                        `\n🎯 **Bạn chọn:** ${choiceLabel} — **${betAmount.toLocaleString()} 🪙**`
+                    )
+            ],
+            components: []
+        });
+        await new Promise(r => setTimeout(r, 600));
     }
 
-    const result = Math.random() < 0.5 ? "ngua" : "up";
-    const win = result === betSide;
-    const resultText = result === "ngua" ? "🔥 NGỬA" : "❄️ ÚP";
+    // Kết quả
+    const result = Math.random() < 0.5 ? "sap" : "ngua";
+    const resultText = result === "sap" ? "SẤP 🔵" : "NGỬA 🔴";
+    const win = userChoice === result;
 
     if (win) {
-        const winAmount = Math.floor(money * 1.95); // Trả lại vốn + 95% lời (5% thuế)
-        addCoins(userId, money + winAmount); // Hoàn vốn + tiền thắng
-        await interaction.editReply({ 
-            content: `🎉 Kết quả là: **${resultText}**. Bạn thắng và nhận được **${winAmount}** coin!` 
+        const winMoney = Math.floor(betAmount * 2);
+        addCoins(userId, winMoney);
+
+        await interaction.editReply({
+            content: null,
+            embeds: [
+                new EmbedBuilder()
+                    .setTitle("🎉 THẮNG RỒI!")
+                    .setColor("#00ff88")
+                    .setDescription(
+                        `## ${result === "sap" ? "🔵" : "🔴"} ${resultText}\n\n` +
+                        `🎯 **Bạn chọn:** ${choiceLabel} ✅\n\n` +
+                        `> 🎊 **THẮNG** **+${winMoney.toLocaleString()} 🪙** (x2)\n\n` +
+                        `💰 Số dư: **${getCoins(userId).toLocaleString()} 🪙**`
+                    )
+                    .setFooter({ text: "🪙 Tung Đồng Xu • SenselessFish" })
+                    .setTimestamp()
+            ],
+            components: []
         });
     } else {
-        await interaction.editReply({ 
-            content: `💀 Kết quả là: **${resultText}**. Bạn đã mất **${money}** coin. Chúc may mắn lần sau!` 
+        await interaction.editReply({
+            content: null,
+            embeds: [
+                new EmbedBuilder()
+                    .setTitle("💀 THUA MẤT!")
+                    .setColor("#ff3333")
+                    .setDescription(
+                        `## ${result === "sap" ? "🔵" : "🔴"} ${resultText}\n\n` +
+                        `🎯 **Bạn chọn:** ${choiceLabel} ❌\n\n` +
+                        `> 😢 **THUA** **-${betAmount.toLocaleString()} 🪙**\n\n` +
+                        `💰 Số dư: **${getCoins(userId).toLocaleString()} 🪙**`
+                    )
+                    .setFooter({ text: "🪙 Tung Đồng Xu • SenselessFish" })
+                    .setTimestamp()
+            ],
+            components: []
         });
     }
     return;
@@ -1997,7 +2372,6 @@ if (interaction.customId.startsWith("bc_bet_")) {
     const userId = interaction.user.id;
 
     try {
-        // 1. Phải deferReply ngay lập tức để tránh lỗi "Interaction has already been acknowledged"
         if (!interaction.deferred && !interaction.replied) await safeDeferReply(interaction);
 
         const choice = interaction.customId.split("_")[2];
@@ -2006,36 +2380,48 @@ if (interaction.customId.startsWith("bc_bet_")) {
 
         const animals = ["bau", "cua", "tom", "ca", "ga", "nai"];
         const emojiMap = {
-            bau: "🍐",
-            cua: "🦀",
-            tom: "🦐",
-            ca: "🐟",
-            ga: "🐔",
-            nai: "🦌"
+            bau: "🍐", cua: "🦀", tom: "🦐", ca: "🐟", ga: "🐔", nai: "🦌"
+        };
+        const nameMap = {
+            bau: "BẦU", cua: "CUA", tom: "TÔM", ca: "CÁ", ga: "GÀ", nai: "NAI"
         };
 
-        // 2. Kiểm tra tính hợp lệ của tiền
         if (isNaN(money) || money <= 0) {
-            return interaction.editReply({
-                content: "❌ Số tiền cược không hợp lệ!"
-            });
+            return interaction.editReply({ content: "❌ Số tiền cược không hợp lệ!" });
         }
 
-        // 3. Kiểm tra ví tiền
         const balance = getCoins(userId);
         if (balance < money) {
             return interaction.editReply({
-                content: `❌ Bạn không đủ coin! Số dư hiện tại: **${balance.toLocaleString()}**`
+                content: `❌ Không đủ coin! Số dư: **${balance.toLocaleString()} 🪙**`
             });
         }
 
-        // 4. Trừ tiền cược và bắt đầu quay
         addCoins(userId, -money);
-        await interaction.editReply("🎲 Đang lắc bầu cua... Chờ chút nhé!");
 
-        // Hiệu ứng chờ 2 giây cho kịch tính
-        await new Promise(r => setTimeout(r, 2000));
+        // 🎲 Animation lắc bát — 5 frames
+        const frames = [
+            { title: "🎲 Bầu Cua Tôm Cá", desc: "```\n🫙  Đang lắc bát...  🫙\n```\n⬛⬛⬛⬛⬛" },
+            { title: "🎲 Bầu Cua Tôm Cá", desc: "```\n🫙  Đang lắc bát...  🫙\n```\n🟨⬛⬛⬛⬛" },
+            { title: "🎲 Bầu Cua Tôm Cá", desc: "```\n🫙  Đang lắc bát...  🫙\n```\n🟨🟨⬛⬛⬛" },
+            { title: "🎲 Bầu Cua Tôm Cá", desc: "```\n🎭  Sắp mở bát...  🎭\n```\n🟨🟨🟨⬛⬛" },
+            { title: "🎲 Bầu Cua Tôm Cá", desc: "```\n🎭  Mở bát ra...  🎭\n```\n🟨🟨🟨🟨⬛" },
+            { title: "🎲 Bầu Cua Tôm Cá", desc: "```\n✨  Kết quả!  ✨\n```\n🟨🟨🟨🟨🟨" },
+        ];
 
+        for (const frame of frames) {
+            await interaction.editReply({
+                embeds: [
+                    new EmbedBuilder()
+                        .setTitle(frame.title)
+                        .setColor("#f1c40f")
+                        .setDescription(frame.desc + `\n\n🎯 Bạn cược: **${emojiMap[choice]} ${nameMap[choice]}** — **${money.toLocaleString()} 🪙**`)
+                ]
+            });
+            await new Promise(r => setTimeout(r, 600));
+        }
+
+        // Kết quả
         const result = [
             animals[Math.floor(Math.random() * animals.length)],
             animals[Math.floor(Math.random() * animals.length)],
@@ -2049,107 +2435,156 @@ if (interaction.customId.startsWith("bc_bet_")) {
         else if (count === 2) winAmount = money * 3;
         else if (count === 3) winAmount = money * 5;
 
-        if (count > 0) {
-            addCoins(userId, winAmount); // Hoàn vốn + tiền thắng (đã trừ tiền cược từ trước)
-        }
+        if (count > 0) addCoins(userId, winAmount);
 
-        // 5. Trả kết quả cuối cùng
-        return interaction.editReply({
-            content: null, // Xóa nội dung "Đang lắc..."
-            embeds: [
-                new EmbedBuilder()
-                    .setTitle("🎲 KẾT QUẢ BẦU CUA")
-                    .setColor(count > 0 ? "Green" : "Red")
-                    .setDescription(
-                        `Người đặt: <@${userId}>\n` +
-                        `Linh vật chọn: ${emojiMap[choice]} **${choice.toUpperCase()}**\n\n` +
-                        `🎲 **KẾT QUẢ:** ${result.map(x => emojiMap[x]).join(" | ")}\n\n` +
-                        (count > 0
-                            ? `🎉 **THẮNG!** Bạn nhận được **+${winAmount.toLocaleString()}** coin (x${count})`
-                            : `💀 **THUA!** Bạn đã mất **-${money.toLocaleString()}** coin.`)
-                    )
-                    .setTimestamp()
-            ]
-        });
+        const resultDisplay = result.map(x => `${emojiMap[x]}`).join("  ╋  ");
+
+        const resultEmbed = new EmbedBuilder()
+            .setTitle(count > 0 ? "🎉 THẮNG RỒI!" : "💀 THUA MẤT!")
+            .setColor(count > 0 ? "#00ff88" : "#ff3333")
+            .setDescription(
+                `## ${resultDisplay}\n\n` +
+                `🎯 **Bạn chọn:** ${emojiMap[choice]} **${nameMap[choice]}** (x${count})\n\n` +
+                (count > 0
+                    ? `> 🎊 **THẮNG** **+${winAmount.toLocaleString()} 🪙**\n> (${count === 1 ? "x2" : count === 2 ? "x3" : "x5 JACKPOT!"})`
+                    : `> 😢 **THUA** **-${money.toLocaleString()} 🪙**`) +
+                `\n\n💰 Số dư: **${getCoins(userId).toLocaleString()} 🪙**`
+            )
+            .setFooter({ text: `🎲 Bầu Cua Tôm Cá • SenselessFish` })
+            .setTimestamp();
+
+        // Nút chơi lại
+        const playAgainRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId("bc_" + choice)
+                .setLabel("🎲 Cược lại " + emojiMap[choice])
+                .setStyle(count > 0 ? ButtonStyle.Success : ButtonStyle.Danger)
+        );
+
+        return interaction.editReply({ content: null, embeds: [resultEmbed], components: [playAgainRow] });
 
     } catch (err) {
         console.error("❌ LỖI BẦU CUA:", err);
-        // Kiểm tra nếu đã defer thì dùng editReply, nếu chưa thì reply
         if (interaction.deferred || interaction.replied) {
-            return interaction.editReply({ content: "❌ Đã xảy ra lỗi hệ thống khi xử lý kết quả!" });
+            return interaction.editReply({ content: "❌ Đã xảy ra lỗi hệ thống!" });
         } else {
             return interaction.reply({ content: "❌ Lỗi khởi tạo trò chơi!", flags: MessageFlags.Ephemeral });
         }
     }
 }
 if (interaction.customId.startsWith("bet_")) {
-        try {
-            const userId = interaction.user.id;
-            const choice = interaction.customId.split("_")[1]; // "tai" hoặc "xiu"
-            const money = parseInt(interaction.fields.getTextInputValue("money"));
+    try {
+        const userId = interaction.user.id;
+        const choice = interaction.customId.split("_")[1]; // "tai" hoặc "xiu"
+        const money = parseInt(interaction.fields.getTextInputValue("money"));
 
-            // 1. deferReply NGAY LẬP TỨC — phải là thao tác đầu tiên để tránh timeout 3 giây
-            if (!interaction.deferred && !interaction.replied) await safeDeferReply(interaction);
+        if (!interaction.deferred && !interaction.replied) await safeDeferReply(interaction);
 
-            // 2. Kiểm tra đầu vào
-            if (isNaN(money) || money <= 0) {
-                return interaction.editReply({ content: "❌ Tiền cược không hợp lệ!" });
-            }
-
-            // 3. Kiểm tra số dư
-            const currentBalance = getCoins(userId);
-            if (currentBalance < money) {
-                return interaction.editReply({
-                    content: `❌ Không đủ tiền! (Bạn có: ${currentBalance.toLocaleString()} coin)`
-                });
-            }
-
-            // 4. Trừ tiền và báo đang lắc
-            addCoins(userId, -money);
-            await interaction.editReply("🎲 Đang lắc xúc xắc...");
-
-            // 5. Dùng await thay vì setTimeout để tránh lỗi interaction expired
-            await new Promise(r => setTimeout(r, 3000));
-
-            const dice = [
-                Math.floor(Math.random() * 6) + 1,
-                Math.floor(Math.random() * 6) + 1,
-                Math.floor(Math.random() * 6) + 1
-            ];
-            const total = dice.reduce((a, b) => a + b, 0);
-
-            const chance = getWinChance(userId);
-            const win = Math.random() < chance;
-            updateStreak(userId, win);
-
-            const totalLabel = total >= 11 ? "TÀI" : "XỈU";
-
-            let resultEmbed = new EmbedBuilder()
-                .setTitle("🎲 KẾT QUẢ TÀI XỈU")
-                .setDescription(`Xúc xắc: **${dice.join(" - ")}** (Tổng: **${total}** → **${totalLabel}**)`)
-                .setTimestamp();
-
-            if (win) {
-                const winMoney = Math.floor(money * 1.95);
-                addCoins(userId, money + winMoney); // hoàn lại vốn + tiền thắng
-                resultEmbed.setColor("Green")
-                    .addFields({ name: "Kết quả", value: `✅ Thắng! Nhận được **+${winMoney.toLocaleString()} coin**` });
-            } else {
-                resultEmbed.setColor("Red")
-                    .addFields({ name: "Kết quả", value: `❌ Thua! Bạn đã mất **-${money.toLocaleString()} coin**` });
-            }
-
-            return interaction.editReply({ content: null, embeds: [resultEmbed] });
-
-        } catch (err) {
-            console.error("🚨 BET_ MODAL ERROR:", err);
-            if (interaction.deferred || interaction.replied) {
-                return interaction.editReply("❌ Có lỗi xảy ra! Vui lòng thử lại.").catch(() => {});
-            }
-            return interaction.reply({ content: "❌ Có lỗi xảy ra! Vui lòng thử lại.", flags: MessageFlags.Ephemeral }).catch(() => {});
+        if (isNaN(money) || money <= 0) {
+            return interaction.editReply({ content: "❌ Tiền cược không hợp lệ!" });
         }
+
+        const currentBalance = getCoins(userId);
+        if (currentBalance < money) {
+            return interaction.editReply({
+                content: `❌ Không đủ tiền! Bạn có: **${currentBalance.toLocaleString()} 🪙**`
+            });
+        }
+
+        addCoins(userId, -money);
+
+        // 🎲 Animation xúc xắc — lắc từng frame
+        const diceFrames = ["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
+        const randomDice = () => diceFrames[Math.floor(Math.random() * 6)];
+
+        const shakeFrames = [
+            `${randomDice()} ${randomDice()} ${randomDice()}`,
+            `${randomDice()} ${randomDice()} ${randomDice()}`,
+            `${randomDice()} ${randomDice()} ${randomDice()}`,
+            `${randomDice()} ${randomDice()} ${randomDice()}`,
+        ];
+
+        const choiceLabel = choice === "tai" ? "🔥 TÀI" : "❄️ XỈU";
+
+        for (let i = 0; i < shakeFrames.length; i++) {
+            await interaction.editReply({
+                embeds: [
+                    new EmbedBuilder()
+                        .setTitle("🎲 TÀI XỈU")
+                        .setColor(choice === "tai" ? "#ff4500" : "#00b4ff")
+                        .setDescription(
+                            `## ${shakeFrames[i]}\n\n` +
+                            `\`\`\`\n🎯 Đang lắc xúc xắc... (${i+1}/4)\n\`\`\`` +
+                            `\n💵 Cược: **${choiceLabel}** — **${money.toLocaleString()} 🪙**`
+                        )
+                ]
+            });
+            await new Promise(r => setTimeout(r, 700));
+        }
+
+        // Tung xúc xắc thật
+        const dice = [
+            Math.floor(Math.random() * 6) + 1,
+            Math.floor(Math.random() * 6) + 1,
+            Math.floor(Math.random() * 6) + 1
+        ];
+        const total = dice.reduce((a, b) => a + b, 0);
+        const diceEmojiMap = { 1: "⚀", 2: "⚁", 3: "⚂", 4: "⚃", 5: "⚄", 6: "⚅" };
+        const diceDisplay = dice.map(d => diceEmojiMap[d]).join("  +  ");
+
+        const chance = getWinChance(userId);
+        const win = Math.random() < chance;
+        updateStreak(userId, win);
+
+        const totalLabel = total >= 11 ? "TÀI 🔥" : "XỈU ❄️";
+        const userWon = (choice === "tai" && total >= 11) || (choice === "xiu" && total < 11);
+        // Dùng kết quả thực tế (không dùng "win" giả — chỉ dùng win để bonus)
+        const actualWin = userWon;
+
+        let winMoney = 0;
+        if (actualWin) {
+            winMoney = Math.floor(money * 1.95);
+            addCoins(userId, money + winMoney);
+        }
+
+        const resultEmbed = new EmbedBuilder()
+            .setTitle(actualWin ? "🎉 THẮNG RỒI!" : "💀 THUA MẤT!")
+            .setColor(actualWin ? "#00ff88" : "#ff3333")
+            .setDescription(
+                `## ${diceDisplay}\n\n` +
+                `🎲 **Tổng điểm:** ${total} → **${totalLabel}**\n\n` +
+                `🎯 **Bạn chọn:** ${choiceLabel}\n\n` +
+                (actualWin
+                    ? `> 🎊 **THẮNG** **+${winMoney.toLocaleString()} 🪙** (x1.95)`
+                    : `> 😢 **THUA** **-${money.toLocaleString()} 🪙**`) +
+                `\n\n💰 Số dư: **${getCoins(userId).toLocaleString()} 🪙**`
+            )
+            .setFooter({ text: "🎲 Tài Xỉu • SenselessFish" })
+            .setTimestamp();
+
+        // Nút chơi lại
+        const replayRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId("tai")
+                .setLabel("🔥 TÀI")
+                .setStyle(ButtonStyle.Danger),
+            new ButtonBuilder()
+                .setCustomId("xiu")
+                .setLabel("❄️ XỈU")
+                .setStyle(ButtonStyle.Primary)
+        );
+
+        return interaction.editReply({ content: null, embeds: [resultEmbed], components: [replayRow] });
+
+    } catch (err) {
+        console.error("🚨 BET_ MODAL ERROR:", err);
+        if (interaction.deferred || interaction.replied) {
+            return interaction.editReply({ content: "❌ Có lỗi xảy ra! Vui lòng thử lại." }).catch(() => {});
+        }
+        return interaction.reply({ content: "❌ Có lỗi xảy ra! Vui lòng thử lại.", flags: MessageFlags.Ephemeral }).catch(() => {});
     }
-    } // đóng isModalSubmit
+}
+} // đóng isModalSubmit
 
     } catch (err) {
         // Lớp bảo vệ cuối — nếu 10062/40060 vẫn lọt (rất hiếm), bỏ qua im lặng
@@ -2191,10 +2626,19 @@ app.get("/staff-realtime", async (req, res) => {
 
         const roleIds = Object.values(ROLE_MAP);
 
+        // Thứ tự ưu tiên: role cao nhất được chọn khi member có nhiều role
+        const ROLE_PRIORITY = [
+            "Founder", "Leader", "Senior Developer", "Admin",
+            "Developer", "Junior Developer", "Mod",
+            "Rank Management", "Experienced Referee", "Referee",
+            "Tryout host", "Training host"
+        ];
+
         const staffMembers = guild.members.cache
             .filter(member => member.roles.cache.some(role => roleIds.includes(role.id)))
             .map(member => {
-                const memberRole = Object.keys(ROLE_MAP).find(r => member.roles.cache.has(ROLE_MAP[r]));
+                // Tìm role ưu tiên cao nhất mà member đang có
+                const memberRole = ROLE_PRIORITY.find(r => ROLE_MAP[r] && member.roles.cache.has(ROLE_MAP[r]));
                 const roleObj = guild.roles.cache.get(ROLE_MAP[memberRole]);
                 const color = roleObj ? "#" + roleObj.color.toString(16).padStart(6,"0") : "#55ff8f";
 
@@ -2304,8 +2748,6 @@ app.listen(PORT, "0.0.0.0", () => {
 console.log("TOKEN LENGTH:", process.env.TOKEN?.length);
 console.log("TOKEN START:", process.env.TOKEN?.slice(0, 10));
 console.log("TOKEN OK:", process.env.TOKEN ? "CÓ" : "KHÔNG");
-// ✅ FIX: Kiểm tra format token — nếu false là token bị lỗi format (dấu cách, ngoặc kép thừa, ký tự lạ)
-console.log("TOKEN FORMAT OK:", /^[A-Za-z0-9._-]{50,}$/.test(process.env.TOKEN || "") ? "✅ HỢP LỆ" : "❌ FORMAT SAI — Kiểm tra .env!");
 
 // ✅ FIX: Kiểm tra TOKEN trước khi thử login
 if (!process.env.TOKEN) {
@@ -2315,26 +2757,21 @@ if (!process.env.TOKEN) {
 
 console.log("👉 ĐANG LOGIN DISCORD...");
 
-async function loginWithRetry(retries = 5, delay = 8000) {
+async function loginWithRetry(retries = 5, delay = 5000) {
     for (let i = 1; i <= retries; i++) {
         try {
             console.log(`🔄 Thử login lần ${i}/${retries}...`);
-            // ✅ FIX: Tăng timeout 30s → 75s — Wispbyte cold start + WebSocket Discord Gateway có thể mất 40-60s
+            // ✅ FIX: Thêm timeout 30s — tránh treo vô thời hạn nếu mạng/Discord chậm
             await Promise.race([
                 client.login(process.env.TOKEN),
                 new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error("LOGIN TIMEOUT (75s) — Kiểm tra mạng hoặc token")), 75000)
+                    setTimeout(() => reject(new Error("LOGIN TIMEOUT (30s) — Kiểm tra mạng hoặc token")), 30000)
                 )
             ]);
             console.log("✅ LOGIN DISCORD THÀNH CÔNG!");
             return;
         } catch (err) {
             console.log(`❌ LOGIN FAIL (lần ${i}/${retries}):`, err.message);
-            // ✅ FIX: Nếu lỗi token sai thì không cần retry
-            if (err.message?.includes("TOKEN_INVALID") || err.code === "TokenInvalid") {
-                console.error("💀 TOKEN SAI HOÀN TOÀN — Kiểm tra lại biến TOKEN trong .env!");
-                process.exit(1);
-            }
             if (i < retries) {
                 console.log(`⏳ Thử lại sau ${delay / 1000}s...`);
                 await new Promise(r => setTimeout(r, delay));
