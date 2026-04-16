@@ -46,7 +46,7 @@ const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require("@googl
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const winStreak = new Map();
 const aiModel = genAI.getGenerativeModel({ 
-    model: "gemma-4-26b-a4b-it",
+    model: "gemini-2.0-flash",
     systemInstruction: {
         role: "system",
         parts: [{ text: "BẠN LÀ TRÍ TUỆ NHÂN TẠO CỦA SENSELESS FISH CLAN.\n\n" +
@@ -199,6 +199,7 @@ const saveStrikes = () => fs.writeFileSync("strike.json", JSON.stringify(strikes
 
 const ROLE_MAP = {
     "Founder": process.env.ROLE_FOUNDER,
+    "Leader": process.env.ROLE_LEADER,
     "Senior Developer": process.env.ROLE_SENIOR_DEV,
     "Developer": process.env.ROLE_DEV,
     "Admin": process.env.ROLE_ADMIN,
@@ -582,6 +583,82 @@ async function safeDeferUpdate(interaction) {
 // 40060 = Cùng interaction bị xử lý 2 lần (WebSocket reconnect)
 //         Fix: Set handledInteractions chặn duplicate theo ID
 // ============================================================
+
+// ============================================================
+// ⏳ COOLDOWN MANAGER — Áp dụng cho TẤT CẢ lệnh & nút
+// Chỉnh thời gian (ms) tại đây, không cần sửa chỗ khác!
+// ============================================================
+const CMD_COOLDOWNS = {
+    // ── Slash commands người dùng thường ──────────────────
+    "tungdongxu":   8_000,   //  8 giây
+    "topcoin":     10_000,   // 10 giây
+    "pay":         15_000,   // 15 giây
+    "coin":         5_000,   //  5 giây
+    "baucua":       5_000,   //  5 giây
+    "taixiu":       5_000,   //  5 giây
+    "list":        10_000,   // 10 giây
+    "bxh":         10_000,   // 10 giây
+
+    // ── Slash commands staff / admin (5-15s tránh nhấn 2 lần) ──
+    "strike":       5_000,
+    "unstrike":     5_000,
+    "staffstrike":  5_000,
+    "blacklist":    5_000,
+    "unblacklist":  5_000,
+    "promote":      5_000,
+    "demote":       5_000,
+    "mainer":       5_000,
+    "demainer":     5_000,
+    "settop":       5_000,
+    "detop":        5_000,
+    "thidau":      15_000,
+
+    // ── Buttons ───────────────────────────────────────────
+    "tai":          3_000,   //  3 giây
+    "xiu":          3_000,
+    "bc_":          3_000,   // prefix — bầu cua chọn linh vật
+    "cf_":          5_000,   // prefix — coin flip
+    "tdx_":         8_000,   // prefix — tung đồng xu bấm nút
+
+    // ── Modals ────────────────────────────────────────────
+    "bc_bet_":     10_000,   // prefix — bầu cua nhập tiền
+    "bet_":        10_000,   // prefix — tài xỉu nhập tiền
+    "submit_score":30_000,   // 30 giây
+    "match_info":   5_000,
+};
+
+const _cmdCooldownStore = new Map();
+
+/**
+ * Kiểm tra cooldown.
+ * @returns {number} Số giây còn lại (0 = không bị cooldown)
+ */
+function checkCooldown(userId, cmdKey) {
+    const ms = CMD_COOLDOWNS[cmdKey];
+    if (!ms) return 0;
+    const storeKey = `${userId}:${cmdKey}`;
+    const last = _cmdCooldownStore.get(storeKey) || 0;
+    const diff = Date.now() - last;
+    if (diff < ms) return Math.ceil((ms - diff) / 1000);
+    _cmdCooldownStore.set(storeKey, Date.now());
+    return 0;
+}
+
+/**
+ * Lấy key cooldown từ interaction.
+ * Prefix (kết thúc bằng "_") được khớp với startsWith.
+ */
+function getCooldownKey(interaction) {
+    if (interaction.isChatInputCommand()) return interaction.commandName;
+    const id = interaction.customId || "";
+    // Kiểm tra prefix trước (bc_, cf_, tdx_, bc_bet_, bet_)
+    for (const key of Object.keys(CMD_COOLDOWNS)) {
+        if (key.endsWith("_") && id.startsWith(key)) return key;
+    }
+    return id;
+}
+// ============================================================
+
 const handledInteractions = new Set();
 let backupRunning = false; // Lock chống backup chạy 2 lần cùng lúc
 
@@ -601,6 +678,22 @@ client.on("interactionCreate", async (interaction) => {
     }
     handledInteractions.add(interaction.id);
     setTimeout(() => handledInteractions.delete(interaction.id), 300_000);
+
+    // --- ⏳ COOLDOWN CHECK (tập trung) ---
+    try {
+        const _cdKey = getCooldownKey(interaction);
+        const _cdLeft = checkCooldown(interaction.user.id, _cdKey);
+        if (_cdLeft > 0) {
+            const _cdMsg = { content: `⏳ Đợi thêm **${_cdLeft}s** trước khi dùng lại lệnh này!`, flags: MessageFlags.Ephemeral };
+            if (interaction.deferred || interaction.replied) {
+                await interaction.followUp(_cdMsg).catch(() => {});
+            } else {
+                await interaction.reply(_cdMsg).catch(() => {});
+            }
+            return;
+        }
+    } catch (_cdErr) { /* bỏ qua lỗi cooldown không ảnh hưởng flow chính */ }
+    // --- END COOLDOWN CHECK ---
 
     try {
 console.log("📩 INTERACTION:", interaction.commandName || interaction.customId);
@@ -2211,12 +2304,27 @@ app.listen(PORT, "0.0.0.0", () => {
 console.log("TOKEN LENGTH:", process.env.TOKEN?.length);
 console.log("TOKEN START:", process.env.TOKEN?.slice(0, 10));
 console.log("TOKEN OK:", process.env.TOKEN ? "CÓ" : "KHÔNG");
+
+// ✅ FIX: Kiểm tra TOKEN trước khi thử login
+if (!process.env.TOKEN) {
+    console.error("💀 LỖI: Biến môi trường TOKEN chưa được set trong .env! Thoát.");
+    process.exit(1);
+}
+
 console.log("👉 ĐANG LOGIN DISCORD...");
+
 async function loginWithRetry(retries = 5, delay = 5000) {
     for (let i = 1; i <= retries; i++) {
         try {
-            await client.login(process.env.TOKEN);
-            console.log("🔑 LOGIN SUCCESS");
+            console.log(`🔄 Thử login lần ${i}/${retries}...`);
+            // ✅ FIX: Thêm timeout 30s — tránh treo vô thời hạn nếu mạng/Discord chậm
+            await Promise.race([
+                client.login(process.env.TOKEN),
+                new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error("LOGIN TIMEOUT (30s) — Kiểm tra mạng hoặc token")), 30000)
+                )
+            ]);
+            console.log("✅ LOGIN DISCORD THÀNH CÔNG!");
             return;
         } catch (err) {
             console.log(`❌ LOGIN FAIL (lần ${i}/${retries}):`, err.message);
