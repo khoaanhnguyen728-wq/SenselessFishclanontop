@@ -4,6 +4,38 @@ const { REST, Routes, SlashCommandBuilder, PermissionFlagsBits } = require("disc
 const commands = [
 
 new SlashCommandBuilder()
+    .setName("giveaway")
+    .setDescription("🎉 Hệ thống Giveaway")
+    .addSubcommand(sub =>
+        sub.setName("start")
+            .setDescription("Tạo giveaway mới")
+            .addStringOption(o =>
+                o.setName("prize").setDescription("Giải thưởng (ví dụ: 5000 coin, Nitro)").setRequired(true))
+            .addStringOption(o =>
+                o.setName("time").setDescription("Thời gian: 10m, 1h, 2h30m, 1d").setRequired(true))
+            .addIntegerOption(o =>
+                o.setName("winners").setDescription("Số người thắng (mặc định 1)").setMinValue(1).setMaxValue(10))
+            .addChannelOption(o =>
+                o.setName("channel").setDescription("Channel để đăng giveaway (mặc định channel hiện tại)"))
+    )
+    .addSubcommand(sub =>
+        sub.setName("end")
+            .setDescription("Kết thúc giveaway sớm")
+            .addStringOption(o =>
+                o.setName("id").setDescription("Message ID của giveaway").setRequired(true))
+    )
+    .addSubcommand(sub =>
+        sub.setName("reroll")
+            .setDescription("Quay lại để chọn người thắng mới")
+            .addStringOption(o =>
+                o.setName("id").setDescription("Message ID của giveaway đã kết thúc").setRequired(true))
+    )
+    .addSubcommand(sub =>
+        sub.setName("list")
+            .setDescription("Xem danh sách giveaway đang diễn ra")
+    ),
+
+new SlashCommandBuilder()
     .setName("backup")
     .setDescription("Hệ thống sao lưu server")
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
@@ -177,6 +209,7 @@ o.setName("permission")
 .setRequired(true)
 .addChoices(
 {name:"Founder",value:"Founder"},
+{name:"Leader",value:"Leader"},
 {name:"Senior Developer",value:"Senior Developer"},
 {name:"Developer",value:"Developer"},
 {name:"Admin",value:"Admin"},
