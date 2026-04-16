@@ -10,7 +10,7 @@ console.log("🚀 BOT ĐANG KHỞI ĐỘNG...");
 const path = require("path");
 const fs = require("fs");
 const dns = require("dns");
-dns.setDefaultResultOrder("ipv4first");
+// dns.setDefaultResultOrder("ipv4first"); // ✅ FIX: Bỏ comment này — Wispbyte dùng dual-stack, ép IPv4 làm WebSocket Discord bị timeout
 const express = require("express");
 const cors = require("cors");
 const axios = require("axios");
@@ -123,8 +123,8 @@ const client = new Client({
         GatewayIntentBits.GuildPresences
     ],
     rest: {
-        timeout: 15000,      // 15s là đủ cho Wispbyte
-        retries: 0           // KHÔNG retry — retry gây 40060 (ack thành công nhưng response bị mất, retry lên bị báo đã ack)
+        timeout: 30000,      // ✅ FIX: Tăng 15s → 30s — Wispbyte cold start chậm, 15s không đủ
+        retries: 1           // ✅ FIX: Cho phép retry 1 lần — 40060 chỉ xảy ra khi bot đang online, lúc login không bị
     },
     ws: {
         large_threshold: 50
@@ -2304,6 +2304,8 @@ app.listen(PORT, "0.0.0.0", () => {
 console.log("TOKEN LENGTH:", process.env.TOKEN?.length);
 console.log("TOKEN START:", process.env.TOKEN?.slice(0, 10));
 console.log("TOKEN OK:", process.env.TOKEN ? "CÓ" : "KHÔNG");
+// ✅ FIX: Kiểm tra format token — nếu false là token bị lỗi format (dấu cách, ngoặc kép thừa, ký tự lạ)
+console.log("TOKEN FORMAT OK:", /^[A-Za-z0-9._-]{50,}$/.test(process.env.TOKEN || "") ? "✅ HỢP LỆ" : "❌ FORMAT SAI — Kiểm tra .env!");
 
 // ✅ FIX: Kiểm tra TOKEN trước khi thử login
 if (!process.env.TOKEN) {
@@ -2313,21 +2315,26 @@ if (!process.env.TOKEN) {
 
 console.log("👉 ĐANG LOGIN DISCORD...");
 
-async function loginWithRetry(retries = 5, delay = 5000) {
+async function loginWithRetry(retries = 5, delay = 8000) {
     for (let i = 1; i <= retries; i++) {
         try {
             console.log(`🔄 Thử login lần ${i}/${retries}...`);
-            // ✅ FIX: Thêm timeout 30s — tránh treo vô thời hạn nếu mạng/Discord chậm
+            // ✅ FIX: Tăng timeout 30s → 75s — Wispbyte cold start + WebSocket Discord Gateway có thể mất 40-60s
             await Promise.race([
                 client.login(process.env.TOKEN),
                 new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error("LOGIN TIMEOUT (30s) — Kiểm tra mạng hoặc token")), 30000)
+                    setTimeout(() => reject(new Error("LOGIN TIMEOUT (75s) — Kiểm tra mạng hoặc token")), 75000)
                 )
             ]);
             console.log("✅ LOGIN DISCORD THÀNH CÔNG!");
             return;
         } catch (err) {
             console.log(`❌ LOGIN FAIL (lần ${i}/${retries}):`, err.message);
+            // ✅ FIX: Nếu lỗi token sai thì không cần retry
+            if (err.message?.includes("TOKEN_INVALID") || err.code === "TokenInvalid") {
+                console.error("💀 TOKEN SAI HOÀN TOÀN — Kiểm tra lại biến TOKEN trong .env!");
+                process.exit(1);
+            }
             if (i < retries) {
                 console.log(`⏳ Thử lại sau ${delay / 1000}s...`);
                 await new Promise(r => setTimeout(r, delay));
