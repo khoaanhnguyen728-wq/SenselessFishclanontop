@@ -512,7 +512,7 @@ return rules.map((r, i) => {
         .setColor(gradientColors[i])
         .setDescription(description)
         .setImage("https://i.postimg.cc/x8HsNw4q/fixedbulletlines.gif")
-        .setFooter({ text: `Rule ${i + 1} / 7 • SenselessFish` });
+        .setFooter({ text: `Rule ${i + 1} / 7 • Tiệm Cà Phê Capoo` });
 });
 }
 
@@ -1235,7 +1235,7 @@ if (subcommand === "load") {
 
                 const targetChannel = channel.isTextBased() ? channel : interaction.channel;
                 const sentMsg = await targetChannel.send({
-                    content: "🎉 **GIVEAWAY MỚI!** 🎉 @everyone",
+                    content: "🎉 **GIVEAWAY MỚI!** 🎉",
                     embeds: [giveawayEmbed],
                     components: [joinRow]
                 });
@@ -2245,7 +2245,7 @@ if (interaction.customId.startsWith("tdx_")) {
                         `> 🎊 **THẮNG** **+${winMoney.toLocaleString()} 🪙** (x2)\n\n` +
                         `💰 Số dư: **${getCoins(userId).toLocaleString()} 🪙**`
                     )
-                    .setFooter({ text: "🪙 Tung Đồng Xu • SenselessFish" })
+                    .setFooter({ text: "🪙 Tung Đồng Xu • Tiệm Cà Phê Capoo" })
                     .setTimestamp()
             ],
             components: []
@@ -2263,7 +2263,7 @@ if (interaction.customId.startsWith("tdx_")) {
                         `> 😢 **THUA** **-${betAmount.toLocaleString()} 🪙**\n\n` +
                         `💰 Số dư: **${getCoins(userId).toLocaleString()} 🪙**`
                     )
-                    .setFooter({ text: "🪙 Tung Đồng Xu • SenselessFish" })
+                    .setFooter({ text: "🪙 Tung Đồng Xu • Tiệm Cà Phê Capoo" })
                     .setTimestamp()
             ],
             components: []
@@ -2462,7 +2462,7 @@ if (interaction.customId.startsWith("bc_bet_")) {
                     : `> 😢 **THUA** **-${money.toLocaleString()} 🪙**`) +
                 `\n\n💰 Số dư: **${getCoins(userId).toLocaleString()} 🪙**`
             )
-            .setFooter({ text: `🎲 Bầu Cua Tôm Cá • SenselessFish` })
+            .setFooter({ text: `🎲 Bầu Cua Tôm Cá • Tiệm Cà Phê Capoo` })
             .setTimestamp();
 
         // Nút chơi lại
@@ -2571,7 +2571,7 @@ if (interaction.customId.startsWith("bet_")) {
                     : `> 😢 **THUA** **-${money.toLocaleString()} 🪙**`) +
                 `\n\n💰 Số dư: **${getCoins(userId).toLocaleString()} 🪙**`
             )
-            .setFooter({ text: "🎲 Tài Xỉu • SenselessFish" })
+            .setFooter({ text: "🎲 Tài Xỉu • Tiệm Cà Phê Capoo" })
             .setTimestamp();
 
         // Nút chơi lại
