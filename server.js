@@ -394,13 +394,25 @@ async function updateAOVLeaderboard() {
             .setTimestamp();
 
         if (message && typeof message.edit === "function") {
-            await message.edit({ embeds: [embed] });
-            return true;
-        } else {
+            try {
+                await message.edit({ embeds: [embed] });
+                return true;
+            } catch (editErr) {
+                // 50001 = Missing Access, 50005 = Cannot edit a message authored by another user
+                // → Reset messageId và tạo mới thay vì crash
+                if (editErr?.code === 50001 || editErr?.code === 50005 || editErr?.status === 403) {
+                    console.warn("⚠️ Không thể edit AOV message cũ (lỗi quyền) — tạo message mới...");
+                    aovMessageId = null;
+                    message = null;
+                } else {
+                    throw editErr; // Lỗi khác thì vẫn ném ra ngoài
+                }
+            }
+        }
 
+        if (!message) {
             const sent = await channel.send({ embeds: [embed] });
             aovMessageId = sent.id;
-
             console.log("📌 Đã tạo BXH mới, ID:", aovMessageId);
             return aovMessageId;
         }
