@@ -33,7 +33,7 @@ function getCoins(userId) {
     return coins[userId] || 0;
 }
 function addCoins(userId, amount) {
-    if (!coins[userId]) coins[userId] = 0;
+    if (coins[userId] === undefined || coins[userId] === null) coins[userId] = 0;
     coins[userId] += amount;
     if (coins[userId] < 0) coins[userId] = 0;
     saveCoins();
@@ -171,6 +171,30 @@ app.use(express.json());
 app.use(cors());
 
 /*DATABASE*/
+// Helper đọc JSON an toàn — thử file chính, fallback sang .tmp nếu lỗi
+function safeReadJSON(filePath, defaultValue) {
+    const tryParse = (fp) => {
+        try {
+            const raw = fs.readFileSync(fp, "utf8").trim();
+            if (!raw) return null;
+            return JSON.parse(raw);
+        } catch { return null; }
+    };
+    const result = tryParse(filePath);
+    if (result !== null) return result;
+    // Thử đọc file .tmp (backup khi crash giữa chừng)
+    const tmp = filePath + ".tmp";
+    if (fs.existsSync(tmp)) {
+        const tmpResult = tryParse(tmp);
+        if (tmpResult !== null) {
+            console.warn(`⚠️ ${filePath} bị lỗi, dùng ${tmp} thay thế`);
+            return tmpResult;
+        }
+    }
+    console.error(`⚠️ Không đọc được ${filePath}, dùng giá trị mặc định`);
+    return defaultValue;
+}
+
 if (!fs.existsSync("coins.json")) fs.writeFileSync("coins.json", "{}");
 if (!fs.existsSync("blacklist.json")) fs.writeFileSync("blacklist.json", "[]");
 if (!fs.existsSync("top.json")) fs.writeFileSync("top.json", "{}");
@@ -178,25 +202,36 @@ if (!fs.existsSync("register.json")) fs.writeFileSync("register.json", "[]");
 if (!fs.existsSync("staff.json")) fs.writeFileSync("staff.json", "[]");
 if (!fs.existsSync("mainers.json")) fs.writeFileSync("mainers.json", "[]");
 if (!fs.existsSync("strike.json")) fs.writeFileSync("strike.json", "[]");
+if (!fs.existsSync("daily.json")) fs.writeFileSync("daily.json", "{}");
 
-let coins = JSON.parse(fs.readFileSync("coins.json", "utf8"));
-let blacklist = JSON.parse(fs.readFileSync("blacklist.json"));
-let top = JSON.parse(fs.readFileSync("top.json"));
-let register = JSON.parse(fs.readFileSync("register.json"));
-let staff = JSON.parse(fs.readFileSync("staff.json"));
-let mainers = JSON.parse(fs.readFileSync("mainers.json"));
-let strikes = JSON.parse(fs.readFileSync("strike.json"));
+let coins = safeReadJSON("coins.json", {});
+let blacklist = safeReadJSON("blacklist.json", []);
+let top = safeReadJSON("top.json", {});
+let register = safeReadJSON("register.json", []);
+let staff = safeReadJSON("staff.json", []);
+let mainers = safeReadJSON("mainers.json", []);
+let strikes = safeReadJSON("strike.json", []);
+// daily: { userId: { lastDaily: timestamp, streak: number } }
+let dailyData = safeReadJSON("daily.json", {});
 
 for (let i = 1; i <= 20; i++) { if (!top[i]) top[i] = null; }
 
 
-const saveCoins = () => fs.writeFileSync("coins.json", JSON.stringify(coins, null, 2));
-const saveBlacklist = () => fs.writeFileSync("blacklist.json", JSON.stringify(blacklist, null, 2));
-const saveTop = () => fs.writeFileSync("top.json", JSON.stringify(top, null, 2));
-const saveStaff = () => fs.writeFileSync("staff.json", JSON.stringify(staff, null, 2));
-const saveRegister = () => fs.writeFileSync("register.json", JSON.stringify(register, null, 2));
-const saveMainers = () => fs.writeFileSync("mainers.json", JSON.stringify(mainers, null, 2));
-const saveStrikes = () => fs.writeFileSync("strike.json", JSON.stringify(strikes, null, 2));
+// Ghi file an toàn: ghi ra .tmp trước rồi rename — tránh corrupt nếu crash giữa chừng
+function atomicWrite(filePath, data) {
+    const tmp = filePath + ".tmp";
+    fs.writeFileSync(tmp, JSON.stringify(data, null, 2), "utf8");
+    fs.renameSync(tmp, filePath);
+}
+
+const saveCoins = () => atomicWrite("coins.json", coins);
+const saveBlacklist = () => atomicWrite("blacklist.json", blacklist);
+const saveTop = () => atomicWrite("top.json", top);
+const saveStaff = () => atomicWrite("staff.json", staff);
+const saveRegister = () => atomicWrite("register.json", register);
+const saveMainers = () => atomicWrite("mainers.json", mainers);
+const saveStrikes = () => atomicWrite("strike.json", strikes);
+const saveDaily = () => atomicWrite("daily.json", dailyData);
 
 const ROLE_MAP = {
     "Founder": process.env.ROLE_FOUNDER,
@@ -212,9 +247,6 @@ const ROLE_MAP = {
     "Tryout host": process.env.ROLE_TRYOUT,
     "Training host": process.env.ROLE_TRAIN
 };
-const dailyCooldown = new Map();
-const dailyStreak = new Map(); 
-const dailyReward = new Map(); 
 const ticketCooldown = new Map(); 
 const TICKET_COOLDOWN = 5000; 
 const cooldown = new Map();
@@ -724,7 +756,6 @@ const CMD_COOLDOWNS = {
     "tai":          3_000,   //  3 giây
     "xiu":          3_000,
     "bc_":          3_000,   // prefix — bầu cua chọn linh vật
-    "cf_":          5_000,   // prefix — coin flip
     "tdx_":         8_000,   // prefix — tung đồng xu bấm nút
 
     // ── Modals ────────────────────────────────────────────
@@ -1353,11 +1384,11 @@ else if (commandName === 'tungdongxu') {
             if (balance < money) {
                 return interaction.editReply(`❌ Bạn không đủ coin! Số dư hiện tại: **${balance.toLocaleString()} coin**`);
             }
-            addCoins(userId, -money);
 
+            // KHÔNG trừ tiền ở đây — chỉ trừ khi user thực sự bấm nút chọn mặt (tdx_ handler)
             const embed = new EmbedBuilder()
                 .setTitle("🪙 TUNG ĐỒNG XU")
-                .setDescription(`Bạn đã cược **${money.toLocaleString()} coin**.\nChọn mặt muốn đặt:`)
+                .setDescription(`Bạn muốn cược **${money.toLocaleString()} coin**.\nChọn mặt muốn đặt:`)
                 .setColor("Gold")
                 .setFooter({ text: "Bạn có 30 giây để chọn!" });
 
@@ -1589,11 +1620,14 @@ else if (commandName === 'daily') {
 
         const userId = interaction.user.id;
         const now = Date.now();
-        const lastDaily = dailyCooldown.get(userId) || 0;
         const oneDay = 86400000;
         const twoDays = 172800000; // 48h — nếu quá 2 ngày thì reset streak
 
-        // cooldown
+        // Lấy dữ liệu từ file (tồn tại qua restart)
+        const userDaily = dailyData[userId] || { lastDaily: 0, streak: 0 };
+        const lastDaily = userDaily.lastDaily || 0;
+
+        // Cooldown check
         if (now - lastDaily < oneDay) {
             const remaining = oneDay - (now - lastDaily);
             const hours = Math.floor(remaining / 3600000);
@@ -1605,7 +1639,7 @@ else if (commandName === 'daily') {
         }
 
         // Tính streak: nếu bỏ lỡ hơn 2 ngày thì reset về 0
-        let streak = dailyStreak.get(userId) || 0;
+        let streak = userDaily.streak || 0;
         if (lastDaily > 0 && now - lastDaily >= twoDays) {
             streak = 0; // bỏ lỡ ngày → reset
         }
@@ -1613,10 +1647,10 @@ else if (commandName === 'daily') {
         // Tính reward: lần đầu 500, mỗi streak +15, max 5000
         const reward = Math.min(500 + streak * 15, 5000);
 
-        // Cập nhật streak cho lần tiếp theo
+        // Cập nhật streak và lưu vào file
         streak += 1;
-        dailyStreak.set(userId, streak);
-        dailyCooldown.set(userId, now);
+        dailyData[userId] = { lastDaily: now, streak };
+        saveDaily();
 
         addCoins(userId, reward);
 
@@ -2121,13 +2155,13 @@ else if (commandName === "baucua") {
                     .setLabel("👥 Xem danh sách")
                     .setStyle(ButtonStyle.Secondary)
             );
-            // FIX: dùng update() để vừa acknowledge interaction vừa cập nhật message trong 1 lần gọi
             await interaction.update({ components: [updatedRow] });
 
-            return interaction.followUp({
+            await interaction.followUp({
                 content: "😢 Bạn đã **rời** khỏi giveaway!",
                 flags: MessageFlags.Ephemeral
-            });
+            }).catch(() => {});
+            return;
         } else {
             // Tham gia giveaway
             gw.participants.push(userId);
@@ -2144,10 +2178,9 @@ else if (commandName === "baucua") {
                     .setLabel("👥 Xem danh sách")
                     .setStyle(ButtonStyle.Secondary)
             );
-            // FIX: dùng update() để vừa acknowledge interaction vừa cập nhật message trong 1 lần gọi
             await interaction.update({ components: [updatedRow] });
 
-            return interaction.followUp({
+            await interaction.followUp({
                 embeds: [
                     new EmbedBuilder()
                         .setColor("#00ff88")
@@ -2160,7 +2193,8 @@ else if (commandName === "baucua") {
                         )
                 ],
                 flags: MessageFlags.Ephemeral
-            });
+            }).catch(() => {});
+            return;
         }
     }
 
@@ -2194,6 +2228,17 @@ if (interaction.customId.startsWith("tdx_")) {
     const userId = interaction.user.id;
 
     await safeDeferUpdate(interaction);
+
+    // Kiểm tra và trừ tiền tại đây (slash command không trừ nữa)
+    const currentBal = getCoins(userId);
+    if (currentBal < betAmount) {
+        return interaction.editReply({
+            content: `❌ Không đủ coin! Số dư hiện tại: **${currentBal.toLocaleString()} 🪙**`,
+            embeds: [],
+            components: []
+        });
+    }
+    addCoins(userId, -betAmount);
 
     // 🪙 Animation tung đồng xu — 5 frames
     const coinFrames = [
@@ -2297,6 +2342,27 @@ if (interaction.customId.startsWith("tdx_")) {
             return;
         }
 
+        // ── Bầu cua: chọn linh vật → mở modal nhập tiền ──
+        if (interaction.customId.startsWith("bc_") && !interaction.customId.startsWith("bc_bet_")) {
+            const validAnimals = ["bc_bau", "bc_cua", "bc_tom", "bc_ca", "bc_ga", "bc_nai"];
+            if (validAnimals.includes(interaction.customId)) {
+                const choice = interaction.customId.split("_")[1];
+                const modal = new ModalBuilder()
+                    .setCustomId(`bc_bet_${choice}`)
+                    .setTitle("Nhập tiền cược Bầu Cua");
+
+                const input = new TextInputBuilder()
+                    .setCustomId("money")
+                    .setLabel("Số tiền cược")
+                    .setStyle(TextInputStyle.Short)
+                    .setPlaceholder("Ví dụ: 100")
+                    .setRequired(true);
+
+                modal.addComponents(new ActionRowBuilder().addComponents(input));
+                return interaction.showModal(modal);
+            }
+        }
+
         if (interaction.customId === "create_ai_ticket") {
             const now = Date.now();
             const lastTicket = ticketCooldown.get(interaction.user.id) || 0;
@@ -2346,7 +2412,8 @@ if (interaction.customId.startsWith("tdx_")) {
     else if (interaction.isStringSelectMenu()) {
 
         if (interaction.customId === "match_info") {
-            return interaction.reply({ content: `📌 Thông tin: ${interaction.values[0]}` });
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral }).catch(() => {});
+            return interaction.editReply({ content: `📌 Thông tin: ${interaction.values[0]}` }).catch(() => {});
         }
 
         if (interaction.customId === "select_stage") {
@@ -2384,6 +2451,7 @@ if (interaction.customId.startsWith("bc_bet_")) {
     const userId = interaction.user.id;
 
     try {
+        // Defer NGAY LẬP TỨC trước mọi xử lý — tránh 10062 nếu logic chậm
         if (!interaction.deferred && !interaction.replied) await safeDeferReply(interaction);
 
         const choice = interaction.customId.split("_")[2];
@@ -2488,9 +2556,11 @@ if (interaction.customId.startsWith("bet_")) {
     try {
         const userId = interaction.user.id;
         const choice = interaction.customId.split("_")[1]; // "tai" hoặc "xiu"
-        const money = parseInt(interaction.fields.getTextInputValue("money"));
 
+        // Defer NGAY LẬP TỨC trước mọi xử lý — tránh 10062 nếu logic chậm
         if (!interaction.deferred && !interaction.replied) await safeDeferReply(interaction);
+
+        const money = parseInt(interaction.fields.getTextInputValue("money"));
 
         if (isNaN(money) || money <= 0) {
             return interaction.editReply({ content: "❌ Tiền cược không hợp lệ!" });
