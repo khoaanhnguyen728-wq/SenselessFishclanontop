@@ -265,7 +265,16 @@ o.setName("user")
     .addStringOption(o =>
       o.setName("ref")
         .setDescription("Referee")
-        .setRequired(true))
+        .setRequired(true)),
+
+new SlashCommandBuilder()
+    .setName("give")
+    .setDescription("💸 Cấp coin cho user (chỉ người được phép dùng)")
+    .addUserOption(o =>
+        o.setName("user").setDescription("Người nhận coin").setRequired(true))
+    .addIntegerOption(o =>
+        o.setName("amount").setDescription("Số lượng coin").setRequired(true).setMinValue(1)),
+
 ].map(c => c.toJSON());
 
 const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
