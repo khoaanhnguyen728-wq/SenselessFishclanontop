@@ -29,8 +29,26 @@ console.log("📂 Backup path:", backupPath);
 
 // Coin functions dùng trực tiếp biến coins + saveCoins (được định nghĩa bên dưới)
 // Các hàm này chỉ được GỌI trong event handlers, sau khi module load xong nên an toàn
+// Reload dữ liệu từ file — dùng khi cần đảm bảo in-memory đồng bộ với disk
+function reloadCoins() {
+    const fresh = safeReadJSON("coins.json", null);
+    if (fresh !== null) {
+        coins = fresh;
+        console.log(`🔄 Reload coins.json: ${Object.keys(coins).length} users`);
+    }
+}
+function reloadDaily() {
+    const fresh = safeReadJSON("daily.json", null);
+    if (fresh !== null) {
+        dailyData = fresh;
+        console.log(`🔄 Reload daily.json: ${Object.keys(dailyData).length} users`);
+    }
+}
+
 function getCoins(userId) {
-    return coins[userId] || 0;
+    const val = coins[userId];
+    if (val === undefined || val === null) return 0;
+    return val;
 }
 function addCoins(userId, amount) {
     if (coins[userId] === undefined || coins[userId] === null) coins[userId] = 0;
@@ -171,27 +189,30 @@ app.use(express.json());
 app.use(cors());
 
 /*DATABASE*/
-// Helper đọc JSON an toàn — thử file chính, fallback sang .tmp nếu lỗi
+// Helper đọc JSON an toàn — thử file chính, fallback sang .bak nếu lỗi
 function safeReadJSON(filePath, defaultValue) {
     const tryParse = (fp) => {
         try {
+            if (!fs.existsSync(fp)) return null;
             const raw = fs.readFileSync(fp, "utf8").trim();
             if (!raw) return null;
-            return JSON.parse(raw);
+            const parsed = JSON.parse(raw);
+            return parsed;
         } catch { return null; }
     };
     const result = tryParse(filePath);
-    if (result !== null) return result;
-    // Thử đọc file .tmp (backup khi crash giữa chừng)
-    const tmp = filePath + ".tmp";
-    if (fs.existsSync(tmp)) {
-        const tmpResult = tryParse(tmp);
-        if (tmpResult !== null) {
-            console.warn(`⚠️ ${filePath} bị lỗi, dùng ${tmp} thay thế`);
-            return tmpResult;
-        }
+    if (result !== null) {
+        console.log(`✅ Đọc ${filePath}: OK`);
+        return result;
     }
-    console.error(`⚠️ Không đọc được ${filePath}, dùng giá trị mặc định`);
+    // Thử đọc file .bak (bản backup trước lần ghi cuối)
+    const bak = filePath + ".bak";
+    const bakResult = tryParse(bak);
+    if (bakResult !== null) {
+        console.warn(`⚠️ ${filePath} lỗi — dùng ${bak} thay thế`);
+        return bakResult;
+    }
+    console.error(`❌ Không đọc được ${filePath} lẫn backup — dùng giá trị mặc định`);
     return defaultValue;
 }
 
@@ -216,12 +237,25 @@ let dailyData = safeReadJSON("daily.json", {});
 
 for (let i = 1; i <= 20; i++) { if (!top[i]) top[i] = null; }
 
+// Log xác nhận dữ liệu đã load khi khởi động
+console.log(`📊 Đã load coins.json: ${Object.keys(coins).length} users`);
+console.log(`📊 Đã load daily.json: ${Object.keys(dailyData).length} users`);
+console.log(`📊 Đã load staff.json: ${staff.length} staff`);
+console.log(`📊 Đã load strikes.json: ${strikes.length} strikes`);
 
-// Ghi file an toàn: ghi ra .tmp trước rồi rename — tránh corrupt nếu crash giữa chừng
+
+// Ghi file an toàn: ghi thẳng vào file, đồng thời giữ 1 bản backup .bak
+// Tránh EXDEV (cross-device rename) trên Linux containers như Wispbyte
 function atomicWrite(filePath, data) {
-    const tmp = filePath + ".tmp";
-    fs.writeFileSync(tmp, JSON.stringify(data, null, 2), "utf8");
-    fs.renameSync(tmp, filePath);
+    const jsonStr = JSON.stringify(data, null, 2);
+    // Backup bản cũ trước khi ghi đè
+    try {
+        if (fs.existsSync(filePath)) {
+            fs.copyFileSync(filePath, filePath + ".bak");
+        }
+    } catch (_) { /* bỏ qua lỗi backup */ }
+    // Ghi thẳng vào file đích
+    fs.writeFileSync(filePath, jsonStr, "utf8");
 }
 
 const saveCoins = () => atomicWrite("coins.json", coins);
@@ -701,6 +735,7 @@ async function safeDeferReply(interaction, options = {}) {
         await interaction.deferReply(options);
     } catch (err) {
         if (err?.code === 40060) return; // Đã ack → tiếp tục
+        if (err?.code === 10062) throw err; // Interaction hết hạn → ném lên để caller xử lý
         throw err;
     }
 }
@@ -711,6 +746,7 @@ async function safeDeferUpdate(interaction) {
         await interaction.deferUpdate();
     } catch (err) {
         if (err?.code === 40060) return;
+        if (err?.code === 10062) throw err;
         throw err;
     }
 }
@@ -1615,9 +1651,15 @@ else if (commandName === 'tungdongxu') {
         }
 // --- LỆNH DAILY ---
 else if (commandName === 'daily') {
+    // Defer trước — nếu 10062 thì interaction đã hết hạn, return im lặng
     try {
         await safeDeferReply(interaction);
+    } catch (deferErr) {
+        if (deferErr?.code === 10062) return; // Interaction hết hạn — bỏ qua
+        throw deferErr;
+    }
 
+    try {
         const userId = interaction.user.id;
         const now = Date.now();
         const oneDay = 86400000;
@@ -1635,7 +1677,7 @@ else if (commandName === 'daily') {
 
             return interaction.editReply(
                 `⏳ Bạn đã nhận quà hôm nay rồi! Quay lại sau **${hours} giờ ${minutes} phút** nữa nhé.`
-            );
+            ).catch(() => {});
         }
 
         // Tính streak: nếu bỏ lỡ hơn 2 ngày thì reset về 0
@@ -1647,7 +1689,7 @@ else if (commandName === 'daily') {
         // Tính reward: lần đầu 500, mỗi streak +15, max 5000
         const reward = Math.min(500 + streak * 15, 5000);
 
-        // Cập nhật streak và lưu vào file
+        // Cập nhật streak và lưu vào file NGAY — trước addCoins để tránh mất dữ liệu nếu crash
         streak += 1;
         dailyData[userId] = { lastDaily: now, streak };
         saveDaily();
@@ -1681,16 +1723,12 @@ else if (commandName === 'daily') {
             .setFooter({ text: "Nhận mỗi ngày để tăng streak • Bỏ lỡ 1 ngày sẽ mất streak!" })
             .setTimestamp();
 
-        return interaction.editReply({ embeds: [embed] });
+        return interaction.editReply({ embeds: [embed] }).catch(() => {});
 
     } catch (err) {
         console.error("🚨 DAILY ERROR:", err);
-
-        if (interaction.deferred || interaction.replied) {
-            return interaction.editReply("❌ Có lỗi xảy ra khi xử lý phần thưởng. Vui lòng thử lại!");
-        } else {
-            return interaction.reply({ content: "❌ Lỗi hệ thống!", flags: MessageFlags.Ephemeral });
-        }
+        // Chỉ thử editReply — không bao giờ gọi reply() vì đã defer rồi
+        interaction.editReply("❌ Có lỗi xảy ra khi xử lý phần thưởng. Vui lòng thử lại!").catch(() => {});
     }
 }
     // --- LỆNH TOPCOIN ---
