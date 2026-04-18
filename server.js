@@ -27,28 +27,73 @@ if (!fs.existsSync(backupPath)) {
 
 console.log("📂 Backup path:", backupPath);
 
-// Coin functions dùng trực tiếp biến coins + saveCoins (được định nghĩa bên dưới)
-// Các hàm này chỉ được GỌI trong event handlers, sau khi module load xong nên an toàn
-// Reload dữ liệu từ file — dùng khi cần đảm bảo in-memory đồng bộ với disk
-function reloadCoins() {
-    const fresh = safeReadJSON("coins.json", null);
-    if (fresh !== null) {
-        coins = fresh;
-        console.log(`🔄 Reload coins.json: ${Object.keys(coins).length} users`);
-    }
-}
-function reloadDaily() {
-    const fresh = safeReadJSON("daily.json", null);
-    if (fresh !== null) {
-        dailyData = fresh;
-        console.log(`🔄 Reload daily.json: ${Object.keys(dailyData).length} users`);
-    }
+/*=== DATABASE — tất cả khai báo và hàm helper ở đây, TRƯỚC mọi thứ khác ===*/
+
+// Đọc JSON an toàn — fallback sang .bak nếu file chính lỗi
+function safeReadJSON(filePath, defaultValue) {
+    const tryParse = (fp) => {
+        try {
+            if (!fs.existsSync(fp)) return null;
+            const raw = fs.readFileSync(fp, "utf8").trim();
+            if (!raw) return null;
+            return JSON.parse(raw);
+        } catch { return null; }
+    };
+    const result = tryParse(filePath);
+    if (result !== null) { console.log("✅ Đọc " + filePath + ": OK"); return result; }
+    const bak = filePath + ".bak";
+    const bakResult = tryParse(bak);
+    if (bakResult !== null) { console.warn("⚠️ " + filePath + " lỗi — dùng .bak"); return bakResult; }
+    console.error("❌ Không đọc được " + filePath + " — dùng mặc định");
+    return defaultValue;
 }
 
+// Ghi file an toàn: backup .bak trước, ghi thẳng (tránh EXDEV trên Wispbyte)
+function atomicWrite(filePath, data) {
+    try { if (fs.existsSync(filePath)) fs.copyFileSync(filePath, filePath + ".bak"); } catch (_) {}
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+}
+
+// Tạo file nếu chưa có
+if (!fs.existsSync("coins.json"))     fs.writeFileSync("coins.json",    "{}");
+if (!fs.existsSync("blacklist.json")) fs.writeFileSync("blacklist.json","[]");
+if (!fs.existsSync("top.json"))       fs.writeFileSync("top.json",      "{}");
+if (!fs.existsSync("register.json"))  fs.writeFileSync("register.json", "[]");
+if (!fs.existsSync("staff.json"))     fs.writeFileSync("staff.json",    "[]");
+if (!fs.existsSync("mainers.json"))   fs.writeFileSync("mainers.json",  "[]");
+if (!fs.existsSync("strike.json"))    fs.writeFileSync("strike.json",   "[]");
+if (!fs.existsSync("daily.json"))     fs.writeFileSync("daily.json",    "{}");
+
+// Khai báo biến TRƯỚC các hàm dùng chúng — bắt buộc vì let không được hoisted
+let coins     = safeReadJSON("coins.json",    {});
+let blacklist  = safeReadJSON("blacklist.json",[]);
+let top        = safeReadJSON("top.json",      {});
+let register   = safeReadJSON("register.json", []);
+let staff      = safeReadJSON("staff.json",    []);
+let mainers    = safeReadJSON("mainers.json",  []);
+let strikes    = safeReadJSON("strike.json",   []);
+let dailyData  = safeReadJSON("daily.json",    {});
+
+for (let i = 1; i <= 20; i++) { if (!top[i]) top[i] = null; }
+
+const saveCoins     = () => atomicWrite("coins.json",    coins);
+const saveBlacklist = () => atomicWrite("blacklist.json",blacklist);
+const saveTop       = () => atomicWrite("top.json",      top);
+const saveStaff     = () => atomicWrite("staff.json",    staff);
+const saveRegister  = () => atomicWrite("register.json", register);
+const saveMainers   = () => atomicWrite("mainers.json",  mainers);
+const saveStrikes   = () => atomicWrite("strike.json",   strikes);
+const saveDaily     = () => atomicWrite("daily.json",    dailyData);
+
+console.log("📊 coins.json:  " + Object.keys(coins).length + " users");
+console.log("📊 daily.json:  " + Object.keys(dailyData).length + " users");
+console.log("📊 staff.json:  " + staff.length + " staff");
+console.log("📊 strike.json: " + strikes.length + " strikes");
+
+// Coin helpers — PHẢI đứng SAU khai báo let coins ở trên
 function getCoins(userId) {
     const val = coins[userId];
-    if (val === undefined || val === null) return 0;
-    return val;
+    return (val === undefined || val === null) ? 0 : val;
 }
 function addCoins(userId, amount) {
     if (coins[userId] === undefined || coins[userId] === null) coins[userId] = 0;
@@ -59,6 +104,14 @@ function addCoins(userId, amount) {
 function setCoins(userId, amount) {
     coins[userId] = Math.max(0, amount);
     saveCoins();
+}
+function reloadCoins() {
+    const fresh = safeReadJSON("coins.json", null);
+    if (fresh !== null) { coins = fresh; console.log("🔄 Reload coins: " + Object.keys(coins).length + " users"); }
+}
+function reloadDaily() {
+    const fresh = safeReadJSON("daily.json", null);
+    if (fresh !== null) { dailyData = fresh; console.log("🔄 Reload daily: " + Object.keys(dailyData).length + " users"); }
 }
 const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require("@google/generative-ai");
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -188,84 +241,7 @@ app.use("/image", express.static("images"));
 app.use(express.json());
 app.use(cors());
 
-/*DATABASE*/
-// Helper đọc JSON an toàn — thử file chính, fallback sang .bak nếu lỗi
-function safeReadJSON(filePath, defaultValue) {
-    const tryParse = (fp) => {
-        try {
-            if (!fs.existsSync(fp)) return null;
-            const raw = fs.readFileSync(fp, "utf8").trim();
-            if (!raw) return null;
-            const parsed = JSON.parse(raw);
-            return parsed;
-        } catch { return null; }
-    };
-    const result = tryParse(filePath);
-    if (result !== null) {
-        console.log(`✅ Đọc ${filePath}: OK`);
-        return result;
-    }
-    // Thử đọc file .bak (bản backup trước lần ghi cuối)
-    const bak = filePath + ".bak";
-    const bakResult = tryParse(bak);
-    if (bakResult !== null) {
-        console.warn(`⚠️ ${filePath} lỗi — dùng ${bak} thay thế`);
-        return bakResult;
-    }
-    console.error(`❌ Không đọc được ${filePath} lẫn backup — dùng giá trị mặc định`);
-    return defaultValue;
-}
-
-if (!fs.existsSync("coins.json")) fs.writeFileSync("coins.json", "{}");
-if (!fs.existsSync("blacklist.json")) fs.writeFileSync("blacklist.json", "[]");
-if (!fs.existsSync("top.json")) fs.writeFileSync("top.json", "{}");
-if (!fs.existsSync("register.json")) fs.writeFileSync("register.json", "[]");
-if (!fs.existsSync("staff.json")) fs.writeFileSync("staff.json", "[]");
-if (!fs.existsSync("mainers.json")) fs.writeFileSync("mainers.json", "[]");
-if (!fs.existsSync("strike.json")) fs.writeFileSync("strike.json", "[]");
-if (!fs.existsSync("daily.json")) fs.writeFileSync("daily.json", "{}");
-
-let coins = safeReadJSON("coins.json", {});
-let blacklist = safeReadJSON("blacklist.json", []);
-let top = safeReadJSON("top.json", {});
-let register = safeReadJSON("register.json", []);
-let staff = safeReadJSON("staff.json", []);
-let mainers = safeReadJSON("mainers.json", []);
-let strikes = safeReadJSON("strike.json", []);
-// daily: { userId: { lastDaily: timestamp, streak: number } }
-let dailyData = safeReadJSON("daily.json", {});
-
-for (let i = 1; i <= 20; i++) { if (!top[i]) top[i] = null; }
-
-// Log xác nhận dữ liệu đã load khi khởi động
-console.log(`📊 Đã load coins.json: ${Object.keys(coins).length} users`);
-console.log(`📊 Đã load daily.json: ${Object.keys(dailyData).length} users`);
-console.log(`📊 Đã load staff.json: ${staff.length} staff`);
-console.log(`📊 Đã load strikes.json: ${strikes.length} strikes`);
-
-
-// Ghi file an toàn: ghi thẳng vào file, đồng thời giữ 1 bản backup .bak
-// Tránh EXDEV (cross-device rename) trên Linux containers như Wispbyte
-function atomicWrite(filePath, data) {
-    const jsonStr = JSON.stringify(data, null, 2);
-    // Backup bản cũ trước khi ghi đè
-    try {
-        if (fs.existsSync(filePath)) {
-            fs.copyFileSync(filePath, filePath + ".bak");
-        }
-    } catch (_) { /* bỏ qua lỗi backup */ }
-    // Ghi thẳng vào file đích
-    fs.writeFileSync(filePath, jsonStr, "utf8");
-}
-
-const saveCoins = () => atomicWrite("coins.json", coins);
-const saveBlacklist = () => atomicWrite("blacklist.json", blacklist);
-const saveTop = () => atomicWrite("top.json", top);
-const saveStaff = () => atomicWrite("staff.json", staff);
-const saveRegister = () => atomicWrite("register.json", register);
-const saveMainers = () => atomicWrite("mainers.json", mainers);
-const saveStrikes = () => atomicWrite("strike.json", strikes);
-const saveDaily = () => atomicWrite("daily.json", dailyData);
+/*DATABASE — đã được khai báo ở đầu file*/
 
 const ROLE_MAP = {
     "Founder": process.env.ROLE_FOUNDER,
@@ -293,8 +269,8 @@ const STAFF_ROLE_ID = process.env.STAFF_ROLE_ID;
 const TICKET_CATEGORY_ID = process.env.TICKET_CATEGORY_ID;
 
 if (!fs.existsSync("giveaways.json")) fs.writeFileSync("giveaways.json", "[]");
-let giveaways = JSON.parse(fs.readFileSync("giveaways.json", "utf8"));
-const saveGiveaways = () => fs.writeFileSync("giveaways.json", JSON.stringify(giveaways, null, 2));
+let giveaways = safeReadJSON("giveaways.json", []);
+const saveGiveaways = () => atomicWrite("giveaways.json", giveaways);
 
 // Khi bot khởi động lại — khôi phục timers cho giveaways chưa hết hạn
 function restoreGiveawayTimers() {
@@ -1733,16 +1709,21 @@ else if (commandName === 'daily') {
 }
     // --- LỆNH TOPCOIN ---
 else if (commandName === 'topcoin') {
-if (!interaction.deferred && !interaction.replied) {
-    await safeDeferReply(interaction);
-}
+    try {
+        await safeDeferReply(interaction);
+    } catch (e) {
+        if (e?.code === 10062) return;
+        throw e;
+    }
 
-const sorted = Object.entries(coins)
-        .sort(([, a], [, b]) => b - a)
-        .slice(0, 10);
+    // Đọc thẳng từ file để đảm bảo dữ liệu mới nhất
+    reloadCoins();
+
+    const entries = Object.entries(coins).filter(([, v]) => typeof v === "number" && v > 0);
+    const sorted = entries.sort(([, a], [, b]) => b - a).slice(0, 10);
 
     const list = sorted.length
-        ? sorted.map(([id, val], i) => `${i + 1}. <@${id}>: **${val}** 🪙`).join("\n")
+        ? sorted.map(([id, val], i) => `${i + 1}. <@${id}>: **${val.toLocaleString()}** 🪙`).join("\n")
         : "Chưa có dữ liệu";
 
     const embed = new EmbedBuilder()
@@ -1750,7 +1731,7 @@ const sorted = Object.entries(coins)
         .setDescription(list)
         .setColor("#f1c40f");
 
-    return interaction.editReply({ embeds: [embed] });
+    return interaction.editReply({ embeds: [embed] }).catch(() => {});
 }
 
     // --- LỆNH PAY ---
@@ -2104,7 +2085,8 @@ if (!interaction.deferred && !interaction.replied) {
 
         /* ===== COIN ===== */
         else if (commandName === "coin") {
-            await safeDeferReply(interaction);
+            try { await safeDeferReply(interaction); } catch (e) { if (e?.code === 10062) return; throw e; }
+            reloadCoins();
             const userId = interaction.user.id;
             const balance = getCoins(userId);
             const embed = new EmbedBuilder()
@@ -2112,7 +2094,7 @@ if (!interaction.deferred && !interaction.replied) {
                 .setDescription(`<@${userId}> đang có **${balance.toLocaleString()} coin** 🪙`)
                 .setColor("#f1c40f")
                 .setTimestamp();
-            return interaction.editReply({ embeds: [embed] });
+            return interaction.editReply({ embeds: [embed] }).catch(() => {});
         }
 
 else if (commandName === "baucua") {
