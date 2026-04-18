@@ -710,9 +710,12 @@ async function safeDeferReply(interaction, options = {}) {
     try {
         await interaction.deferReply(options);
     } catch (err) {
-        if (err?.code === 40060) return; // Đã ack → tiếp tục
-        if (err?.code === 10062) throw err; // Interaction hết hạn → ném lên để caller xử lý
-        throw err;
+        // ✅ FIX InteractionNotReplied:
+        // 40060 = đã được ack bởi lần gọi trước (duplicate interaction).
+        // KHÔNG return im lặng ở đây vì sẽ để editReply chạy tiếp mà interaction
+        // chưa deferred trong process này → gây InteractionNotReplied.
+        // Thay vào đó throw để outer catch xử lý (bỏ qua im lặng).
+        throw err; // Ném tất cả lỗi (10062, 40060, ...) lên outer catch
     }
 }
 
@@ -721,8 +724,7 @@ async function safeDeferUpdate(interaction) {
     try {
         await interaction.deferUpdate();
     } catch (err) {
-        if (err?.code === 40060) return;
-        if (err?.code === 10062) throw err;
+        // ✅ FIX: Throw tất cả lỗi để outer catch xử lý đúng, không return im lặng
         throw err;
     }
 }
@@ -1716,8 +1718,11 @@ else if (commandName === 'topcoin') {
         throw e;
     }
 
-    // Đọc thẳng từ file để đảm bảo dữ liệu mới nhất
-    reloadCoins();
+    // ✅ FIX: KHÔNG gọi reloadCoins() ở đây.
+    // In-memory `coins` luôn là source of truth vì mọi addCoins/setCoins
+    // đều ghi file ngay lập tức (synchronous). Nếu gọi reloadCoins() mà
+    // file bị rỗng/reset thì sẽ GHI ĐÈ data đúng trong bộ nhớ bằng data rỗng,
+    // khiến /daily sau đó chỉ lưu 500 thay vì 100500.
 
     const entries = Object.entries(coins).filter(([, v]) => typeof v === "number" && v > 0);
     const sorted = entries.sort(([, a], [, b]) => b - a).slice(0, 10);
@@ -2086,7 +2091,7 @@ if (!interaction.deferred && !interaction.replied) {
         /* ===== COIN ===== */
         else if (commandName === "coin") {
             try { await safeDeferReply(interaction); } catch (e) { if (e?.code === 10062) return; throw e; }
-            reloadCoins();
+            // ✅ FIX: Không gọi reloadCoins() - tránh ghi đè in-memory bằng file rỗng
             const userId = interaction.user.id;
             const balance = getCoins(userId);
             const embed = new EmbedBuilder()
@@ -2432,7 +2437,8 @@ if (interaction.customId.startsWith("tdx_")) {
     else if (interaction.isStringSelectMenu()) {
 
         if (interaction.customId === "match_info") {
-            await interaction.deferReply({ flags: MessageFlags.Ephemeral }).catch(() => {});
+            // ✅ FIX: Dùng safeDeferReply thay vì raw deferReply().catch() để xử lý đúng 40060/10062
+            try { await safeDeferReply(interaction, { flags: MessageFlags.Ephemeral }); } catch { return; }
             return interaction.editReply({ content: `📌 Thông tin: ${interaction.values[0]}` }).catch(() => {});
         }
 
