@@ -752,6 +752,8 @@ const CMD_COOLDOWNS = {
     "list":        10_000,   // 10 giây
     "bxh":         10_000,   // 10 giây
 
+    "give":         5_000,   //  5 giây
+
     // ── Slash commands staff / admin (5-15s tránh nhấn 2 lần) ──
     "strike":       5_000,
     "unstrike":     5_000,
@@ -1767,7 +1769,34 @@ if (!interaction.deferred && !interaction.replied) {
     return interaction.editReply(`✅ Đã chuyển **${amount} coin** cho <@${target.id}>`);
 }
 
-        /* ===== STAFFSTRIKE ===== */
+    // --- LỆNH GIVE (chỉ GIVECOINS_ID mới dùng được) ---
+else if (commandName === 'give') {
+    if (!interaction.deferred && !interaction.replied) await safeDeferReply(interaction);
+
+    // Chỉ cho phép user có ID trong env GIVECOINS_ID
+    const allowedId = process.env.GIVECOINS_ID;
+    if (!allowedId || interaction.user.id !== allowedId) {
+        return interaction.editReply({ content: "❌ Bạn không có quyền dùng lệnh này!", flags: MessageFlags.Ephemeral });
+    }
+
+    const target = options.getUser('user');
+    const amount = options.getInteger('amount');
+
+    if (!target || !amount || amount <= 0) {
+        return interaction.editReply("❌ Dữ liệu không hợp lệ!");
+    }
+
+    addCoins(target.id, amount);
+
+    const embed = new EmbedBuilder()
+        .setTitle("💸 GIVE COIN")
+        .setColor("#00ff88")
+        .setDescription(`✅ Đã cấp **${amount.toLocaleString()} 🪙** cho <@${target.id}>`)
+        .addFields({ name: "💰 Số dư mới", value: `**${getCoins(target.id).toLocaleString()} coin**`, inline: true })
+        .setTimestamp();
+
+    return interaction.editReply({ embeds: [embed] });
+}
         else if (commandName === "staffstrike") {
             await safeDeferReply(interaction);
 
@@ -2701,8 +2730,7 @@ if (interaction.customId.startsWith("bet_")) {
             return;
         }
         if (err?.code === 40060 || err?.message?.includes("already been acknowledged")) {
-            console.warn("[FALLBACK] 40060 lọt qua guard — bỏ qua");
-            return;
+            return; // duplicate interaction — bỏ qua im lặng
         }
         console.error("🚨 LỖI HỆ THỐNG INTERACTION:", err);
 
