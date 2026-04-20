@@ -2007,7 +2007,12 @@ if (!interaction.deferred && !interaction.replied) {
 
     // --- LỆNH GIVE (chỉ GIVECOINS_ID mới dùng được) ---
 else if (commandName === 'give') {
-    if (!interaction.deferred && !interaction.replied) await safeDeferReply(interaction);
+    try {
+        await safeDeferReply(interaction);
+    } catch (deferErr) {
+        if (deferErr?.code === 10062 || deferErr?.message?.includes("Unknown Interaction")) return;
+        throw deferErr;
+    }
 
     // Chỉ cho phép user có ID trong env GIVECOINS_ID
     const allowedId = process.env.GIVECOINS_ID;
