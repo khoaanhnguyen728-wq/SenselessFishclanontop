@@ -104,34 +104,56 @@ function safeReadJSON(filePath, defaultValue) {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// GHI FILE AN TOÀN — backup .bak trước, verify sau khi ghi
+// GHI FILE AN TOÀN — ghi ra file .tmp trước, rename nguyên tử
+// Đảm bảo thư mục tồn tại, verify nội dung sau khi ghi
 // ══════════════════════════════════════════════════════════════════
 function atomicWrite(filePath, data) {
+    // Đảm bảo thư mục tồn tại
+    const dir = path.dirname(filePath);
+    try {
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    } catch(_) {}
+
+    // Backup file cũ
     try {
         if (fs.existsSync(filePath)) {
             fs.copyFileSync(filePath, filePath + ".bak");
         }
     } catch(_) {}
+
+    const tmpPath = filePath + ".tmp";
     try {
         const json = JSON.stringify(data, null, 2);
-        fs.writeFileSync(filePath, json, "utf8");
-        // Verify: đọc lại kiểm tra size
-        const written = fs.readFileSync(filePath, "utf8");
-        if (written.length < 2) throw new Error("File ghi ra bị rỗng!");
+        // Ghi ra .tmp trước (nếu crash ở đây, file gốc vẫn còn)
+        fs.writeFileSync(tmpPath, json, "utf8");
+        // Verify nội dung .tmp trước khi rename
+        const verify = fs.readFileSync(tmpPath, "utf8").trim();
+        if (!verify || verify.length < 2) throw new Error("File .tmp bị rỗng sau khi ghi!");
+        // Rename nguyên tử — thay thế file cũ bằng file mới một lần
+        fs.renameSync(tmpPath, filePath);
+        // Double-check: đọc lại file đích
+        const final = fs.readFileSync(filePath, "utf8").trim();
+        if (!final || final.length < 2) throw new Error("File đích bị rỗng sau rename!");
+        console.log(`  💾 Đã ghi: ${path.basename(filePath)} (${final.length} bytes)`);
     } catch(e) {
         console.error(`❌ atomicWrite FAILED [${filePath}]: ${e.message}`);
-        // Thử restore từ bak
+        // Dọn .tmp nếu còn
+        try { if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath); } catch(_) {}
+        // Restore từ .bak nếu file đích bị hỏng
         try {
             if (fs.existsSync(filePath + ".bak")) {
-                fs.copyFileSync(filePath + ".bak", filePath);
-                console.warn(`  ↩️ Đã restore từ .bak`);
+                const bakContent = fs.readFileSync(filePath + ".bak", "utf8").trim();
+                if (bakContent && bakContent.length >= 2) {
+                    fs.copyFileSync(filePath + ".bak", filePath);
+                    console.warn(`  ↩️ Đã restore từ .bak: ${path.basename(filePath)}`);
+                }
             }
         } catch(_) {}
     }
 }
 
 // ══════════════════════════════════════════════════════════════════
-// KHỞI TẠO FILE — chỉ tạo nếu chưa có
+// KHỞI TẠO FILE — chỉ tạo nếu chưa có (KHÔNG ghi đè data cũ!)
 // ══════════════════════════════════════════════════════════════════
 const DB = {
     coins:     path.join(DATA_DIR, "coins.json"),
@@ -145,14 +167,38 @@ const DB = {
     giveaways: path.join(DATA_DIR, "giveaways.json"),
 };
 
-if (!fs.existsSync(DB.coins))     fs.writeFileSync(DB.coins,    "{}");
-if (!fs.existsSync(DB.blacklist)) fs.writeFileSync(DB.blacklist,"[]");
-if (!fs.existsSync(DB.top))       fs.writeFileSync(DB.top,      "{}");
-if (!fs.existsSync(DB.register))  fs.writeFileSync(DB.register, "[]");
-if (!fs.existsSync(DB.staff))     fs.writeFileSync(DB.staff,    "[]");
-if (!fs.existsSync(DB.mainers))   fs.writeFileSync(DB.mainers,  "[]");
-if (!fs.existsSync(DB.strike))    fs.writeFileSync(DB.strike,   "[]");
-if (!fs.existsSync(DB.daily))     fs.writeFileSync(DB.daily,    "{}");
+// Hàm khởi tạo file an toàn — KHÔNG ghi đè nếu đã tồn tại và hợp lệ
+function initDBFile(filePath, defaultContent) {
+    if (fs.existsSync(filePath)) {
+        try {
+            const raw = fs.readFileSync(filePath, "utf8").trim();
+            if (raw && raw.length >= 2 && raw !== "null") {
+                JSON.parse(raw); // validate JSON
+                console.log(`  📂 DB tồn tại OK: ${path.basename(filePath)} (${raw.length} bytes)`);
+                return; // File OK, không làm gì
+            }
+        } catch(e) {
+            console.warn(`  ⚠️ DB corrupt [${path.basename(filePath)}]: ${e.message} → ghi lại default`);
+        }
+    }
+    // File chưa có hoặc bị corrupt → ghi default
+    try {
+        fs.writeFileSync(filePath, defaultContent, "utf8");
+        console.log(`  📝 DB khởi tạo mới: ${path.basename(filePath)}`);
+    } catch(e) {
+        console.error(`  ❌ Không thể khởi tạo DB [${filePath}]: ${e.message}`);
+    }
+}
+
+initDBFile(DB.coins,    "{}");
+initDBFile(DB.blacklist,"[]");
+initDBFile(DB.top,      "{}");
+initDBFile(DB.register, "[]");
+initDBFile(DB.staff,    "[]");
+initDBFile(DB.mainers,  "[]");
+initDBFile(DB.strike,   "[]");
+initDBFile(DB.daily,    "{}");
+initDBFile(DB.giveaways,"[]");
 
 // ══════════════════════════════════════════════════════════════════
 // ĐỌC DATA VÀO BỘ NHỚ
@@ -165,6 +211,7 @@ let staff      = safeReadJSON(DB.staff,    []);
 let mainers    = safeReadJSON(DB.mainers,  []);
 let strikes    = safeReadJSON(DB.strike,   []);
 let dailyData  = safeReadJSON(DB.daily,    {});
+let giveaways  = safeReadJSON(DB.giveaways,[]);
 
 // Đảm bảo đúng kiểu — phòng file bị corrupt
 if (!Array.isArray(blacklist)) { console.warn("⚠️ blacklist reset []"); blacklist = []; }
@@ -198,9 +245,11 @@ console.log(`📊 coins   : ${Object.keys(coins).length} users | tổng ${Object
 console.log(`📊 daily   : ${Object.keys(dailyData).length} users`);
 console.log(`📊 staff   : ${staff.length}`);
 console.log(`📊 strikes : ${strikes.length}`);
-// Test ghi thực tế ngay lúc khởi động
+// Test ghi thực tế ngay lúc khởi động — dùng file test riêng, KHÔNG ghi đè data
 try {
-    fs.writeFileSync(DB.coins, JSON.stringify(coins, null, 2), "utf8");
+    const testPath = path.join(DATA_DIR, ".__startup_write_test__");
+    fs.writeFileSync(testPath, Date.now().toString(), "utf8");
+    fs.unlinkSync(testPath);
     console.log("✅ Write test PASSED — ghi file OK");
 } catch(e) {
     console.error("💀 Write test FAILED — KHÔNG THỂ GHI FILE:", e.message);
@@ -386,9 +435,7 @@ const ADMIN_ROLE = process.env.ADMIN_ROLE;
 const STAFF_ROLE_ID = process.env.STAFF_ROLE_ID;
 const TICKET_CATEGORY_ID = process.env.TICKET_CATEGORY_ID;
 
-if (!fs.existsSync(DB.giveaways)) fs.writeFileSync(DB.giveaways, "[]");
-let giveaways = safeReadJSON(DB.giveaways, []);
-if (!Array.isArray(giveaways)) { console.warn("⚠️ giveaways reset []"); giveaways = []; fs.writeFileSync(DB.giveaways, "[]"); }
+if (!Array.isArray(giveaways)) { console.warn("⚠️ giveaways reset []"); giveaways = []; }
 const saveGiveaways = () => {
     if (!Array.isArray(giveaways)) giveaways = [];
     atomicWrite(DB.giveaways, giveaways);
@@ -550,19 +597,20 @@ async function updateAOVLeaderboard() {
         for (let i = 1; i <= 20; i++) {
             const member = apiTop[i] || {};
 
-            let medal = (i === 1) ? "👑" : (i <= 3 ? "➤" : "➠");
-            let displayName = member?.id ? `<@${member.id}>` : "Vacant";
+            let medal = (i === 1) ? "👑" : (i === 2) ? "🥈" : (i === 3) ? "🥉" : (i <= 10 ? "➤" : "➠");
+            let displayName = member?.id ? `<@${member.id}>` : "*Vacant*";
 
-            if (i === 1) displayName = `***${displayName}***`;
+            if (i === 1) displayName = `### ${displayName}`;
             else if (i <= 3) displayName = `**${displayName}**`;
 
-            text += `${medal} **TOP ${i}** • ${displayName}\n\n`;
+            text += `${medal} \`TOP ${String(i).padStart(2," ")}\` ${displayName}\n`;
         }
 
         const embed = new EmbedBuilder()
             .setColor("#00eaff")
-            .setTitle("🏆 AOV LEADERBOARD")
+            .setTitle("🏆 AOV LEADERBOARD — SENSELESSFISH")
             .setDescription(text || "Chưa có dữ liệu")
+            .setFooter({ text: "🔄 Cập nhật mỗi 10 giây • SenselessFish Clan" })
             .setTimestamp();
 
         if (message && typeof message.edit === "function") {
@@ -728,9 +776,19 @@ const result = await aiModel.generateContent(prompt);
     if (content === "!panel") {
     if (!hasPermission(message.member)) return;
     const embed = new EmbedBuilder()
-        .setTitle("🎫 AI SUPPORT PANEL")
-        .setDescription("Bấm nút bên dưới để tạo ticket hỗ trợ")
-        .setColor("#00eaff");
+        .setTitle("🎫 AI SUPPORT — TIỆM CÀ PHÊ CAPOO")
+        .setColor("#00eaff")
+        .setDescription(
+            `## 🤖 Hỗ trợ 24/7\n\n` +
+            `> 💬 Đặt câu hỏi cho AI bất kỳ lúc nào\n` +
+            `> 🎫 Mỗi ticket là một phòng chat riêng tư\n` +
+            `> 🔒 Chỉ bạn mới thấy ticket của mình\n\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━\n` +
+            `Nhấn **Tạo Ticket** bên dưới để bắt đầu!\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━`
+        )
+        .setFooter({ text: "SenselessFish Clan • AI Support" })
+        .setTimestamp();
 
     const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
@@ -1536,9 +1594,17 @@ else if (commandName === 'tungdongxu') {
             // KHÔNG trừ tiền ở đây — chỉ trừ khi user thực sự bấm nút chọn mặt (tdx_ handler)
             const embed = new EmbedBuilder()
                 .setTitle("🪙 TUNG ĐỒNG XU")
-                .setDescription(`Bạn muốn cược **${money.toLocaleString()} coin**.\nChọn mặt muốn đặt:`)
-                .setColor("Gold")
-                .setFooter({ text: "Bạn có 30 giây để chọn!" });
+                .setColor("#f1c40f")
+                .setDescription(
+                    `## 💵 ${money.toLocaleString()} coin\n\n` +
+                    `> 🎯 Chọn mặt bạn muốn đặt cược\n` +
+                    `> 💰 Thắng nhận **x2** tiền cược\n\n` +
+                    `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                    `🔵 **SẤP** hay 🔴 **NGỬA**?\n` +
+                    `━━━━━━━━━━━━━━━━━━━━━━`
+                )
+                .setFooter({ text: "🪙 Tung Đồng Xu • Tiệm Cà Phê Capoo | Bạn có 30 giây để chọn!" })
+                .setTimestamp();
 
             const row = new ActionRowBuilder().addComponents(
                 new ButtonBuilder().setCustomId(`tdx_sap_${money}`).setLabel("SẤP").setStyle(ButtonStyle.Primary),
@@ -1581,10 +1647,14 @@ else if (commandName === 'tungdongxu') {
             const embed = new EmbedBuilder()
                 .setTitle("🚫 BLACKLIST THÀNH CÔNG")
                 .setColor("#ff0000")
-                .addFields(
-                    { name: "User", value: `<@${user.id}> (${user.username})`, inline: true },
-                    { name: "Lý do", value: reason, inline: true }
+                .setThumbnail(user.displayAvatarURL({ forceStatic: false }))
+                .setDescription(
+                    `> 👤 **User:** <@${user.id}> \`(${user.username})\`\n` +
+                    `> 🔨 **Bởi:** <@${interaction.user.id}>\n` +
+                    `> 📌 **Lý do:** ${reason}\n` +
+                    `> 🕐 **Thời gian:** <t:${Math.floor(Date.now()/1000)}:F>`
                 )
+                .setFooter({ text: `ID: ${user.id}` })
                 .setTimestamp();
 
             await interaction.editReply({ embeds: [embed] });
@@ -1599,11 +1669,12 @@ else if (commandName === 'tungdongxu') {
                 const logEmbed = new EmbedBuilder()
                     .setTitle("🚫 BLACKLIST LOG")
                     .setColor("#ff0000")
-                    .setThumbnail(user.displayAvatarURL())
-                    .addFields(
-                        { name: "User", value: `<@${user.id}>`, inline: true },
-                        { name: "Người thực hiện", value: `<@${interaction.user.id}>`, inline: true },
-                        { name: "Lý do", value: reason }
+                    .setThumbnail(user.displayAvatarURL({ forceStatic: false }))
+                    .setDescription(
+                        `> 👤 **User:** <@${user.id}> \`(${user.username})\`\n` +
+                        `> 🔨 **Thực hiện bởi:** <@${interaction.user.id}>\n` +
+                        `> 📌 **Lý do:** ${reason}\n` +
+                        `> 🕐 **Thời gian:** <t:${Math.floor(Date.now()/1000)}:F>`
                     )
                     .setFooter({ text: `ID: ${user.id}` })
                     .setTimestamp();
@@ -1638,7 +1709,13 @@ else if (commandName === 'tungdongxu') {
             const embed = new EmbedBuilder()
                 .setTitle("✅ UNBLACKLIST THÀNH CÔNG")
                 .setColor("#00ffcc")
-                .addFields({ name: "User", value: `${user.username}`, inline: true })
+                .setThumbnail(user.displayAvatarURL({ forceStatic: false }))
+                .setDescription(
+                    `> 👤 **User:** <@${user.id}> \`(${user.username})\`\n` +
+                    `> 🔓 **Bởi:** <@${interaction.user.id}>\n` +
+                    `> 🕐 **Thời gian:** <t:${Math.floor(Date.now()/1000)}:F>`
+                )
+                .setFooter({ text: `ID: ${user.id}` })
                 .setTimestamp();
 
             const logChannel = interaction.guild.channels.cache.get(process.env.BLACKLIST_LOG_CHANNEL);
@@ -1647,9 +1724,10 @@ else if (commandName === 'tungdongxu') {
                     .setTitle("✅ UNBLACKLIST LOG")
                     .setColor("#00ffcc")
                     .setThumbnail(user.displayAvatarURL({ forceStatic: false }))
-                    .addFields(
-                        { name: "User", value: `${user.username}`, inline: true },
-                        { name: "Người thực hiện", value: `<@${interaction.user.id}>`, inline: true }
+                    .setDescription(
+                        `> 👤 **User:** <@${user.id}> \`(${user.username})\`\n` +
+                        `> 🔓 **Thực hiện bởi:** <@${interaction.user.id}>\n` +
+                        `> 🕐 **Thời gian:** <t:${Math.floor(Date.now()/1000)}:F>`
                     )
                     .setFooter({ text: `ID: ${user.id}` })
                     .setTimestamp();
@@ -1691,16 +1769,17 @@ else if (commandName === 'tungdongxu') {
             saveStrikes();
 
             const embed = new EmbedBuilder()
-                .setColor("Red")
-                .setTitle("🚨 Strike Member")
-                .setThumbnail(target.displayAvatarURL())
-                .addFields(
-                    { name: "👤 User", value: `<@${target.id}>`, inline: true },
-                    { name: "🛡 Staff", value: `<@${interaction.user.id}>`, inline: true },
-                    { name: "📌 Reason", value: reason }
+                .setColor("#ff4444")
+                .setTitle("🚨 STRIKE MEMBER")
+                .setThumbnail(target.displayAvatarURL({ forceStatic: false }))
+                .setDescription(
+                    `> 👤 **User:** <@${target.id}> \`(${target.username})\`\n` +
+                    `> 🛡️ **Staff:** <@${interaction.user.id}>\n` +
+                    `> 📌 **Lý do:** ${reason}\n` +
+                    `> 🕐 **Thời gian:** <t:${Math.floor(Date.now()/1000)}:F>`
                 )
                 .setImage(proofUrl)
-                .setFooter({ text: `Strike ${user.strikes.length}/3` })
+                .setFooter({ text: `⚠️ Strike ${user.strikes.length}/3 • Đủ 3 sẽ bị BAN` })
                 .setTimestamp();
 
             sendStrikeLog(client, embed);
@@ -1744,15 +1823,16 @@ else if (commandName === 'tungdongxu') {
             saveStrikes();
 
             const embed = new EmbedBuilder()
-                .setColor("Green")
-                .setTitle("✅ Unstrike")
-                .setThumbnail(target.displayAvatarURL())
-                .addFields(
-                    { name: "👤 User", value: `<@${target.id}>`, inline: true },
-                    { name: "🛡 Staff", value: `<@${interaction.user.id}>`, inline: true },
-                    { name: "🗑 Removed", value: removed.reason }
+                .setColor("#00cc66")
+                .setTitle("✅ GỠ STRIKE THÀNH CÔNG")
+                .setThumbnail(target.displayAvatarURL({ forceStatic: false }))
+                .setDescription(
+                    `> 👤 **User:** <@${target.id}> \`(${target.username})\`\n` +
+                    `> 🛡️ **Staff:** <@${interaction.user.id}>\n` +
+                    `> 🗑️ **Strike đã gỡ:** ${removed.reason}\n` +
+                    `> 📊 **Còn lại:** ${user.strikes.length}/${user.staff ? 4 : 3} strikes`
                 )
-                .setFooter({ text: `Còn lại: ${user.strikes.length}` })
+                .setFooter({ text: `Strike #${strikeIndex + 1} đã được xóa` })
                 .setTimestamp();
 
             sendStrikeLog(client, embed);
@@ -1812,27 +1892,19 @@ else if (commandName === 'daily') {
         const nextReward = Math.min(500 + streak * 15, 5000);
 
         const embed = new EmbedBuilder()
-            .setTitle("🎁 QUÀ TẶNG HÀNG NGÀY")
-            .setColor(isMax ? "Gold" : "Green")
-            .setDescription(`Chúc mừng <@${userId}>! Bạn đã nhận được **${reward.toLocaleString()} coin**.`)
-            .addFields(
-                {
-                    name: "🔥 Streak",
-                    value: `**${streak} ngày** liên tiếp`,
-                    inline: true
-                },
-                {
-                    name: "💰 Số dư hiện tại",
-                    value: `**${getCoins(userId).toLocaleString()} coin**`,
-                    inline: true
-                },
-                {
-                    name: isMax ? "🏆 Đã đạt tối đa!" : "⏭ Lần sau",
-                    value: isMax ? "Bạn đang nhận mức thưởng cao nhất!" : `**${nextReward.toLocaleString()} coin**`,
-                    inline: true
-                }
+            .setTitle(isMax ? "🏆 QUÀ TẶNG HÀNG NGÀY — TỐI ĐA!" : "🎁 QUÀ TẶNG HÀNG NGÀY")
+            .setColor(isMax ? "#FFD700" : streak >= 7 ? "#ff6b35" : "#00cc66")
+            .setThumbnail(interaction.user.displayAvatarURL({ forceStatic: false }))
+            .setDescription(
+                `## 🪙 +${reward.toLocaleString()} coin\n\n` +
+                `> 👤 <@${userId}>\n` +
+                `> 🔥 **Streak:** ${streak} ngày liên tiếp ${"🌟".repeat(Math.min(streak, 7))}\n` +
+                `> 💰 **Số dư:** ${getCoins(userId).toLocaleString()} coin\n` +
+                (isMax
+                    ? `> 🏆 **Đã đạt mức thưởng tối đa mỗi ngày!**`
+                    : `> ⏭️ **Lần sau:** ${nextReward.toLocaleString()} coin`)
             )
-            .setFooter({ text: "Nhận mỗi ngày để tăng streak • Bỏ lỡ 1 ngày sẽ mất streak!" })
+            .setFooter({ text: "🎁 Nhận mỗi ngày để tăng streak • Bỏ lỡ 1 ngày sẽ mất streak!" })
             .setTimestamp();
 
         return interaction.editReply({ embeds: [embed] }).catch(() => {});
@@ -1861,14 +1933,27 @@ else if (commandName === 'topcoin') {
     const entries = Object.entries(coins).filter(([, v]) => typeof v === "number" && v > 0);
     const sorted = entries.sort(([, a], [, b]) => b - a).slice(0, 10);
 
+    const medals = ["🥇", "🥈", "🥉"];
     const list = sorted.length
-        ? sorted.map(([id, val], i) => `${i + 1}. <@${id}>: **${val.toLocaleString()}** 🪙`).join("\n")
+        ? sorted.map(([id, val], i) => {
+            const medal = medals[i] || `**${i + 1}.**`;
+            return `${medal} <@${id}> — **${val.toLocaleString()} 🪙**`;
+        }).join("\n")
         : "Chưa có dữ liệu";
 
+    const totalCoins = sorted.reduce((a, [, v]) => a + v, 0);
+
     const embed = new EmbedBuilder()
-        .setTitle("🏆 TOP COIN")
-        .setDescription(list)
-        .setColor("#f1c40f");
+        .setTitle("🏆 BẢNG XẾP HẠNG COIN")
+        .setColor("#f1c40f")
+        .setDescription(
+            `## 💰 Top 10 giàu nhất\n\n` +
+            list +
+            `\n\n━━━━━━━━━━━━━━━━━━━━━━\n` +
+            `> 🌐 **Tổng lưu thông:** ${totalCoins.toLocaleString()} 🪙`
+        )
+        .setFooter({ text: "Dùng /daily mỗi ngày để leo bảng xếp hạng!" })
+        .setTimestamp();
 
     return interaction.editReply({ embeds: [embed] }).catch(() => {});
 }
@@ -1898,7 +1983,20 @@ if (!interaction.deferred && !interaction.replied) {
     addCoins(userId, -amount);
     addCoins(target.id, amount);
 
-    return interaction.editReply(`✅ Đã chuyển **${amount} coin** cho <@${target.id}>`);
+    return interaction.editReply({
+        embeds: [new EmbedBuilder()
+            .setTitle("💸 CHUYỂN COIN THÀNH CÔNG")
+            .setColor("#00cc88")
+            .setDescription(
+                `## 🪙 ${amount.toLocaleString()} coin\n\n` +
+                `> 📤 **Từ:** <@${userId}>\n` +
+                `> 📥 **Đến:** <@${target.id}>\n` +
+                `> 💰 **Số dư của bạn:** ${getCoins(userId).toLocaleString()} coin`
+            )
+            .setFooter({ text: `Giao dịch lúc` })
+            .setTimestamp()
+        ]
+    });
 }
 
     // --- LỆNH GIVE (chỉ GIVECOINS_ID mới dùng được) ---
@@ -1921,10 +2019,16 @@ else if (commandName === 'give') {
     addCoins(target.id, amount);
 
     const embed = new EmbedBuilder()
-        .setTitle("💸 GIVE COIN")
+        .setTitle("💸 CẤP COIN THÀNH CÔNG")
         .setColor("#00ff88")
-        .setDescription(`✅ Đã cấp **${amount.toLocaleString()} 🪙** cho <@${target.id}>`)
-        .addFields({ name: "💰 Số dư mới", value: `**${getCoins(target.id).toLocaleString()} coin**`, inline: true })
+        .setThumbnail(target.displayAvatarURL({ forceStatic: false }))
+        .setDescription(
+            `## 🪙 +${amount.toLocaleString()} coin\n\n` +
+            `> 👤 **Nhận:** <@${target.id}> \`(${target.username})\`\n` +
+            `> 💰 **Số dư mới:** ${getCoins(target.id).toLocaleString()} coin\n` +
+            `> 🔑 **Admin:** <@${interaction.user.id}>`
+        )
+        .setFooter({ text: "Admin • Give Coin" })
         .setTimestamp();
 
     return interaction.editReply({ embeds: [embed] });
@@ -1963,16 +2067,17 @@ else if (commandName === 'give') {
             saveStrikes();
 
             const embed = new EmbedBuilder()
-                .setColor("Orange")
-                .setTitle("⚠️ Staff Strike")
-                .setThumbnail(target.displayAvatarURL())
-                .addFields(
-                    { name: "👤 Staff", value: `<@${target.id}>`, inline: true },
-                    { name: "🛡 By", value: `<@${interaction.user.id}>`, inline: true },
-                    { name: "📌 Reason", value: reason }
+                .setColor("#ff8c00")
+                .setTitle("⚠️ STAFF STRIKE")
+                .setThumbnail(target.displayAvatarURL({ forceStatic: false }))
+                .setDescription(
+                    `> 👤 **Staff:** <@${target.id}> \`(${target.username})\`\n` +
+                    `> 🛡️ **Bởi:** <@${interaction.user.id}>\n` +
+                    `> 📌 **Lý do:** ${reason}\n` +
+                    `> 🕐 **Thời gian:** <t:${Math.floor(Date.now()/1000)}:F>`
                 )
-                .setImage(proof?.url)
-                .setFooter({ text: `Strike ${user.strikes.length}/4` })
+                .setImage(proof?.url || null)
+                .setFooter({ text: `⚠️ Strike ${user.strikes.length}/4 • Đủ 4 sẽ bị gỡ role` })
                 .setTimestamp();
 
             sendStrikeLog(client, embed);
@@ -1999,19 +2104,38 @@ else if (commandName === 'give') {
 
             const type = options.getString("type");
             let text = "";
+            let title = "";
+            let color = 0x00eaff;
 
-            if (type === "top") Object.keys(top).forEach(i => {
-                if (top[i]) text += `🏆 **TOP ${i}** • ${top[i].name}\n`;
-            });
-            if (type === "staff") staff.forEach(s => text += `👑 **${s.username}** • ${s.role}\n`);
-            if (type === "mainers") mainers.forEach(m => text += `🔥 **${m.name}**\n`);
+            if (type === "top") {
+                title = "🏆 DANH SÁCH AOV TOP";
+                color = 0xFFD700;
+                Object.keys(top).forEach(i => {
+                    if (top[i]) {
+                        const medal = i == 1 ? "👑" : i <= 3 ? "🥈🥉".charAt(i-2) : "➤";
+                        text += `${medal} **TOP ${i}** • <@${top[i].id || "0"}> \`${top[i].name}\`\n`;
+                    }
+                });
+            }
+            if (type === "staff") {
+                title = "👑 DANH SÁCH STAFF";
+                color = 0x9b59b6;
+                staff.forEach(s => text += `> 👤 **${s.username}** — \`${s.role}\`\n`);
+            }
+            if (type === "mainers") {
+                title = "🔥 DANH SÁCH MAINER";
+                color = 0xff6b35;
+                mainers.forEach((m, i) => text += `**${i+1}.** 🔥 **${m.name}**\n`);
+            }
 
             return interaction.editReply({
                 embeds: [
                     new EmbedBuilder()
-                        .setTitle(`📋 Danh sách ${type}`)
-                        .setDescription(text || "Không có dữ liệu")
-                        .setColor(0x00eaff)
+                        .setTitle(title || `📋 Danh sách ${type}`)
+                        .setDescription(text || "Chưa có dữ liệu")
+                        .setColor(color)
+                        .setFooter({ text: `Tổng: ${text ? text.split("\n").filter(Boolean).length : 0} mục` })
+                        .setTimestamp()
                 ]
             });
         }
@@ -2131,20 +2255,33 @@ else if (commandName === 'give') {
             if (logChannel) {
                 const embed = new EmbedBuilder()
                     .setColor("#00ffcc")
-                    .setTitle("📢 ROLE UPDATE")
+                    .setTitle("📢 PROMOTE — ROLE UPDATE")
                     .setThumbnail(user.displayAvatarURL({ forceStatic: false }))
-                    .addFields(
-                        { name: " User", value: `<@${user.id}>`, inline: true },
-                        { name: " Role", value: roleName, inline: true },
-                        { name: " Action", value: "Promote", inline: true },
-                        { name: " By", value: `<@${interaction.user.id}>`, inline: true }
+                    .setDescription(
+                        `> 👤 **User:** <@${user.id}> \`(${user.username})\`\n` +
+                        `> 🎭 **Role mới:** \`${roleName}\`\n` +
+                        `> ✅ **Action:** Promote\n` +
+                        `> 🔑 **Bởi:** <@${interaction.user.id}>\n` +
+                        `> 🕐 **Thời gian:** <t:${Math.floor(Date.now()/1000)}:F>`
                     )
                     .setFooter({ text: `ID: ${user.id}`, iconURL: interaction.user.displayAvatarURL() })
                     .setTimestamp();
                 logChannel.send({ embeds: [embed] });
             }
 
-            return interaction.editReply(`✅ ${user.username} đã được set role **${roleName}**`);
+            return interaction.editReply({
+                embeds: [new EmbedBuilder()
+                    .setColor("#00ffcc")
+                    .setTitle("✅ PROMOTE THÀNH CÔNG")
+                    .setThumbnail(user.displayAvatarURL({ forceStatic: false }))
+                    .setDescription(
+                        `> 👤 **User:** <@${user.id}>\n` +
+                        `> 🎭 **Role:** \`${roleName}\`\n` +
+                        `> 🔑 **Bởi:** <@${interaction.user.id}>`
+                    )
+                    .setTimestamp()
+                ]
+            });
         }
 
         /* ===== DEMOTE ===== */
@@ -2174,19 +2311,32 @@ else if (commandName === 'give') {
             if (logChannel) {
                 const embed = new EmbedBuilder()
                     .setColor("#ff4d4d")
-                    .setTitle("📢 ROLE REMOVED")
+                    .setTitle("📢 DEMOTE — ROLE REMOVED")
                     .setThumbnail(user.displayAvatarURL({ forceStatic: false }))
-                    .addFields(
-                        { name: " User", value: `<@${user.id}>`, inline: true },
-                        { name: " Action", value: "Demote", inline: true },
-                        { name: " By", value: `<@${interaction.user.id}>`, inline: true }
+                    .setDescription(
+                        `> 👤 **User:** <@${user.id}> \`(${user.username})\`\n` +
+                        `> ❌ **Action:** Demote — Gỡ toàn bộ role\n` +
+                        `> 🔑 **Bởi:** <@${interaction.user.id}>\n` +
+                        `> 🕐 **Thời gian:** <t:${Math.floor(Date.now()/1000)}:F>`
                     )
                     .setFooter({ text: `ID: ${user.id}`, iconURL: interaction.user.displayAvatarURL() })
                     .setTimestamp();
                 logChannel.send({ embeds: [embed] });
             }
 
-            return interaction.editReply(`❌ Đã gỡ toàn bộ role của ${user.username}`);
+            return interaction.editReply({
+                embeds: [new EmbedBuilder()
+                    .setColor("#ff4d4d")
+                    .setTitle("❌ DEMOTE THÀNH CÔNG")
+                    .setThumbnail(user.displayAvatarURL({ forceStatic: false }))
+                    .setDescription(
+                        `> 👤 **User:** <@${user.id}> \`(${user.username})\`\n` +
+                        `> ❌ **Đã gỡ toàn bộ role staff\n` +
+                        `> 🔑 **Bởi:** <@${interaction.user.id}>`
+                    )
+                    .setTimestamp()
+                ]
+            });
         }
 
         /* ===== MAINER ===== */
@@ -2227,13 +2377,18 @@ else if (commandName === 'give') {
             const ref = options.getString("ref");
 
             const embed = new EmbedBuilder()
-                .setTitle("🏆 THÔNG BÁO THI ĐẤU")
-                .setColor(0x00eaff)
-                .addFields(
-                    { name: "⚔️ Trận đấu", value: `${team1} VS ${team2}` },
-                    { name: "⏰ Thời gian", value: time, inline: true },
-                    { name: "🏁 Referee", value: ref, inline: true }
-                );
+                .setTitle("⚔️ THÔNG BÁO THI ĐẤU")
+                .setColor("#e74c3c")
+                .setDescription(
+                    `## 🏟️ ${team1} ⚔️ ${team2}\n\n` +
+                    `> ⏰ **Thời gian:** ${time}\n` +
+                    `> 🏁 **Referee:** ${ref}\n\n` +
+                    `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                    `Chúc các đội thi đấu công bằng! 🎮\n` +
+                    `━━━━━━━━━━━━━━━━━━━━━━`
+                )
+                .setFooter({ text: "SenselessFish Clan • Tournament" })
+                .setTimestamp();
 
             const dropdown = new StringSelectMenuBuilder()
                 .setCustomId("match_info")
@@ -2256,9 +2411,15 @@ else if (commandName === 'give') {
             const userId = interaction.user.id;
             const balance = getCoins(userId);
             const embed = new EmbedBuilder()
-                .setTitle("💰 SỐ DƯ CỦA BẠN")
-                .setDescription(`<@${userId}> đang có **${balance.toLocaleString()} coin** 🪙`)
+                .setTitle("💰 SỐ DƯ TÀI KHOẢN")
                 .setColor("#f1c40f")
+                .setDescription(
+                    `## 🪙 ${balance.toLocaleString()} coin\n\n` +
+                    `> 👤 <@${userId}>\n` +
+                    `> 💵 Số dư hiện tại của bạn`
+                )
+                .setThumbnail(interaction.user.displayAvatarURL({ forceStatic: false }))
+                .setFooter({ text: "Dùng /daily để nhận coin miễn phí mỗi ngày!" })
                 .setTimestamp();
             return interaction.editReply({ embeds: [embed] }).catch(() => {});
         }
@@ -2267,9 +2428,19 @@ else if (commandName === "baucua") {
     await safeDeferReply(interaction);
 
     const embed = new EmbedBuilder()
-        .setTitle("🎲 BẦU CUA")
-        .setDescription("👉 Chọn linh vật bạn muốn cược")
-        .setColor("#00eaff");
+        .setTitle("🎲 BẦU CUA TÔM CÁ")
+        .setColor("#e67e22")
+        .setDescription(
+            `## 🫙 Lắc Bát!\n\n` +
+            `> 🍐 **BẦU** • 🦀 **CUA** • 🦐 **TÔM**\n` +
+            `> 🐟 **CÁ** • 🐔 **GÀ** • 🦌 **NAI**\n\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━\n` +
+            `Chọn linh vật để đặt cược!\n` +
+            `🎯 Trúng **x2** • x2 **x3** • x3 **x5 JACKPOT!**\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━`
+        )
+        .setFooter({ text: "🎲 Bầu Cua Tôm Cá • Tiệm Cà Phê Capoo" })
+        .setTimestamp();
 
     const row1 = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId("bc_bau").setLabel("🍐 BẦU").setStyle(ButtonStyle.Primary),
@@ -2637,8 +2808,19 @@ if (interaction.customId.startsWith("tdx_")) {
 
                 const embed = new EmbedBuilder()
                     .setTitle("🎫 AI SUPPORT TICKET")
-                    .setDescription(`Xin chào <@${interaction.user.id}>`)
-                    .setColor("#00eaff");
+                    .setColor("#00eaff")
+                    .setThumbnail(interaction.user.displayAvatarURL({ forceStatic: false }))
+                    .setDescription(
+                        `## 👋 Xin chào <@${interaction.user.id}>!\n\n` +
+                        `> 🤖 **AI hỗ trợ** sẵn sàng giúp bạn\n` +
+                        `> 💬 Nhắn tin bất cứ điều gì bạn cần\n` +
+                        `> 🔒 Nhấn nút bên dưới để đóng ticket\n\n` +
+                        `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                        `_Ticket này chỉ bạn và staff có thể xem_\n` +
+                        `━━━━━━━━━━━━━━━━━━━━━━`
+                    )
+                    .setFooter({ text: `Ticket của ${interaction.user.username} • SenselessFish` })
+                    .setTimestamp();
 
                 const row = new ActionRowBuilder().addComponents(
                     new ButtonBuilder()
@@ -2648,7 +2830,7 @@ if (interaction.customId.startsWith("tdx_")) {
                 );
 
                 await ticketChannel.send({ embeds: [embed], components: [row] });
-                return interaction.editReply({ content: `✅ Ticket: ${ticketChannel}` });
+                return interaction.editReply({ content: `✅ Ticket đã tạo: ${ticketChannel}` });
 
             } catch (err) {
                 console.error(err);
@@ -3153,12 +3335,17 @@ app.post("/register", async (req, res) => {
         }
 
         const embed = new EmbedBuilder()
-            .setTitle("📝 ĐĂNG KÝ THI ĐẤU")
+            .setTitle("📝 ĐĂNG KÝ THI ĐẤU MỚI")
             .setColor("#00eaff")
-            .addFields(
-                { name: " Discord", value: discord, inline: true },
-                { name: " Roblox", value: robloxUsername || "N/A", inline: true }
+            .setDescription(
+                `> 🎮 **Discord:** \`${discord}\`\n` +
+                `> 🕹️ **Roblox:** \`${robloxUsername || "N/A"}\`\n` +
+                `> 🕐 **Thời gian:** <t:${Math.floor(Date.now()/1000)}:F>\n\n` +
+                `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                `Vui lòng chọn **Stage** bên dưới để tiếp tục!\n` +
+                `━━━━━━━━━━━━━━━━━━━━━━`
             )
+            .setFooter({ text: "SenselessFish Clan • Đăng ký thi đấu" })
             .setTimestamp();
 
         const menu = new StringSelectMenuBuilder()
