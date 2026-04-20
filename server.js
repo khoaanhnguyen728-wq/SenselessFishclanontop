@@ -36,8 +36,8 @@ console.log("📂 Backup path:", backupPath);
 function findDataDir() {
     const candidates = [
         process.env.DATA_DIR,          // 1. Cấu hình thủ công qua env (ưu tiên cao nhất)
-        process.cwd(),                  // 2. Working dir (nơi file cũ thường nằm)
-        __dirname,                      // 3. Cùng thư mục server.js
+        __dirname,                      // 2. Cùng thư mục server.js (ổn định nhất trên Wispbyte)
+        process.cwd(),                  // 3. Working dir (fallback)
         path.join(__dirname, "data"),   // 4. Subfolder /data
         "/tmp",                         // 5. Luôn writable trên Linux — last resort
     ].filter(Boolean);
@@ -134,9 +134,9 @@ function atomicWrite(filePath, data) {
         // Double-check: đọc lại file đích
         const final = fs.readFileSync(filePath, "utf8").trim();
         if (!final || final.length < 2) throw new Error("File đích bị rỗng sau rename!");
-        console.log(`  💾 Đã ghi: ${path.basename(filePath)} (${final.length} bytes)`);
+        console.log(`  💾 Đã ghi: ${path.basename(filePath)} (${final.length} bytes) → ${path.resolve(filePath)}`);
     } catch(e) {
-        console.error(`❌ atomicWrite FAILED [${filePath}]: ${e.message}`);
+        console.error(`❌ atomicWrite FAILED [${path.resolve(filePath)}]: ${e.message}`);
         // Dọn .tmp nếu còn
         try { if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath); } catch(_) {}
         // Restore từ .bak nếu file đích bị hỏng
@@ -266,6 +266,7 @@ function addCoins(userId, amount) {
     if (coins[userId] === undefined || coins[userId] === null) coins[userId] = 0;
     coins[userId] += amount;
     if (coins[userId] < 0) coins[userId] = 0;
+    console.log(`💰 addCoins: ${userId} → ${coins[userId]} (${amount >= 0 ? "+" : ""}${amount}) | file: ${DB.coins}`);
     saveCoins();
 }
 function setCoins(userId, amount) {
@@ -898,12 +899,14 @@ async function safeDeferReply(interaction, options = {}) {
     try {
         await interaction.deferReply(options);
     } catch (err) {
-        // ✅ FIX InteractionNotReplied:
-        // 40060 = đã được ack bởi lần gọi trước (duplicate interaction).
-        // KHÔNG return im lặng ở đây vì sẽ để editReply chạy tiếp mà interaction
-        // chưa deferred trong process này → gây InteractionNotReplied.
-        // Thay vào đó throw để outer catch xử lý (bỏ qua im lặng).
-        throw err; // Ném tất cả lỗi (10062, 40060, ...) lên outer catch
+        // 40060 = đã ack (WebSocket duplicate) → đánh dấu như đã deferred để editReply hoạt động
+        // 10062 = interaction hết hạn → ném lên để outer catch bỏ qua im lặng
+        if (err?.code === 40060 || err?.message?.includes("already been acknowledged")) {
+            // Trick: gán cờ thủ công để các hàm sau biết không cần reply nữa
+            try { interaction._forceDeferred = true; } catch(_) {}
+            return; // KHÔNG throw — tiếp tục flow bình thường với editReply
+        }
+        throw err; // 10062 và các lỗi khác → ném lên outer catch
     }
 }
 
@@ -912,7 +915,10 @@ async function safeDeferUpdate(interaction) {
     try {
         await interaction.deferUpdate();
     } catch (err) {
-        // ✅ FIX: Throw tất cả lỗi để outer catch xử lý đúng, không return im lặng
+        if (err?.code === 40060 || err?.message?.includes("already been acknowledged")) {
+            try { interaction._forceDeferred = true; } catch(_) {}
+            return; // KHÔNG throw — tiếp tục bình thường
+        }
         throw err;
     }
 }
@@ -3258,7 +3264,7 @@ if (interaction.customId.startsWith("bet_")) {
         };
 
         try {
-            if (interaction.deferred || interaction.replied) {
+            if (interaction.deferred || interaction.replied || interaction._forceDeferred) {
                 await interaction.editReply(errorEmbed).catch(() => {});
             } else {
                 await interaction.reply(errorEmbed).catch(() => {});
