@@ -122,6 +122,16 @@ let mainers    = safeReadJSON(DB.mainers,  []);
 let strikes    = safeReadJSON(DB.strike,   []);
 let dailyData  = safeReadJSON(DB.daily,    {});
 
+// ✅ FIX: Đảm bảo tất cả biến array LUÔN là array, object LUÔN là object
+if (!Array.isArray(blacklist)) { console.warn("⚠️ blacklist.json reset"); blacklist = []; }
+if (!Array.isArray(register))  { console.warn("⚠️ register.json reset"); register = []; }
+if (!Array.isArray(staff))     { console.warn("⚠️ staff.json reset");    staff = []; }
+if (!Array.isArray(mainers))   { console.warn("⚠️ mainers.json reset");  mainers = []; }
+if (!Array.isArray(strikes))   { console.warn("⚠️ strike.json reset");   strikes = []; }
+if (typeof coins !== "object" || Array.isArray(coins))     { console.warn("⚠️ coins.json reset");    coins = {}; }
+if (typeof top !== "object" || Array.isArray(top))         { console.warn("⚠️ top.json reset");      top = {}; }
+if (typeof dailyData !== "object" || Array.isArray(dailyData)) { console.warn("⚠️ daily.json reset"); dailyData = {}; }
+
 for (let i = 1; i <= 20; i++) { if (!top[i]) top[i] = null; }
 
 const saveCoins     = () => atomicWrite(DB.coins,    coins);
@@ -320,10 +330,20 @@ const TICKET_CATEGORY_ID = process.env.TICKET_CATEGORY_ID;
 
 if (!fs.existsSync(DB.giveaways)) fs.writeFileSync(DB.giveaways, "[]");
 let giveaways = safeReadJSON(DB.giveaways, []);
-const saveGiveaways = () => atomicWrite(DB.giveaways, giveaways);
+// ✅ FIX: Đảm bảo giveaways LUÔN là array dù file bị corrupt thành {} hay null
+if (!Array.isArray(giveaways)) {
+    console.warn("⚠️ giveaways.json không phải array — reset về []");
+    giveaways = [];
+    fs.writeFileSync(DB.giveaways, "[]");
+}
+const saveGiveaways = () => {
+    if (!Array.isArray(giveaways)) giveaways = [];
+    atomicWrite(DB.giveaways, giveaways);
+};
 
 // Khi bot khởi động lại — khôi phục timers cho giveaways chưa hết hạn
 function restoreGiveawayTimers() {
+    if (!Array.isArray(giveaways)) { giveaways = []; return; }
     const now = Date.now();
     for (const gw of giveaways.filter(g => !g.ended)) {
         const remaining = gw.endsAt - now;
