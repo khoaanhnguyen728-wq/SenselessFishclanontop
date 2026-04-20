@@ -33,62 +33,112 @@ console.log("📂 Backup path:", backupPath);
 function safeReadJSON(filePath, defaultValue) {
     const tryParse = (fp) => {
         try {
-            if (!fs.existsSync(fp)) return null;
+            if (!fs.existsSync(fp)) { console.log("  ⚪ Không tồn tại:", fp); return null; }
             const raw = fs.readFileSync(fp, "utf8").trim();
-            if (!raw) return null;
-            return JSON.parse(raw);
-        } catch { return null; }
+            if (!raw) { console.log("  ⚪ File rỗng:", fp); return null; }
+            const parsed = JSON.parse(raw);
+            console.log("  ✅ Đọc OK:", fp);
+            return parsed;
+        } catch(e) { console.log("  ❌ Parse lỗi:", fp, e.message); return null; }
     };
     const result = tryParse(filePath);
-    if (result !== null) { console.log("✅ Đọc " + filePath + ": OK"); return result; }
+    if (result !== null) return result;
     const bak = filePath + ".bak";
     const bakResult = tryParse(bak);
-    if (bakResult !== null) { console.warn("⚠️ " + filePath + " lỗi — dùng .bak"); return bakResult; }
-    console.error("❌ Không đọc được " + filePath + " — dùng mặc định");
+    if (bakResult !== null) { console.warn("⚠️ Dùng .bak:", bak); return bakResult; }
+    console.error("❌ Không đọc được — dùng mặc định:", filePath);
     return defaultValue;
 }
 
 // Ghi file an toàn: backup .bak trước, ghi thẳng (tránh EXDEV trên Wispbyte)
 function atomicWrite(filePath, data) {
-    try { if (fs.existsSync(filePath)) fs.copyFileSync(filePath, filePath + ".bak"); } catch (_) {}
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+    try {
+        // Backup file hiện tại trước khi ghi
+        if (fs.existsSync(filePath)) fs.copyFileSync(filePath, filePath + ".bak");
+    } catch (_) {}
+    try {
+        fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+    } catch(e) {
+        console.error("❌ atomicWrite FAILED:", filePath, e.message);
+    }
 }
 
+// ✅ FIX ĐÚNG: Tự động phát hiện thư mục dữ liệu
+// File JSON cũ nằm ở process.cwd() (code cũ dùng path tương đối).
+// Nếu coins.json tồn tại ở cwd → dùng cwd (giữ nguyên data cũ).
+// Nếu không → dùng __dirname (cài mới).
+// Sau đó nếu 2 thư mục khác nhau, tự MIGRATE file cũ sang vị trí mới.
+const _cwdDir    = process.cwd();
+const _dirName   = __dirname;
+const _hasCwdData = fs.existsSync(path.join(_cwdDir, "coins.json"));
+const DATA_DIR   = _hasCwdData ? _cwdDir : _dirName;
+
+console.log("📁 CWD     :", _cwdDir);
+console.log("📁 __dirname:", _dirName);
+console.log("📁 DATA_DIR :", DATA_DIR);
+
+// Nếu file đang ở cwd nhưng server.js chạy từ __dirname khác → migrate 1 lần
+if (_hasCwdData && _cwdDir !== _dirName) {
+    const filesToMigrate = ["coins.json","blacklist.json","top.json","register.json",
+                            "staff.json","mainers.json","strike.json","daily.json","giveaways.json"];
+    for (const f of filesToMigrate) {
+        const src  = path.join(_cwdDir, f);
+        const dest = path.join(_dirName, f);
+        if (fs.existsSync(src) && !fs.existsSync(dest)) {
+            try { fs.copyFileSync(src, dest); console.log("📦 Migrated:", f); } catch(e) { console.warn("⚠️ Migrate lỗi:", f, e.message); }
+        }
+    }
+}
+
+const DB = {
+    coins:     path.join(DATA_DIR, "coins.json"),
+    blacklist: path.join(DATA_DIR, "blacklist.json"),
+    top:       path.join(DATA_DIR, "top.json"),
+    register:  path.join(DATA_DIR, "register.json"),
+    staff:     path.join(DATA_DIR, "staff.json"),
+    mainers:   path.join(DATA_DIR, "mainers.json"),
+    strike:    path.join(DATA_DIR, "strike.json"),
+    daily:     path.join(DATA_DIR, "daily.json"),
+    giveaways: path.join(DATA_DIR, "giveaways.json"),
+};
+
 // Tạo file nếu chưa có
-if (!fs.existsSync("coins.json"))     fs.writeFileSync("coins.json",    "{}");
-if (!fs.existsSync("blacklist.json")) fs.writeFileSync("blacklist.json","[]");
-if (!fs.existsSync("top.json"))       fs.writeFileSync("top.json",      "{}");
-if (!fs.existsSync("register.json"))  fs.writeFileSync("register.json", "[]");
-if (!fs.existsSync("staff.json"))     fs.writeFileSync("staff.json",    "[]");
-if (!fs.existsSync("mainers.json"))   fs.writeFileSync("mainers.json",  "[]");
-if (!fs.existsSync("strike.json"))    fs.writeFileSync("strike.json",   "[]");
-if (!fs.existsSync("daily.json"))     fs.writeFileSync("daily.json",    "{}");
+if (!fs.existsSync(DB.coins))     fs.writeFileSync(DB.coins,    "{}");
+if (!fs.existsSync(DB.blacklist)) fs.writeFileSync(DB.blacklist,"[]");
+if (!fs.existsSync(DB.top))       fs.writeFileSync(DB.top,      "{}");
+if (!fs.existsSync(DB.register))  fs.writeFileSync(DB.register, "[]");
+if (!fs.existsSync(DB.staff))     fs.writeFileSync(DB.staff,    "[]");
+if (!fs.existsSync(DB.mainers))   fs.writeFileSync(DB.mainers,  "[]");
+if (!fs.existsSync(DB.strike))    fs.writeFileSync(DB.strike,   "[]");
+if (!fs.existsSync(DB.daily))     fs.writeFileSync(DB.daily,    "{}");
 
 // Khai báo biến TRƯỚC các hàm dùng chúng — bắt buộc vì let không được hoisted
-let coins     = safeReadJSON("coins.json",    {});
-let blacklist  = safeReadJSON("blacklist.json",[]);
-let top        = safeReadJSON("top.json",      {});
-let register   = safeReadJSON("register.json", []);
-let staff      = safeReadJSON("staff.json",    []);
-let mainers    = safeReadJSON("mainers.json",  []);
-let strikes    = safeReadJSON("strike.json",   []);
-let dailyData  = safeReadJSON("daily.json",    {});
+let coins      = safeReadJSON(DB.coins,    {});
+let blacklist  = safeReadJSON(DB.blacklist,[]);
+let top        = safeReadJSON(DB.top,      {});
+let register   = safeReadJSON(DB.register, []);
+let staff      = safeReadJSON(DB.staff,    []);
+let mainers    = safeReadJSON(DB.mainers,  []);
+let strikes    = safeReadJSON(DB.strike,   []);
+let dailyData  = safeReadJSON(DB.daily,    {});
 
 for (let i = 1; i <= 20; i++) { if (!top[i]) top[i] = null; }
 
-const saveCoins     = () => atomicWrite("coins.json",    coins);
-const saveBlacklist = () => atomicWrite("blacklist.json",blacklist);
-const saveTop       = () => atomicWrite("top.json",      top);
-const saveStaff     = () => atomicWrite("staff.json",    staff);
-const saveRegister  = () => atomicWrite("register.json", register);
-const saveMainers   = () => atomicWrite("mainers.json",  mainers);
-const saveStrikes   = () => atomicWrite("strike.json",   strikes);
-const saveDaily     = () => atomicWrite("daily.json",    dailyData);
+const saveCoins     = () => atomicWrite(DB.coins,    coins);
+const saveBlacklist = () => atomicWrite(DB.blacklist,blacklist);
+const saveTop       = () => atomicWrite(DB.top,      top);
+const saveStaff     = () => atomicWrite(DB.staff,    staff);
+const saveRegister  = () => atomicWrite(DB.register, register);
+const saveMainers   = () => atomicWrite(DB.mainers,  mainers);
+const saveStrikes   = () => atomicWrite(DB.strike,   strikes);
+const saveDaily     = () => atomicWrite(DB.daily,    dailyData);
 
-console.log("📊 coins.json:  " + Object.keys(coins).length + " users");
+console.log("━━━━━━━━━━━ DATABASE STARTUP ━━━━━━━━━━━");
+console.log("📊 coins.json:  " + Object.keys(coins).length + " users | tổng:", Object.values(coins).reduce((a,b)=>a+(b||0),0), "coin");
 console.log("📊 daily.json:  " + Object.keys(dailyData).length + " users");
 console.log("📊 staff.json:  " + staff.length + " staff");
 console.log("📊 strike.json: " + strikes.length + " strikes");
+console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
 // Coin helpers — PHẢI đứng SAU khai báo let coins ở trên
 function getCoins(userId) {
@@ -106,11 +156,11 @@ function setCoins(userId, amount) {
     saveCoins();
 }
 function reloadCoins() {
-    const fresh = safeReadJSON("coins.json", null);
+    const fresh = safeReadJSON(DB.coins, null);
     if (fresh !== null) { coins = fresh; console.log("🔄 Reload coins: " + Object.keys(coins).length + " users"); }
 }
 function reloadDaily() {
-    const fresh = safeReadJSON("daily.json", null);
+    const fresh = safeReadJSON(DB.daily, null);
     if (fresh !== null) { dailyData = fresh; console.log("🔄 Reload daily: " + Object.keys(dailyData).length + " users"); }
 }
 const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require("@google/generative-ai");
@@ -268,9 +318,9 @@ const ADMIN_ROLE = process.env.ADMIN_ROLE;
 const STAFF_ROLE_ID = process.env.STAFF_ROLE_ID;
 const TICKET_CATEGORY_ID = process.env.TICKET_CATEGORY_ID;
 
-if (!fs.existsSync("giveaways.json")) fs.writeFileSync("giveaways.json", "[]");
-let giveaways = safeReadJSON("giveaways.json", []);
-const saveGiveaways = () => atomicWrite("giveaways.json", giveaways);
+if (!fs.existsSync(DB.giveaways)) fs.writeFileSync(DB.giveaways, "[]");
+let giveaways = safeReadJSON(DB.giveaways, []);
+const saveGiveaways = () => atomicWrite(DB.giveaways, giveaways);
 
 // Khi bot khởi động lại — khôi phục timers cho giveaways chưa hết hạn
 function restoreGiveawayTimers() {
@@ -771,12 +821,14 @@ const CMD_COOLDOWNS = {
     // ── Buttons ───────────────────────────────────────────
     "tai":          3_000,   //  3 giây
     "xiu":          3_000,
+    "tx_":          3_000,   // prefix — tài xỉu nút mới
     "bc_":          3_000,   // prefix — bầu cua chọn linh vật
     "tdx_":         8_000,   // prefix — tung đồng xu bấm nút
 
     // ── Modals ────────────────────────────────────────────
     "bc_bet_":     10_000,   // prefix — bầu cua nhập tiền
-    "bet_":        10_000,   // prefix — tài xỉu nhập tiền
+    "txbet_":      10_000,   // prefix — tài xỉu nhập tiền (mới)
+    "bet_":        10_000,   // prefix — tài xỉu nhập tiền (cũ)
     "submit_score":30_000,   // 30 giây
     "match_info":   5_000,
     "giveaway":    10_000,   // 10 giây
@@ -2157,23 +2209,57 @@ else if (commandName === "baucua") {
         else if (commandName === "taixiu") {
             await safeDeferReply(interaction);
 
-            const embed = new EmbedBuilder()
-                .setTitle("🎲 TÀI XỈU")
-                .setDescription("👉 Chọn Tài hoặc Xỉu\n💰 Sau đó nhập tiền")
-                .setColor("Yellow");
+            // ── Payouts cho từng ô số ──────────────────────────
+            // Số 3 và 18 (triple only): x150 | 4/17: x60 | 5/16: x30 | 6/15: x18
+            // 7/14: x12 | 8/13: x8 | 9/10/11/12: x6
 
-            const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setCustomId("tai")
-                    .setLabel("🔥 TÀI")
-                    .setStyle(ButtonStyle.Danger),
-                new ButtonBuilder()
-                    .setCustomId("xiu")
-                    .setLabel("❄️ XỈU")
-                    .setStyle(ButtonStyle.Primary)
+            const txEmbed = new EmbedBuilder()
+                .setTitle("🎲 TÀI XỈU")
+                .setColor("#1a1a2e")
+                .setDescription(
+                    "```\n" +
+                    "  🎰  CHỌN Ô CƯỢC CỦA BẠN  🎰\n" +
+                    "```\n" +
+                    "> 🔥 **Tài (11-18)** / ❄️ **Xỉu (3-10)** → x**1.95**\n" +
+                    "> 🟡 **Chẵn** / 🟣 **Lẻ** → x**1.95**\n" +
+                    "> 🎯 **Số lẻ 3/18** → x**150** | **4/17** → x**60**\n" +
+                    "> 🎯 **5/16** → x**30** | **6/15** → x**18** | **7/14** → x**12**\n" +
+                    "> 🎯 **8/13** → x**8** | **9–12** → x**6**"
+                )
+                .setFooter({ text: "🎲 Tài Xỉu • Tiệm Cà Phê Capoo" })
+                .setTimestamp();
+
+            // Row 1: Xỉu | Tài | Chẵn | Lẻ
+            const row1 = new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId("tx_xiu").setLabel("❄️ Xỉu (3-10)").setStyle(ButtonStyle.Success),
+                new ButtonBuilder().setCustomId("tx_tai").setLabel("🔥 Tài (11-18)").setStyle(ButtonStyle.Success),
+                new ButtonBuilder().setCustomId("tx_chan").setLabel("🟡 Chẵn").setStyle(ButtonStyle.Danger),
+                new ButtonBuilder().setCustomId("tx_le").setLabel("🟣 Lẻ").setStyle(ButtonStyle.Danger)
+            );
+            // Row 2: Số 3 → 7
+            const row2 = new ActionRowBuilder().addComponents(
+                ...[3,4,5,6,7].map(n =>
+                    new ButtonBuilder().setCustomId(`tx_so_${n}`).setLabel(`Số ${n}`).setStyle(ButtonStyle.Primary)
+                )
+            );
+            // Row 3: Số 8 → 12
+            const row3 = new ActionRowBuilder().addComponents(
+                ...[8,9,10,11,12].map(n =>
+                    new ButtonBuilder().setCustomId(`tx_so_${n}`).setLabel(`Số ${n}`).setStyle(ButtonStyle.Primary)
+                )
+            );
+            // Row 4: Số 13 → 17
+            const row4 = new ActionRowBuilder().addComponents(
+                ...[13,14,15,16,17].map(n =>
+                    new ButtonBuilder().setCustomId(`tx_so_${n}`).setLabel(`Số ${n}`).setStyle(ButtonStyle.Primary)
+                )
+            );
+            // Row 5: Số 18
+            const row5 = new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId("tx_so_18").setLabel("Số 18").setStyle(ButtonStyle.Primary)
             );
 
-            return interaction.editReply({ embeds: [embed], components: [row] });
+            return interaction.editReply({ embeds: [txEmbed], components: [row1, row2, row3, row4, row5] });
         }
 
     }
@@ -2371,6 +2457,35 @@ if (interaction.customId.startsWith("tdx_")) {
     return;
 }
 
+        // ── Tài Xỉu: nút chọn ô cược → mở modal nhập tiền ──
+        if (interaction.customId.startsWith("tx_")) {
+            const choice = interaction.customId.slice(3); // "tai", "xiu", "chan", "le", "so_3"...
+            const labelMap = {
+                tai: "🔥 Tài (11-18)",
+                xiu: "❄️ Xỉu (3-10)",
+                chan: "🟡 Chẵn",
+                le: "🟣 Lẻ",
+            };
+            let label = labelMap[choice];
+            if (!label && choice.startsWith("so_")) {
+                label = `🎯 Số ${choice.split("_")[1]}`;
+            }
+            const modal = new ModalBuilder()
+                .setCustomId(`txbet_${choice}`)
+                .setTitle(`Cược: ${label}`);
+
+            const input = new TextInputBuilder()
+                .setCustomId("money")
+                .setLabel("Số tiền cược (coin)")
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder("Ví dụ: 500")
+                .setRequired(true);
+
+            modal.addComponents(new ActionRowBuilder().addComponents(input));
+            return interaction.showModal(modal);
+        }
+
+        // ── Nút tai/xiu cũ (backwards compat) ──
         if (interaction.customId === "tai" || interaction.customId === "xiu") {
             const modal = new ModalBuilder()
                 .setCustomId(`bet_${interaction.customId}`)
@@ -2502,6 +2617,143 @@ if (interaction.customId.startsWith("tdx_")) {
                 content: `✅ Đã gửi!\nStage: **${stage}**\nScore: **${score}**`
             });
         }
+if (interaction.customId.startsWith("txbet_")) {
+    try {
+        const userId = interaction.user.id;
+        const choice = interaction.customId.slice(6); // "tai","xiu","chan","le","so_3"...
+
+        if (!interaction.deferred && !interaction.replied) await safeDeferReply(interaction);
+
+        const money = parseInt(interaction.fields.getTextInputValue("money"));
+        if (isNaN(money) || money <= 0) {
+            return interaction.editReply({ content: "❌ Tiền cược không hợp lệ!" });
+        }
+
+        const currentBalance = getCoins(userId);
+        if (currentBalance < money) {
+            return interaction.editReply({
+                content: `❌ Không đủ coin! Bạn có: **${currentBalance.toLocaleString()} 🪙**`
+            });
+        }
+
+        addCoins(userId, -money);
+
+        // ── Payout table ──
+        const payoutMap = {
+            3: 150, 4: 60, 5: 30, 6: 18, 7: 12, 8: 8,
+            9: 6, 10: 6, 11: 6, 12: 6,
+            13: 8, 14: 12, 15: 18, 16: 30, 17: 60, 18: 150
+        };
+
+        const labelMap = {
+            tai: "🔥 Tài (11-18)", xiu: "❄️ Xỉu (3-10)",
+            chan: "🟡 Chẵn", le: "🟣 Lẻ"
+        };
+        let choiceLabel = labelMap[choice];
+        let targetNum = null;
+        if (choice.startsWith("so_")) {
+            targetNum = parseInt(choice.split("_")[1]);
+            choiceLabel = `🎯 Số ${targetNum}`;
+        }
+
+        const diceEmojiMap = { 1:"⚀", 2:"⚁", 3:"⚂", 4:"⚃", 5:"⚄", 6:"⚅" };
+
+        // 🎲 Animation lắc xúc xắc
+        const animFrames = [
+            "┃ 🎲  Đang lắc...  🎲 ┃",
+            "┃ 🎰  Đang lắc...  🎰 ┃",
+            "┃ 🎲  Sắp ra...   🎲 ┃",
+            "┃ 🎰  Kết quả!    🎰 ┃",
+        ];
+        const bars = ["⬛⬛⬛⬛⬛⬛⬛⬛", "🟥⬛⬛⬛⬛⬛⬛⬛", "🟥🟧⬛⬛⬛⬛⬛⬛", "🟥🟧🟨🟩⬛⬛⬛⬛",
+                      "🟥🟧🟨🟩🟦⬛⬛⬛", "🟥🟧🟨🟩🟦🟣⬛⬛", "🟥🟧🟨🟩🟦🟣🟤⬛", "🟥🟧🟨🟩🟦🟣🟤⬜"];
+        const getRandomDice = () => {
+            const d = [Math.floor(Math.random()*6)+1, Math.floor(Math.random()*6)+1, Math.floor(Math.random()*6)+1];
+            return d.map(x => diceEmojiMap[x]).join("  +  ");
+        };
+
+        for (let i = 0; i < 4; i++) {
+            await interaction.editReply({
+                embeds: [
+                    new EmbedBuilder()
+                        .setTitle("🎲 TÀI XỈU — Đang Lắc...")
+                        .setColor(i % 2 === 0 ? "#ff6b35" : "#0099ff")
+                        .setDescription(
+                            `\`\`\`\n${animFrames[i]}\n\`\`\`\n` +
+                            `## ${getRandomDice()}\n\n` +
+                            `${bars[i * 2]}\n\n` +
+                            `🎯 **Ô cược:** ${choiceLabel}\n` +
+                            `💵 **Tiền cược:** ${money.toLocaleString()} 🪙`
+                        )
+                ]
+            });
+            await new Promise(r => setTimeout(r, 700));
+        }
+
+        // ── Tung xúc xắc thật ──
+        const dice = [
+            Math.floor(Math.random()*6)+1,
+            Math.floor(Math.random()*6)+1,
+            Math.floor(Math.random()*6)+1
+        ];
+        const total = dice.reduce((a,b) => a+b, 0);
+        const diceDisplay = dice.map(d => diceEmojiMap[d]).join("  +  ");
+
+        // Kiểm tra thắng
+        let actualWin = false;
+        let payout = 0;
+        if (choice === "tai")  { actualWin = total >= 11; payout = Math.floor(money * 1.95); }
+        else if (choice === "xiu") { actualWin = total <= 10; payout = Math.floor(money * 1.95); }
+        else if (choice === "chan") { actualWin = total % 2 === 0; payout = Math.floor(money * 1.95); }
+        else if (choice === "le")  { actualWin = total % 2 !== 0; payout = Math.floor(money * 1.95); }
+        else if (targetNum !== null) {
+            actualWin = total === targetNum;
+            payout = money * (payoutMap[targetNum] || 6);
+        }
+
+        if (actualWin) addCoins(userId, money + payout);
+
+        const totalLabel = total >= 11
+            ? `**TÀI 🔥** (${total})`
+            : `**XỈU ❄️** (${total})`;
+        const parityLabel = total % 2 === 0 ? "**CHẴN 🟡**" : "**LẺ 🟣**";
+
+        const resultEmbed = new EmbedBuilder()
+            .setTitle(actualWin ? "🎉 THẮNG RỒI!" : "💀 THUA MẤT!")
+            .setColor(actualWin ? "#00ff88" : "#ff3333")
+            .setDescription(
+                `## ${diceDisplay}\n\n` +
+                `🎲 **Tổng:** ${total} → ${totalLabel} | ${parityLabel}\n\n` +
+                `🎯 **Ô cược:** ${choiceLabel}\n\n` +
+                (actualWin
+                    ? `> 🎊 **THẮNG** **+${payout.toLocaleString()} 🪙** (x${
+                        choice==="tai"||choice==="xiu"||choice==="chan"||choice==="le"
+                          ? "1.95" : payoutMap[targetNum]
+                      })`
+                    : `> 😢 **THUA** **-${money.toLocaleString()} 🪙**`) +
+                `\n\n💰 **Số dư:** ${getCoins(userId).toLocaleString()} 🪙`
+            )
+            .setFooter({ text: "🎲 Tài Xỉu • Tiệm Cà Phê Capoo" })
+            .setTimestamp();
+
+        // Nút chơi lại
+        const replayRow1 = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId("tx_xiu").setLabel("❄️ Xỉu").setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId("tx_tai").setLabel("🔥 Tài").setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId("tx_chan").setLabel("🟡 Chẵn").setStyle(ButtonStyle.Danger),
+            new ButtonBuilder().setCustomId("tx_le").setLabel("🟣 Lẻ").setStyle(ButtonStyle.Danger)
+        );
+
+        return interaction.editReply({ content: null, embeds: [resultEmbed], components: [replayRow1] });
+
+    } catch (err) {
+        console.error("🚨 TXBET_ MODAL ERROR:", err);
+        if (interaction.deferred || interaction.replied) {
+            return interaction.editReply({ content: "❌ Có lỗi xảy ra! Vui lòng thử lại." }).catch(() => {});
+        }
+        return interaction.reply({ content: "❌ Có lỗi xảy ra! Vui lòng thử lại.", flags: MessageFlags.Ephemeral }).catch(() => {});
+    }
+}
 if (interaction.customId.startsWith("bc_bet_")) {
     const userId = interaction.user.id;
 
