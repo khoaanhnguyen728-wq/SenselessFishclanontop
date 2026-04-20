@@ -29,67 +29,110 @@ console.log("📂 Backup path:", backupPath);
 
 /*=== DATABASE — tất cả khai báo và hàm helper ở đây, TRƯỚC mọi thứ khác ===*/
 
-// Đọc JSON an toàn — fallback sang .bak nếu file chính lỗi
+// ══════════════════════════════════════════════════════════════════
+// TÌM THƯ MỤC GHI ĐƯỢC — test write thực sự, không đoán mò
+// Ưu tiên: env DATA_DIR → cwd (có data cũ) → __dirname → /tmp
+// ══════════════════════════════════════════════════════════════════
+function findDataDir() {
+    const candidates = [
+        process.env.DATA_DIR,          // 1. Cấu hình thủ công qua env (ưu tiên cao nhất)
+        process.cwd(),                  // 2. Working dir (nơi file cũ thường nằm)
+        __dirname,                      // 3. Cùng thư mục server.js
+        path.join(__dirname, "data"),   // 4. Subfolder /data
+        "/tmp",                         // 5. Luôn writable trên Linux — last resort
+    ].filter(Boolean);
+
+    // Pass 1: tìm thư mục có data CŨ + writable
+    for (const dir of candidates) {
+        try {
+            if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+            // Test write thực sự
+            const testFile = path.join(dir, ".__write_test__");
+            fs.writeFileSync(testFile, "1", "utf8");
+            fs.unlinkSync(testFile);
+            // Ưu tiên nơi đã có coins.json (data cũ)
+            if (fs.existsSync(path.join(dir, "coins.json"))) {
+                console.log(`✅ DATA_DIR (có data cũ): ${dir}`);
+                return dir;
+            }
+        } catch(e) {
+            console.log(`⚠️ Không ghi được vào: ${dir} — ${e.message}`);
+        }
+    }
+    // Pass 2: lấy thư mục writable đầu tiên
+    for (const dir of candidates) {
+        try {
+            if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+            const testFile = path.join(dir, ".__write_test__");
+            fs.writeFileSync(testFile, "1", "utf8");
+            fs.unlinkSync(testFile);
+            console.log(`✅ DATA_DIR (writable mới): ${dir}`);
+            return dir;
+        } catch(_) {}
+    }
+    console.error("💀 KHÔNG TÌM ĐƯỢC THƯ MỤC GHI ĐƯỢC — dùng cwd và cầu trời!");
+    return process.cwd();
+}
+
+const DATA_DIR = findDataDir();
+console.log("📁 CWD      :", process.cwd());
+console.log("📁 __dirname:", __dirname);
+console.log("📁 DATA_DIR :", DATA_DIR);
+
+// ══════════════════════════════════════════════════════════════════
+// ĐỌC JSON AN TOÀN — fallback .bak nếu file chính lỗi/rỗng
+// ══════════════════════════════════════════════════════════════════
 function safeReadJSON(filePath, defaultValue) {
     const tryParse = (fp) => {
         try {
-            if (!fs.existsSync(fp)) { console.log("  ⚪ Không tồn tại:", fp); return null; }
+            if (!fs.existsSync(fp)) return null;
             const raw = fs.readFileSync(fp, "utf8").trim();
-            if (!raw) { console.log("  ⚪ File rỗng:", fp); return null; }
-            const parsed = JSON.parse(raw);
-            console.log("  ✅ Đọc OK:", fp);
-            return parsed;
-        } catch(e) { console.log("  ❌ Parse lỗi:", fp, e.message); return null; }
+            if (!raw || raw === "null") return null;
+            return JSON.parse(raw);
+        } catch(e) {
+            console.error(`❌ Parse lỗi [${fp}]: ${e.message}`);
+            return null;
+        }
     };
     const result = tryParse(filePath);
-    if (result !== null) return result;
+    if (result !== null) { console.log(`  ✅ Đọc OK: ${filePath}`); return result; }
     const bak = filePath + ".bak";
     const bakResult = tryParse(bak);
-    if (bakResult !== null) { console.warn("⚠️ Dùng .bak:", bak); return bakResult; }
-    console.error("❌ Không đọc được — dùng mặc định:", filePath);
+    if (bakResult !== null) { console.warn(`  ⚠️ Dùng .bak: ${bak}`); return bakResult; }
+    console.error(`  ❌ Không đọc được → dùng mặc định: ${filePath}`);
     return defaultValue;
 }
 
-// Ghi file an toàn: backup .bak trước, ghi thẳng (tránh EXDEV trên Wispbyte)
+// ══════════════════════════════════════════════════════════════════
+// GHI FILE AN TOÀN — backup .bak trước, verify sau khi ghi
+// ══════════════════════════════════════════════════════════════════
 function atomicWrite(filePath, data) {
     try {
-        // Backup file hiện tại trước khi ghi
-        if (fs.existsSync(filePath)) fs.copyFileSync(filePath, filePath + ".bak");
-    } catch (_) {}
-    try {
-        fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
-    } catch(e) {
-        console.error("❌ atomicWrite FAILED:", filePath, e.message);
-    }
-}
-
-// ✅ FIX ĐÚNG: Tự động phát hiện thư mục dữ liệu
-// File JSON cũ nằm ở process.cwd() (code cũ dùng path tương đối).
-// Nếu coins.json tồn tại ở cwd → dùng cwd (giữ nguyên data cũ).
-// Nếu không → dùng __dirname (cài mới).
-// Sau đó nếu 2 thư mục khác nhau, tự MIGRATE file cũ sang vị trí mới.
-const _cwdDir    = process.cwd();
-const _dirName   = __dirname;
-const _hasCwdData = fs.existsSync(path.join(_cwdDir, "coins.json"));
-const DATA_DIR   = _hasCwdData ? _cwdDir : _dirName;
-
-console.log("📁 CWD     :", _cwdDir);
-console.log("📁 __dirname:", _dirName);
-console.log("📁 DATA_DIR :", DATA_DIR);
-
-// Nếu file đang ở cwd nhưng server.js chạy từ __dirname khác → migrate 1 lần
-if (_hasCwdData && _cwdDir !== _dirName) {
-    const filesToMigrate = ["coins.json","blacklist.json","top.json","register.json",
-                            "staff.json","mainers.json","strike.json","daily.json","giveaways.json"];
-    for (const f of filesToMigrate) {
-        const src  = path.join(_cwdDir, f);
-        const dest = path.join(_dirName, f);
-        if (fs.existsSync(src) && !fs.existsSync(dest)) {
-            try { fs.copyFileSync(src, dest); console.log("📦 Migrated:", f); } catch(e) { console.warn("⚠️ Migrate lỗi:", f, e.message); }
+        if (fs.existsSync(filePath)) {
+            fs.copyFileSync(filePath, filePath + ".bak");
         }
+    } catch(_) {}
+    try {
+        const json = JSON.stringify(data, null, 2);
+        fs.writeFileSync(filePath, json, "utf8");
+        // Verify: đọc lại kiểm tra size
+        const written = fs.readFileSync(filePath, "utf8");
+        if (written.length < 2) throw new Error("File ghi ra bị rỗng!");
+    } catch(e) {
+        console.error(`❌ atomicWrite FAILED [${filePath}]: ${e.message}`);
+        // Thử restore từ bak
+        try {
+            if (fs.existsSync(filePath + ".bak")) {
+                fs.copyFileSync(filePath + ".bak", filePath);
+                console.warn(`  ↩️ Đã restore từ .bak`);
+            }
+        } catch(_) {}
     }
 }
 
+// ══════════════════════════════════════════════════════════════════
+// KHỞI TẠO FILE — chỉ tạo nếu chưa có
+// ══════════════════════════════════════════════════════════════════
 const DB = {
     coins:     path.join(DATA_DIR, "coins.json"),
     blacklist: path.join(DATA_DIR, "blacklist.json"),
@@ -102,7 +145,6 @@ const DB = {
     giveaways: path.join(DATA_DIR, "giveaways.json"),
 };
 
-// Tạo file nếu chưa có
 if (!fs.existsSync(DB.coins))     fs.writeFileSync(DB.coins,    "{}");
 if (!fs.existsSync(DB.blacklist)) fs.writeFileSync(DB.blacklist,"[]");
 if (!fs.existsSync(DB.top))       fs.writeFileSync(DB.top,      "{}");
@@ -112,7 +154,9 @@ if (!fs.existsSync(DB.mainers))   fs.writeFileSync(DB.mainers,  "[]");
 if (!fs.existsSync(DB.strike))    fs.writeFileSync(DB.strike,   "[]");
 if (!fs.existsSync(DB.daily))     fs.writeFileSync(DB.daily,    "{}");
 
-// Khai báo biến TRƯỚC các hàm dùng chúng — bắt buộc vì let không được hoisted
+// ══════════════════════════════════════════════════════════════════
+// ĐỌC DATA VÀO BỘ NHỚ
+// ══════════════════════════════════════════════════════════════════
 let coins      = safeReadJSON(DB.coins,    {});
 let blacklist  = safeReadJSON(DB.blacklist,[]);
 let top        = safeReadJSON(DB.top,      {});
@@ -122,18 +166,21 @@ let mainers    = safeReadJSON(DB.mainers,  []);
 let strikes    = safeReadJSON(DB.strike,   []);
 let dailyData  = safeReadJSON(DB.daily,    {});
 
-// ✅ FIX: Đảm bảo tất cả biến array LUÔN là array, object LUÔN là object
-if (!Array.isArray(blacklist)) { console.warn("⚠️ blacklist.json reset"); blacklist = []; }
-if (!Array.isArray(register))  { console.warn("⚠️ register.json reset"); register = []; }
-if (!Array.isArray(staff))     { console.warn("⚠️ staff.json reset");    staff = []; }
-if (!Array.isArray(mainers))   { console.warn("⚠️ mainers.json reset");  mainers = []; }
-if (!Array.isArray(strikes))   { console.warn("⚠️ strike.json reset");   strikes = []; }
-if (typeof coins !== "object" || Array.isArray(coins))     { console.warn("⚠️ coins.json reset");    coins = {}; }
-if (typeof top !== "object" || Array.isArray(top))         { console.warn("⚠️ top.json reset");      top = {}; }
-if (typeof dailyData !== "object" || Array.isArray(dailyData)) { console.warn("⚠️ daily.json reset"); dailyData = {}; }
+// Đảm bảo đúng kiểu — phòng file bị corrupt
+if (!Array.isArray(blacklist)) { console.warn("⚠️ blacklist reset []"); blacklist = []; }
+if (!Array.isArray(register))  { console.warn("⚠️ register reset []");  register = []; }
+if (!Array.isArray(staff))     { console.warn("⚠️ staff reset []");     staff = []; }
+if (!Array.isArray(mainers))   { console.warn("⚠️ mainers reset []");   mainers = []; }
+if (!Array.isArray(strikes))   { console.warn("⚠️ strikes reset []");   strikes = []; }
+if (typeof coins !== "object" || Array.isArray(coins))         { console.warn("⚠️ coins reset {}");    coins = {}; }
+if (typeof top !== "object"   || Array.isArray(top))           { console.warn("⚠️ top reset {}");      top = {}; }
+if (typeof dailyData !== "object" || Array.isArray(dailyData)) { console.warn("⚠️ daily reset {}");    dailyData = {}; }
 
 for (let i = 1; i <= 20; i++) { if (!top[i]) top[i] = null; }
 
+// ══════════════════════════════════════════════════════════════════
+// SAVE FUNCTIONS
+// ══════════════════════════════════════════════════════════════════
 const saveCoins     = () => atomicWrite(DB.coins,    coins);
 const saveBlacklist = () => atomicWrite(DB.blacklist,blacklist);
 const saveTop       = () => atomicWrite(DB.top,      top);
@@ -143,11 +190,22 @@ const saveMainers   = () => atomicWrite(DB.mainers,  mainers);
 const saveStrikes   = () => atomicWrite(DB.strike,   strikes);
 const saveDaily     = () => atomicWrite(DB.daily,    dailyData);
 
+// ══════════════════════════════════════════════════════════════════
+// STARTUP LOG
+// ══════════════════════════════════════════════════════════════════
 console.log("━━━━━━━━━━━ DATABASE STARTUP ━━━━━━━━━━━");
-console.log("📊 coins.json:  " + Object.keys(coins).length + " users | tổng:", Object.values(coins).reduce((a,b)=>a+(b||0),0), "coin");
-console.log("📊 daily.json:  " + Object.keys(dailyData).length + " users");
-console.log("📊 staff.json:  " + staff.length + " staff");
-console.log("📊 strike.json: " + strikes.length + " strikes");
+console.log(`📊 coins   : ${Object.keys(coins).length} users | tổng ${Object.values(coins).reduce((a,b)=>a+(typeof b==="number"?b:0),0).toLocaleString()} coin`);
+console.log(`📊 daily   : ${Object.keys(dailyData).length} users`);
+console.log(`📊 staff   : ${staff.length}`);
+console.log(`📊 strikes : ${strikes.length}`);
+// Test ghi thực tế ngay lúc khởi động
+try {
+    fs.writeFileSync(DB.coins, JSON.stringify(coins, null, 2), "utf8");
+    console.log("✅ Write test PASSED — ghi file OK");
+} catch(e) {
+    console.error("💀 Write test FAILED — KHÔNG THỂ GHI FILE:", e.message);
+    console.error("💀 DATA SẼ MẤT KHI RESTART! Kiểm tra quyền thư mục:", DATA_DIR);
+}
 console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
 // Coin helpers — PHẢI đứng SAU khai báo let coins ở trên
@@ -330,16 +388,18 @@ const TICKET_CATEGORY_ID = process.env.TICKET_CATEGORY_ID;
 
 if (!fs.existsSync(DB.giveaways)) fs.writeFileSync(DB.giveaways, "[]");
 let giveaways = safeReadJSON(DB.giveaways, []);
-// ✅ FIX: Đảm bảo giveaways LUÔN là array dù file bị corrupt thành {} hay null
-if (!Array.isArray(giveaways)) {
-    console.warn("⚠️ giveaways.json không phải array — reset về []");
-    giveaways = [];
-    fs.writeFileSync(DB.giveaways, "[]");
-}
+if (!Array.isArray(giveaways)) { console.warn("⚠️ giveaways reset []"); giveaways = []; fs.writeFileSync(DB.giveaways, "[]"); }
 const saveGiveaways = () => {
     if (!Array.isArray(giveaways)) giveaways = [];
     atomicWrite(DB.giveaways, giveaways);
 };
+
+// ══ AUTO-SAVE mỗi 60 giây — phòng crash mất data in-memory chưa ghi ══
+setInterval(() => {
+    try { atomicWrite(DB.coins,    coins);    } catch(_) {}
+    try { atomicWrite(DB.daily,    dailyData);} catch(_) {}
+    try { atomicWrite(DB.giveaways,giveaways);} catch(_) {}
+}, 60_000);
 
 // Khi bot khởi động lại — khôi phục timers cho giveaways chưa hết hạn
 function restoreGiveawayTimers() {
