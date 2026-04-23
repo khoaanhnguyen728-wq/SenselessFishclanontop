@@ -35,46 +35,14 @@ console.log("📂 Backup path:", backupPath);
 // restart → mất data. Dùng __dirname để đảm bảo luôn cùng 1 chỗ.
 // Nếu muốn tuỳ chỉnh, set biến môi trường DATA_DIR trong .env
 // ══════════════════════════════════════════════════════════════════
-const DATA_DIR = (() => {
-    // Ưu tiên env DATA_DIR nếu được set thủ công trong .env
-    if (process.env.DATA_DIR) {
-        const dir = process.env.DATA_DIR;
-        try {
-            if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-            console.log(`✅ DATA_DIR (từ env): ${dir}`);
-            return dir;
-        } catch(e) {
-            console.error(`⚠️ Không dùng được DATA_DIR từ env [${dir}]: ${e.message}`);
-        }
-    }
-
-    // ══════════════════════════════════════════════════════════════════
-    // AUTO-DETECT: Tìm thư mục đã có chứa coins.json (data cũ)
-    // Thứ tự ưu tiên: __dirname → cwd → __dirname/data
-    // Điều này fix lỗi mỗi lần restart bot bị mất data vì đọc sai thư mục
-    // ══════════════════════════════════════════════════════════════════
-    const candidates = [
-        __dirname,                          // /home/container (nơi server.js nằm)
-        process.cwd(),                      // working directory hiện tại
-        path.join(__dirname, "data"),       // /home/container/data
-    ];
-
-    for (const dir of candidates) {
-        try {
-            const testFile = path.join(dir, "coins.json");
-            if (fs.existsSync(testFile)) {
-                console.log(`✅ DATA_DIR (auto-detect — tìm thấy coins.json): ${dir}`);
-                return dir;
-            }
-        } catch(_) {}
-    }
-
-    // Không tìm thấy data cũ → dùng __dirname (cùng chỗ với server.js)
-    // Lý do dùng __dirname thay vì __dirname/data: tránh tạo thư mục mới sai chỗ
-    const dir = __dirname;
-    console.log(`✅ DATA_DIR (mặc định __dirname — chưa có data cũ): ${dir}`);
-    return dir;
-})();
+// ══════════════════════════════════════════════════════════════════
+// DATA_DIR — cố định là cùng thư mục với server.js (__dirname)
+// Trên Wispbyte: /home/container/ — nơi coins.json, daily.json... đang nằm
+// Không dùng auto-detect vì nó chọn sai thư mục mỗi lần restart
+// Muốn tuỳ chỉnh: set DATA_DIR trong file .env
+// ══════════════════════════════════════════════════════════════════
+const DATA_DIR = process.env.DATA_DIR || __dirname;
+console.log(`✅ DATA_DIR: ${DATA_DIR}`);
 console.log("📁 CWD      :", process.cwd());
 console.log("📁 __dirname:", __dirname);
 console.log("📁 DATA_DIR :", DATA_DIR);
@@ -87,14 +55,8 @@ function safeReadJSON(filePath, defaultValue) {
         try {
             if (!fs.existsSync(fp)) return null;
             const raw = fs.readFileSync(fp, "utf8").trim();
-            if (!raw || raw === "null" || raw === "{}" || raw === "[]") return null;
-            const parsed = JSON.parse(raw);
-            // Kiểm tra object/array có thực sự có data không
-            if (typeof parsed === "object" && parsed !== null) {
-                const count = Array.isArray(parsed) ? parsed.length : Object.keys(parsed).length;
-                if (count === 0) return null; // Rỗng — thử .bak
-            }
-            return parsed;
+            if (!raw || raw === "null") return null;
+            return JSON.parse(raw);
         } catch(e) {
             console.error(`❌ Parse lỗi [${fp}]: ${e.message}`);
             return null;
@@ -102,20 +64,10 @@ function safeReadJSON(filePath, defaultValue) {
     };
     const result = tryParse(filePath);
     if (result !== null) { console.log(`  ✅ Đọc OK: ${filePath}`); return result; }
-
-    // File chính rỗng hoặc không có data — thử .bak
     const bak = filePath + ".bak";
     const bakResult = tryParse(bak);
-    if (bakResult !== null) { console.warn(`  ⚠️ File chính rỗng → Dùng .bak: ${bak}`); return bakResult; }
-
-    // Cả hai đều không có data — trả về defaultValue
-    // Lưu ý: nếu file tồn tại nhưng rỗng, vẫn trả default (không ghi đè)
-    const exists = fs.existsSync(filePath);
-    if (exists) {
-        console.warn(`  ⚠️ File tồn tại nhưng rỗng/không đọc được → dùng mặc định: ${filePath}`);
-    } else {
-        console.error(`  ❌ File không tồn tại → dùng mặc định: ${filePath}`);
-    }
+    if (bakResult !== null) { console.warn(`  ⚠️ Dùng .bak: ${bak}`); return bakResult; }
+    console.error(`  ❌ Không đọc được → dùng mặc định: ${filePath}`);
     return defaultValue;
 }
 
