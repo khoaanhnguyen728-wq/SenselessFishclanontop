@@ -30,51 +30,34 @@ console.log("📂 Backup path:", backupPath);
 /*=== DATABASE — tất cả khai báo và hàm helper ở đây, TRƯỚC mọi thứ khác ===*/
 
 // ══════════════════════════════════════════════════════════════════
-// TÌM THƯ MỤC GHI ĐƯỢC — test write thực sự, không đoán mò
-// Ưu tiên: env DATA_DIR → cwd (có data cũ) → __dirname → /tmp
+// DATA_DIR CỐ ĐỊNH — luôn dùng thư mục /data bên cạnh server.js
+// Không dùng findDataDir() vì sẽ chọn thư mục khác nhau mỗi lần
+// restart → mất data. Dùng __dirname để đảm bảo luôn cùng 1 chỗ.
+// Nếu muốn tuỳ chỉnh, set biến môi trường DATA_DIR trong .env
 // ══════════════════════════════════════════════════════════════════
-function findDataDir() {
-    const candidates = [
-        process.env.DATA_DIR,          // 1. Cấu hình thủ công qua env (ưu tiên cao nhất)
-        __dirname,                      // 2. Cùng thư mục server.js (ổn định nhất trên Wispbyte)
-        process.cwd(),                  // 3. Working dir (fallback)
-        path.join(__dirname, "data"),   // 4. Subfolder /data
-        "/tmp",                         // 5. Luôn writable trên Linux — last resort
-    ].filter(Boolean);
-
-    // Pass 1: tìm thư mục có data CŨ + writable
-    for (const dir of candidates) {
+const DATA_DIR = (() => {
+    // Ưu tiên env DATA_DIR nếu được set thủ công trong .env
+    if (process.env.DATA_DIR) {
+        const dir = process.env.DATA_DIR;
         try {
             if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-            // Test write thực sự
-            const testFile = path.join(dir, ".__write_test__");
-            fs.writeFileSync(testFile, "1", "utf8");
-            fs.unlinkSync(testFile);
-            // Ưu tiên nơi đã có coins.json (data cũ)
-            if (fs.existsSync(path.join(dir, "coins.json"))) {
-                console.log(`✅ DATA_DIR (có data cũ): ${dir}`);
-                return dir;
-            }
+            console.log(`✅ DATA_DIR (từ env): ${dir}`);
+            return dir;
         } catch(e) {
-            console.log(`⚠️ Không ghi được vào: ${dir} — ${e.message}`);
+            console.error(`⚠️ Không dùng được DATA_DIR từ env [${dir}]: ${e.message}`);
         }
     }
-    // Pass 2: lấy thư mục writable đầu tiên
-    for (const dir of candidates) {
-        try {
-            if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-            const testFile = path.join(dir, ".__write_test__");
-            fs.writeFileSync(testFile, "1", "utf8");
-            fs.unlinkSync(testFile);
-            console.log(`✅ DATA_DIR (writable mới): ${dir}`);
-            return dir;
-        } catch(_) {}
+    // Mặc định: thư mục /data cạnh server.js — luôn cố định, không đổi khi restart
+    const dir = path.join(__dirname, "data");
+    try {
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        console.log(`✅ DATA_DIR (cố định): ${dir}`);
+        return dir;
+    } catch(e) {
+        console.error(`💀 Không tạo được thư mục data [${dir}]: ${e.message}`);
+        return __dirname; // fallback cuối cùng
     }
-    console.error("💀 KHÔNG TÌM ĐƯỢC THƯ MỤC GHI ĐƯỢC — dùng cwd và cầu trời!");
-    return process.cwd();
-}
-
-const DATA_DIR = findDataDir();
+})();
 console.log("📁 CWD      :", process.cwd());
 console.log("📁 __dirname:", __dirname);
 console.log("📁 DATA_DIR :", DATA_DIR);
