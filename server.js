@@ -87,8 +87,14 @@ function safeReadJSON(filePath, defaultValue) {
         try {
             if (!fs.existsSync(fp)) return null;
             const raw = fs.readFileSync(fp, "utf8").trim();
-            if (!raw || raw === "null") return null;
-            return JSON.parse(raw);
+            if (!raw || raw === "null" || raw === "{}" || raw === "[]") return null;
+            const parsed = JSON.parse(raw);
+            // Kiểm tra object/array có thực sự có data không
+            if (typeof parsed === "object" && parsed !== null) {
+                const count = Array.isArray(parsed) ? parsed.length : Object.keys(parsed).length;
+                if (count === 0) return null; // Rỗng — thử .bak
+            }
+            return parsed;
         } catch(e) {
             console.error(`❌ Parse lỗi [${fp}]: ${e.message}`);
             return null;
@@ -96,10 +102,20 @@ function safeReadJSON(filePath, defaultValue) {
     };
     const result = tryParse(filePath);
     if (result !== null) { console.log(`  ✅ Đọc OK: ${filePath}`); return result; }
+
+    // File chính rỗng hoặc không có data — thử .bak
     const bak = filePath + ".bak";
     const bakResult = tryParse(bak);
-    if (bakResult !== null) { console.warn(`  ⚠️ Dùng .bak: ${bak}`); return bakResult; }
-    console.error(`  ❌ Không đọc được → dùng mặc định: ${filePath}`);
+    if (bakResult !== null) { console.warn(`  ⚠️ File chính rỗng → Dùng .bak: ${bak}`); return bakResult; }
+
+    // Cả hai đều không có data — trả về defaultValue
+    // Lưu ý: nếu file tồn tại nhưng rỗng, vẫn trả default (không ghi đè)
+    const exists = fs.existsSync(filePath);
+    if (exists) {
+        console.warn(`  ⚠️ File tồn tại nhưng rỗng/không đọc được → dùng mặc định: ${filePath}`);
+    } else {
+        console.error(`  ❌ File không tồn tại → dùng mặc định: ${filePath}`);
+    }
     return defaultValue;
 }
 
@@ -114,39 +130,44 @@ function atomicWrite(filePath, data) {
         if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     } catch(_) {}
 
-    // Backup file cũ
+    const json = JSON.stringify(data, null, 2);
+
+    // Validate data trước khi ghi — tránh ghi rỗng/null
+    if (!json || json.length < 2) {
+        console.error(`❌ atomicWrite CANCELLED [${path.basename(filePath)}]: data rỗng/null, không ghi!`);
+        return;
+    }
+
+    // Backup file cũ vào .bak TRƯỚC — nhưng chỉ khi file hiện tại có data hợp lệ
     try {
         if (fs.existsSync(filePath)) {
-            fs.copyFileSync(filePath, filePath + ".bak");
+            const existing = fs.readFileSync(filePath, "utf8").trim();
+            if (existing && existing.length >= 2 && existing !== "null") {
+                fs.writeFileSync(filePath + ".bak", existing, "utf8");
+            }
         }
     } catch(_) {}
 
-    const tmpPath = filePath + ".tmp";
+    // Ghi thẳng vào file — KHÔNG dùng rename vì trên Wispbyte/nhiều hosting
+    // fs.renameSync có thể fail khi cross-device, gây mất data hoặc restore sai .bak
     try {
-        const json = JSON.stringify(data, null, 2);
-        // Ghi ra .tmp trước (nếu crash ở đây, file gốc vẫn còn)
-        fs.writeFileSync(tmpPath, json, "utf8");
-        // Verify nội dung .tmp trước khi rename
-        const verify = fs.readFileSync(tmpPath, "utf8").trim();
-        if (!verify || verify.length < 2) throw new Error("File .tmp bị rỗng sau khi ghi!");
-        // Rename nguyên tử — thay thế file cũ bằng file mới một lần
-        fs.renameSync(tmpPath, filePath);
-        // Double-check: đọc lại file đích
-        const final = fs.readFileSync(filePath, "utf8").trim();
-        if (!final || final.length < 2) throw new Error("File đích bị rỗng sau rename!");
-        console.log(`  💾 Đã ghi: ${path.basename(filePath)} (${final.length} bytes) → ${path.resolve(filePath)}`);
+        fs.writeFileSync(filePath, json, "utf8");
+
+        // Verify ngay sau khi ghi
+        const verify = fs.readFileSync(filePath, "utf8").trim();
+        if (!verify || verify.length < 2) {
+            throw new Error("File bị rỗng ngay sau khi ghi!");
+        }
+
+        console.log(`  💾 Đã ghi: ${path.basename(filePath)} (${verify.length} bytes) → ${path.resolve(filePath)}`);
     } catch(e) {
         console.error(`❌ atomicWrite FAILED [${path.resolve(filePath)}]: ${e.message}`);
-        // Dọn .tmp nếu còn
-        try { if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath); } catch(_) {}
-        // Restore từ .bak nếu file đích bị hỏng
+        // Thử restore từ .bak nếu file bị hỏng sau ghi
         try {
-            if (fs.existsSync(filePath + ".bak")) {
-                const bakContent = fs.readFileSync(filePath + ".bak", "utf8").trim();
-                if (bakContent && bakContent.length >= 2) {
-                    fs.copyFileSync(filePath + ".bak", filePath);
-                    console.warn(`  ↩️ Đã restore từ .bak: ${path.basename(filePath)}`);
-                }
+            const bakContent = fs.readFileSync(filePath + ".bak", "utf8").trim();
+            if (bakContent && bakContent.length >= 2) {
+                fs.writeFileSync(filePath, bakContent, "utf8");
+                console.warn(`  ↩️ Đã restore từ .bak: ${path.basename(filePath)}`);
             }
         } catch(_) {}
     }
