@@ -47,16 +47,33 @@ const DATA_DIR = (() => {
             console.error(`⚠️ Không dùng được DATA_DIR từ env [${dir}]: ${e.message}`);
         }
     }
-    // Mặc định: thư mục /data cạnh server.js — luôn cố định, không đổi khi restart
-    const dir = path.join(__dirname, "data");
-    try {
-        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-        console.log(`✅ DATA_DIR (cố định): ${dir}`);
-        return dir;
-    } catch(e) {
-        console.error(`💀 Không tạo được thư mục data [${dir}]: ${e.message}`);
-        return __dirname; // fallback cuối cùng
+
+    // ══════════════════════════════════════════════════════════════════
+    // AUTO-DETECT: Tìm thư mục đã có chứa coins.json (data cũ)
+    // Thứ tự ưu tiên: __dirname → cwd → __dirname/data
+    // Điều này fix lỗi mỗi lần restart bot bị mất data vì đọc sai thư mục
+    // ══════════════════════════════════════════════════════════════════
+    const candidates = [
+        __dirname,                          // /home/container (nơi server.js nằm)
+        process.cwd(),                      // working directory hiện tại
+        path.join(__dirname, "data"),       // /home/container/data
+    ];
+
+    for (const dir of candidates) {
+        try {
+            const testFile = path.join(dir, "coins.json");
+            if (fs.existsSync(testFile)) {
+                console.log(`✅ DATA_DIR (auto-detect — tìm thấy coins.json): ${dir}`);
+                return dir;
+            }
+        } catch(_) {}
     }
+
+    // Không tìm thấy data cũ → dùng __dirname (cùng chỗ với server.js)
+    // Lý do dùng __dirname thay vì __dirname/data: tránh tạo thư mục mới sai chỗ
+    const dir = __dirname;
+    console.log(`✅ DATA_DIR (mặc định __dirname — chưa có data cũ): ${dir}`);
+    return dir;
 })();
 console.log("📁 CWD      :", process.cwd());
 console.log("📁 __dirname:", __dirname);
