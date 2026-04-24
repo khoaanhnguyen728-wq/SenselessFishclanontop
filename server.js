@@ -30,22 +30,43 @@ console.log("📂 Backup path:", backupPath);
 /*=== DATABASE — tất cả khai báo và hàm helper ở đây, TRƯỚC mọi thứ khác ===*/
 
 // ══════════════════════════════════════════════════════════════════
-// DATA_DIR CỐ ĐỊNH — luôn dùng thư mục /data bên cạnh server.js
-// Không dùng findDataDir() vì sẽ chọn thư mục khác nhau mỗi lần
-// restart → mất data. Dùng __dirname để đảm bảo luôn cùng 1 chỗ.
-// Nếu muốn tuỳ chỉnh, set biến môi trường DATA_DIR trong .env
+// DATA_DIR CỐ ĐỊNH CHO WISPBYTE
+// Wispbyte lưu file tại /home/container — đây là thư mục persistent
+// __dirname có thể thay đổi mỗi lần container restart → KHÔNG dùng
+// Thứ tự ưu tiên:
+//   1. Biến môi trường DATA_DIR (set trong Wispbyte panel → Variables)
+//   2. /home/container (mặc định Wispbyte — persistent storage)
+//   3. __dirname (fallback cuối cùng)
 // ══════════════════════════════════════════════════════════════════
-// ══════════════════════════════════════════════════════════════════
-// DATA_DIR — cố định là cùng thư mục với server.js (__dirname)
-// Trên Wispbyte: /home/container/ — nơi coins.json, daily.json... đang nằm
-// Không dùng auto-detect vì nó chọn sai thư mục mỗi lần restart
-// Muốn tuỳ chỉnh: set DATA_DIR trong file .env
-// ══════════════════════════════════════════════════════════════════
-const DATA_DIR = process.env.DATA_DIR || __dirname;
-console.log(`✅ DATA_DIR: ${DATA_DIR}`);
+const WISPBYTE_DEFAULT = "/home/container";
+const DATA_DIR = process.env.DATA_DIR
+    || (fs.existsSync(WISPBYTE_DEFAULT) ? WISPBYTE_DEFAULT : __dirname);
+
+console.log("━━━━━━━━━━━ PATH DEBUG ━━━━━━━━━━━");
 console.log("📁 CWD      :", process.cwd());
 console.log("📁 __dirname:", __dirname);
 console.log("📁 DATA_DIR :", DATA_DIR);
+
+// ══ SCAN — liệt kê các file JSON trong DATA_DIR để debug khi restart ══
+try {
+    const filesInDataDir = fs.readdirSync(DATA_DIR).filter(f => f.endsWith(".json") || f.endsWith(".json.bak"));
+    if (filesInDataDir.length > 0) {
+        console.log("📂 JSON files tìm thấy trong DATA_DIR:");
+        filesInDataDir.forEach(f => {
+            const fp = path.join(DATA_DIR, f);
+            try {
+                const size = fs.statSync(fp).size;
+                console.log(`   ✅ ${f} (${size} bytes)`);
+            } catch(_) { console.log(`   ⚠️ ${f} (không đọc được stat)`); }
+        });
+    } else {
+        console.warn("⚠️ CẢNH BÁO: Không tìm thấy file JSON nào trong DATA_DIR!");
+        console.warn("⚠️ Nếu đây là lần đầu chạy thì bình thường. Nếu đã từng có data → kiểm tra DATA_DIR!");
+    }
+} catch(e) {
+    console.error("❌ Không đọc được DATA_DIR:", e.message);
+}
+console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
 // ══════════════════════════════════════════════════════════════════
 // ĐỌC JSON AN TOÀN — fallback .bak nếu file chính lỗi/rỗng
