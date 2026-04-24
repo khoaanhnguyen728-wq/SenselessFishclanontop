@@ -30,22 +30,55 @@ console.log("📂 Backup path:", backupPath);
 /*=== DATABASE — tất cả khai báo và hàm helper ở đây, TRƯỚC mọi thứ khác ===*/
 
 // ══════════════════════════════════════════════════════════════════
-// DATA_DIR CỐ ĐỊNH CHO WISPBYTE
-// Wispbyte lưu file tại /home/container — đây là thư mục persistent
-// __dirname có thể thay đổi mỗi lần container restart → KHÔNG dùng
+// DATA_DIR — TUYỆT ĐỐI CỐ ĐỊNH, KHÔNG PHỤ THUỘC server.js
+//
+// VẤN ĐỀ: Khi bạn upload file mới lên Wispbyte, __dirname và CWD
+// có thể thay đổi → bot tìm file JSON ở thư mục mới (rỗng) thay vì
+// thư mục cũ có data → MẤT DATA.
+//
+// GIẢI PHÁP: Dùng đường dẫn TUYỆT ĐỐI /home/container/botdata
+// Thư mục này KHÔNG thay đổi dù bạn upload file mới, sửa code, hay
+// restart bao nhiêu lần đi nữa. Đây là persistent storage của Wispbyte.
+//
 // Thứ tự ưu tiên:
-//   1. Biến môi trường DATA_DIR (set trong Wispbyte panel → Variables)
-//   2. /home/container (mặc định Wispbyte — persistent storage)
-//   3. __dirname (fallback cuối cùng)
+//   1. process.env.DATA_DIR nếu bạn muốn override thủ công
+//   2. /home/container/botdata — CỐ ĐỊNH, KHUYẾN NGHỊ
 // ══════════════════════════════════════════════════════════════════
-const WISPBYTE_DEFAULT = "/home/container";
-const DATA_DIR = process.env.DATA_DIR
-    || (fs.existsSync(WISPBYTE_DEFAULT) ? WISPBYTE_DEFAULT : __dirname);
+const DATA_DIR = process.env.DATA_DIR || "/home/container/botdata";
+
+// Tạo thư mục data nếu chưa có (lần đầu chạy)
+try {
+    if (!fs.existsSync(DATA_DIR)) {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+        console.log(`📁 Đã tạo DATA_DIR: ${DATA_DIR}`);
+    }
+} catch(e) {
+    console.error(`❌ Không tạo được DATA_DIR [${DATA_DIR}]:`, e.message);
+}
 
 console.log("━━━━━━━━━━━ PATH DEBUG ━━━━━━━━━━━");
 console.log("📁 CWD      :", process.cwd());
 console.log("📁 __dirname:", __dirname);
 console.log("📁 DATA_DIR :", DATA_DIR);
+
+// ══ MIGRATION: lần đầu dùng botdata, tự động copy file JSON cũ từ /home/container sang ══
+// Đảm bảo data cũ không bị mất khi chuyển sang thư mục mới
+(function migrateOldData() {
+    const OLD_DIRS = ["/home/container", __dirname, process.cwd()].filter((d, i, arr) => d !== DATA_DIR && arr.indexOf(d) === i);
+    const JSON_FILES = ["coins.json","blacklist.json","top.json","register.json","staff.json","mainers.json","strike.json","daily.json","giveaways.json"];
+    for (const oldDir of OLD_DIRS) {
+        for (const fname of JSON_FILES) {
+            const src = path.join(oldDir, fname);
+            const dst = path.join(DATA_DIR, fname);
+            try {
+                if (fs.existsSync(src) && !fs.existsSync(dst)) {
+                    fs.copyFileSync(src, dst);
+                    console.log(`  🔀 MIGRATE: ${src} → ${dst}`);
+                }
+            } catch(_) {}
+        }
+    }
+})();
 
 // ══ SCAN — liệt kê các file JSON trong DATA_DIR để debug khi restart ══
 try {
