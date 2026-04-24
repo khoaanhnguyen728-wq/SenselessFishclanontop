@@ -140,42 +140,15 @@ const DB = {
     giveaways: path.join(DATA_DIR, "giveaways.json"),
 };
 
-// Hàm khởi tạo file an toàn — KHÔNG ghi đè nếu đã tồn tại và hợp lệ
-function initDBFile(filePath, defaultContent) {
-    if (fs.existsSync(filePath)) {
-        try {
-            const raw = fs.readFileSync(filePath, "utf8").trim();
-            if (raw && raw.length >= 2 && raw !== "null") {
-                JSON.parse(raw); // validate JSON
-                console.log(`  📂 DB tồn tại OK: ${path.basename(filePath)} (${raw.length} bytes)`);
-                return; // File OK, không làm gì
-            }
-        } catch(e) {
-            console.warn(`  ⚠️ DB corrupt [${path.basename(filePath)}]: ${e.message} → ghi lại default`);
-        }
-    }
-    // File chưa có hoặc bị corrupt → ghi default
-    try {
-        fs.writeFileSync(filePath, defaultContent, "utf8");
-        console.log(`  📝 DB khởi tạo mới: ${path.basename(filePath)}`);
-    } catch(e) {
-        console.error(`  ❌ Không thể khởi tạo DB [${filePath}]: ${e.message}`);
-    }
-}
-
-initDBFile(DB.coins,    "{}");
-initDBFile(DB.blacklist,"[]");
-initDBFile(DB.top,      "{}");
-initDBFile(DB.register, "[]");
-initDBFile(DB.staff,    "[]");
-initDBFile(DB.mainers,  "[]");
-initDBFile(DB.strike,   "[]");
-initDBFile(DB.daily,    "{}");
-initDBFile(DB.giveaways,"[]");
 
 // ══════════════════════════════════════════════════════════════════
 // ĐỌC DATA VÀO BỘ NHỚ
-// ══════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════
+// ĐỌC DATA VÀO BỘ NHỌ
+// - File có data → đọc bình thường
+// - File rỗng / JSON lỗi → tự động fallback đọc .bak
+// - Không có gì cả → dùng giá trị mặc định {} / []
+// ════════════════════════════════════════════════════════════════
 let coins      = safeReadJSON(DB.coins,    {});
 let blacklist  = safeReadJSON(DB.blacklist,[]);
 let top        = safeReadJSON(DB.top,      {});
