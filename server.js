@@ -91,15 +91,20 @@ function atomicWrite(filePath, data) {
     }
 
     // Backup file cũ vào .bak TRƯỚC — nhưng chỉ khi file hiện tại có data hợp lệ
-    try {
-        if (fs.existsSync(filePath)) {
-            const existing = fs.readFileSync(filePath, "utf8").trim();
-            if (existing && existing.length >= 2 && existing !== "null") {
+// MỚI — VALIDATE JSON TRƯỚC KHI BACKUP
+try {
+    if (fs.existsSync(filePath)) {
+        const existing = fs.readFileSync(filePath, "utf8").trim();
+        if (existing && existing.length >= 2 && existing !== "null") {
+            try {
+                JSON.parse(existing); // ✅ Chỉ backup nếu JSON hợp lệ
                 fs.writeFileSync(filePath + ".bak", existing, "utf8");
+            } catch(_) {
+                console.warn(`⚠️ atomicWrite: ${path.basename(filePath)} bị corrupt (JSON lỗi), GIỮ NGUYÊN .bak cũ — không overwrite!`);
             }
         }
-    } catch(_) {}
-
+    }
+} catch(_) {}
     // Ghi thẳng vào file — KHÔNG dùng rename vì trên Wispbyte/nhiều hosting
     // fs.renameSync có thể fail khi cross-device, gây mất data hoặc restore sai .bak
     try {
